@@ -435,6 +435,72 @@ describe('NAT64 network-specific prefixes (RFC 6052 §2.2)', () => {
 		expect(claimedIpv4s(Uint8Array.of(169, 254, 169, 254))).toEqual([]);
 	});
 
+	/**
+	 * NESTED prefixes (two translators, a resolver answering two AAAA, an operator
+	 * declaring an outer and an inner prefix): an address both contain is read
+	 * through EVERY one of them. The /32 reads 2a00:1:5db8:d822::a9fe:a9fe as the public
+	 * 93.184.216.34, the /96 — the more specific, the one routing follows — as the
+	 * metadata endpoint. Before 2026-10-21 only the FIRST matching prefix was read,
+	 * so the verdict hung on the order the resolver (or the operator) listed them.
+	 */
+	const NESTED_OUTER = '2a00:1::/32';
+	const NESTED_INNER = '2a00:1:5db8:d822::/96';
+	const NESTED_TO_METADATA = '2a00:1:5db8:d822::a9fe:a9fe';
+	const NESTED_TO_PUBLIC = '2a00:1:5db8:d822::5db8:d822'; // 93.184.216.34 through BOTH
+
+	function seedNested(order: readonly string[]): void {
+		setNat64DiscoveryForTests({
+			prefixes: order.map((cidr) => packBlocks([cidr])[0] as PackedCidr),
+			expiresAt: Date.now() + 10 * 60_000,
+		});
+	}
+
+	test('NESTED discovered prefixes: every one is read, in either list order', async () => {
+		const metadata = packIpv6(NESTED_TO_METADATA) as Uint8Array;
+		for (const order of [
+			[NESTED_OUTER, NESTED_INNER],
+			[NESTED_INNER, NESTED_OUTER],
+		]) {
+			seedNested(order);
+			expect(isPrivateIp(NESTED_TO_METADATA), order.join(' then ')).toBe(true);
+			expect(claimedIpv4s(metadata), order.join(' then ')).toContain('169.254.169.254');
+			expect(
+				await refusalReason(assertPublicUrl(`http://[${NESTED_TO_METADATA}]/`)),
+				order.join(' then '),
+			).toBe('private_literal');
+			// Positive control: public through both prefixes still passes.
+			expect(isPrivateIp(NESTED_TO_PUBLIC), order.join(' then ')).toBe(false);
+		}
+	});
+
+	test('NESTED declared prefixes: every one is read; the fold follows the most specific', () => {
+		const metadata = packIpv6(NESTED_TO_METADATA) as Uint8Array;
+		for (const declared of [
+			`${NESTED_OUTER}, ${NESTED_INNER}`,
+			`${NESTED_INNER}, ${NESTED_OUTER}`,
+		]) {
+			declareNat64(declared);
+			expect(isPrivateIp(NESTED_TO_METADATA), declared).toBe(true);
+			expect(claimedIpv4s(metadata), declared).toContain('169.254.169.254');
+			// The fold says where the packet GOES: longest-prefix match, the /96.
+			expect(embeddedIpv4(metadata), declared).toBe('169.254.169.254');
+			expect(isPrivateIp(NESTED_TO_PUBLIC), declared).toBe(false);
+		}
+		// Control: the outer declaration alone reads the public IPv4 and accepts.
+		declareNat64(NESTED_OUTER);
+		expect(isPrivateIp(NESTED_TO_METADATA)).toBe(false);
+	});
+
+	test('a DISCOVERED prefix inside a DECLARED one still tightens (refusal is never lost)', () => {
+		declareNat64(NESTED_OUTER);
+		seedNested([NESTED_INNER]);
+		expect(isPrivateIp(NESTED_TO_METADATA)).toBe(true);
+		expect(claimedIpv4s(packIpv6(NESTED_TO_METADATA) as Uint8Array)).toContain('169.254.169.254');
+		// …and the authoritative fold does not take the resolver's word.
+		expect(embeddedIpv4(packIpv6(NESTED_TO_METADATA) as Uint8Array)).toBe('93.184.216.34');
+		expect(isPrivateIp(NESTED_TO_PUBLIC)).toBe(false);
+	});
+
 	test('the discovery cache: an answer replaces, an EMPTY answer keeps (tighten-only)', () => {
 		const known = [{ network: packIpv6('2c0f:f248:64::') as Uint8Array, prefixBits: 96 }];
 		const other = [{ network: packIpv6('2c0f:f249::') as Uint8Array, prefixBits: 64 }];

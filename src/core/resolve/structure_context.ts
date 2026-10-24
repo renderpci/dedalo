@@ -147,9 +147,14 @@ export interface StructureContextEntry extends StructureContextCore {
 	columns_map?: unknown[];
 	/** Section-only extras (PHP :2056-2100). */
 	matrix_table?: string | null;
-	/** Section-only relation_list_tipo (PHP :2056-2100); search-mode
+	/** Section-only relation_list_tipo (PHP :2056-2100) and the principal-gated
+	 * time_machine_list trigger (WC-2026-10-22-tm-scope-whole-request); search-mode
 	 * parent_grouper_label on any element with a parent grouper (PHP :1700). */
-	config?: { relation_list_tipo?: string | null; parent_grouper_label?: string | null };
+	config?: {
+		relation_list_tipo?: string | null;
+		time_machine_list?: string | null;
+		parent_grouper_label?: string | null;
+	};
 	/** Section-only: the section_map node's properties (PHP :2075). */
 	section_map?: unknown;
 	/** Section-only: the session-stored navigation SQO (PHP :1695-98, stamped

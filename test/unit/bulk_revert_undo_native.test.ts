@@ -17,7 +17,9 @@
  *   reverts; a live-run refusal; a cascade (soft: the wiped data restored; a
  *   record a REVERT deleted, D2: undeleted by the revert of that revert — the
  *   one producer of a row-deleted cascade target since the dataframe hard
- *   delete was retired, WC-2026-09-29-dataframe-hard-delete-retired); legacy runs (born in the run vs not); the propagate
+ *   delete was retired, WC-2026-09-29-dataframe-hard-delete-retired; a HARD
+ *   undelete's media FILES, standalone and re-linked by a unit; a missing target
+ *   refused before its scope was judged, never located — SEC-16); legacy runs (born in the run vs not); the propagate
  *   region on a translatable UNSLICED model (M2).
  *   The Part-1 catalogue (deleted import_csv_append_native titles) and its
  *   addendum (preBatchLangSlice rules, the per-language legacy walk, the wipe
@@ -421,6 +423,46 @@ function plantedVersions(live: string): string[] {
 	return [...(existsSync(live) ? [live] : []), ...versions];
 }
 
+/**
+ * Plant a live image FILE for `id`'s IMAGE key (and the key itself, id 1) at
+ * the path the media doors resolve; swept in afterAll with its deleted/ versions.
+ */
+async function plantImage(id: number, content: string): Promise<string> {
+	const spec = mustGet(mediaTypeOf('component_image'), 'image spec');
+	await seed(id, 'media', IMAGE, [{ id: 1 }]);
+	const live = buildMediaLocation(
+		spec,
+		{ componentTipo: IMAGE, sectionTipo: SECTION, sectionId: id, lang: null },
+		spec.defaultQuality,
+		spec.defaultExtension,
+		await resolveMediaPathOptions(IMAGE, SECTION, id),
+	).absolutePath;
+	mkdirSync(dirname(live), { recursive: true });
+	writeFileSync(live, content);
+	plantedMedia.push(live);
+	return live;
+}
+
+/** The deleted/ versions of a planted file (the live path excluded). */
+const deletedVersionsOf = (live: string): string[] =>
+	plantedVersions(live).filter((path) => path !== live);
+
+/**
+ * FLOOR of a hard delete's file half: the delete moved the live file into
+ * deleted/ — so a passing undelete below proves the files came BACK.
+ */
+function expectMovedToDeleted(live: string): void {
+	expect(existsSync(live)).toBe(false);
+	expect(deletedVersionsOf(live).length).toBe(1);
+}
+
+/** The undelete put the file back at its live path, and left no deleted/ version behind. */
+function expectBackLive(live: string, content: string): void {
+	expect(existsSync(live), 'the undeleted media key points at a live path with no file').toBe(true);
+	expect(readFileSync(live, 'utf8')).toBe(content);
+	expect(deletedVersionsOf(live)).toEqual([]);
+}
+
 // ---------------------------------------------------------------- lifecycle
 
 beforeAll(async () => {
@@ -739,7 +781,10 @@ describe('records the run created (D2)', () => {
 		await insertLocator(referrer, TPORTAL, born);
 		const data = await revert(run);
 		expect(await stored(born, 'string', TEXT)).toBeUndefined();
-		expect(reasons(data)).toEqual(['created_record_kept']);
+		// Located: D2's gate judged the record's scope before keeping it (SEC-16).
+		expect(data.skipped).toEqual([
+			{ reason: 'created_record_kept', section_tipo: SECTION, tipo: SECTION, section_id: born },
+		]);
 		expect(targetsOf(await stored(referrer, 'relation', TPORTAL))).toEqual([born]);
 	});
 
@@ -1810,7 +1855,15 @@ describe('generations and cascade targets across reverts (review 2026-09-27)', (
 		await createSectionRecord(SECTION, USER_ID, birth, target);
 		const data = await revert(id);
 		expect(await stored(target, 'string', TEXT)).toBeUndefined();
-		expect(reasons(data)).toEqual(['cascade_delete_not_reverted']);
+		// Located: the row at the address was there, and its scope judged (SEC-16).
+		expect(data.skipped).toEqual([
+			{
+				reason: 'cascade_delete_not_reverted',
+				section_tipo: SECTION,
+				tipo: SECTION,
+				section_id: target,
+			},
+		]);
 	});
 
 	test('SOFT-wiped target whose created_date was REWRITTEN since (a CSV dd199 column): the same record, restored', async () => {
@@ -2434,6 +2487,57 @@ describe('a cascade target another record REFERENCED (inverse references, D3)', 
 	});
 });
 
+describe('the HARD (missing-row) undelete brings the record’s media FILES back (P1-11/LIFE-08)', () => {
+	// The delete door under a bulk id moves every media file of the record into
+	// deleted/ (after its COMMIT); the undelete is its inverse, or the record
+	// comes back with media keys pointing at live paths with no file. Producer:
+	// the delete door under a bulk id, as above (D2's known window; the hard
+	// cascade runs recorded before WC-2026-09-29-dataframe-hard-delete-retired).
+	// A record BORN in a run never reaches D2 with a media key the run wrote: the
+	// unit reverting that key empties it first.
+
+	test('STANDALONE (no unit re-links it): the undelete moves the files back after its group commits', async () => {
+		const target = await rec();
+		await setText(target, 'lg-spa', 'standalone record');
+		const live = await plantImage(target, 'standalone-image');
+		const id = await mint();
+		expect(
+			(await deleteSectionRecord(SECTION, target, USER_ID, undefined, { bulkProcessId: id }))
+				.removed,
+		).toBe(true);
+		expect(await stored(target, 'data', 'section_id')).toBe('NO-RECORD');
+		expectMovedToDeleted(live);
+		const data = await revert(id);
+		expect(data.skipped).toEqual([]);
+		expect(data.inexact.map((entry) => entry.basis)).toEqual(['cascade_undelete']);
+		expect(texts(await stored(target, 'string', TEXT))).toEqual(['lg-spa:standalone record']);
+		expect(await stored(target, 'media', IMAGE)).toEqual([{ id: 1 }]);
+		expectBackLive(live, 'standalone-image');
+	});
+
+	test('RE-LINKED BY A UNIT (the stripped locator’s): the files come back after the unit commits', async () => {
+		const [target, other] = [await rec(), await rec()];
+		await setText(target, 'lg-spa', 'relinked record');
+		const live = await plantImage(target, 'relinked-image');
+		await seed(other, 'relation', MAIN2, [locator(1, target, MAIN2)]);
+		const id = await mint();
+		expect(
+			(await deleteSectionRecord(SECTION, target, USER_ID, undefined, { bulkProcessId: id }))
+				.removed,
+		).toBe(true);
+		// FLOOR: gone, the locator stripped under the run (the unit that re-links
+		// it), and the files moved.
+		expect(await stored(target, 'data', 'section_id')).toBe('NO-RECORD');
+		expect(targetsOf(await stored(other, 'relation', MAIN2))).toEqual([]);
+		expectMovedToDeleted(live);
+		const data = await revert(id);
+		expect(data.skipped).toEqual([]);
+		expect(targetsOf(await stored(other, 'relation', MAIN2))).toEqual([target]);
+		expect(await stored(target, 'media', IMAGE)).toEqual([{ id: 1 }]);
+		expectBackLive(live, 'relinked-image');
+	});
+});
+
 describe('the undelete is COUPLED to the unit that re-links it (D3)', () => {
 	test('the re-linking unit is REFUSED: the target stays deleted — never an orphan', async () => {
 		const { host, target, revertId } = await revertDeletedTarget({ text: null });
@@ -2479,6 +2583,54 @@ describe('the undelete is COUPLED to the unit that re-links it (D3)', () => {
 			expect(await stored(target, 'data', 'section_id')).not.toBe('NO-RECORD');
 			expect(framePairs(await stored(host, 'relation', HSLOT))).toEqual([`${HMAIN}#1->${target}`]);
 			expect(data.skipped).toEqual([]);
+		} finally {
+			await removeAclIdentityFixture();
+		}
+	});
+});
+
+describe('a MISSING cascade target refused before any record-scope check is never LOCATED (SEC-16)', () => {
+	test('a NON-ADMIN reverts a run whose deleted record’s snapshot is unreadable: a coordinate-free entry', async () => {
+		// The missing-row undelete judges the record's scope on the RESTORED row
+		// (mayUndelete passes on the section level alone). A refusal decided
+		// before that — the snapshot unusable — has judged nothing about the
+		// record, so its entry carries the reason and nothing else: the bulk id
+		// is enumerable and the run's rows are found without a projects filter.
+		const target = await rec();
+		await setText(target, 'lg-spa', 'unjudged record');
+		const id = await mint();
+		expect(
+			(await deleteSectionRecord(SECTION, target, USER_ID, undefined, { bulkProcessId: id }))
+				.removed,
+		).toBe(true);
+		const twin = mustGet(
+			(await runRowsOf(SECTION, target, id)).find((row) => row.tm_role === 4),
+			'the role-4 twin',
+		);
+		// The unreadable snapshot (the decoder's absent image).
+		await sql.unsafe('UPDATE matrix_time_machine SET data = NULL WHERE id = $1', [twin.id]);
+		await installAclIdentityFixture();
+		try {
+			const grants = [{ id: 50, tipo: SECTION, section_tipo: SECTION, value: 2 }];
+			await sql.unsafe(
+				`UPDATE matrix_profiles SET misc = jsonb_set(misc, '{dd774}', (misc->'dd774') || $1::text::jsonb)
+				 WHERE section_tipo = 'dd234' AND section_id = $2`,
+				[JSON.stringify(grants), ACL_NON_ADMIN_PROFILE_ID],
+			);
+			clearAclIdentityCaches();
+			const reader = await resolvePrincipal(ACL_NON_ADMIN_USER_ID);
+			expect(reader.isGlobalAdmin).toBe(false);
+			const response = await toolTimeMachineBulkRevert({
+				principal: reader,
+				userId: ACL_NON_ADMIN_USER_ID,
+				options: { bulk_process_id: id },
+				background: false,
+			});
+			expect(response.ok).toBe(true);
+			const data = response.data as RevertData;
+			minted.push(data.bulk_process_id);
+			expect(await stored(target, 'data', 'section_id')).toBe('NO-RECORD');
+			expect(data.skipped).toEqual([{ reason: 'cascade_delete_not_reverted' }]);
 		} finally {
 			await removeAclIdentityFixture();
 		}

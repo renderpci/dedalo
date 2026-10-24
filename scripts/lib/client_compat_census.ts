@@ -369,6 +369,16 @@ export const NON_ENVELOPE_READS: readonly NonEnvelopeRead[] = [
 		pattern: literal('sse_response?.data?.msg'),
 		reason: `${FRAME_REASON} — a NON-terminal progress frame, data = the handler's publishProgress {msg, counter, total}; the terminal frame's envelope is read through request_failed / response_data`,
 	},
+	{
+		file: 'tools/tool_bibliography_acquisition/js/render_tool_bibliography_acquisition.js',
+		pattern: literal('sse_response.errors'),
+		reason: `${FRAME_REASON} — the TERMINAL frame's own lines (interrupted / stopped mid-run / pfile not found, src/core/api/process_status.ts) when it carries no coded error and no result envelope: a commit's end that did not say what it did (unknown_on_uncoded_end)`,
+	},
+	{
+		file: 'tools/tool_numisdata_acquisition/js/render_tool_numisdata_acquisition.js',
+		pattern: literal('sse_response.errors'),
+		reason: `${FRAME_REASON} — the TERMINAL frame's own lines (interrupted / stopped mid-run / pfile not found, src/core/api/process_status.ts) when it carries no coded error and no result envelope: a commit's end that did not say what it did (unknown_on_uncoded_end)`,
+	},
 	// ── media / background job frames ─────────────────────────────────────────
 	{
 		file: 'tools/tool_media_versions/js/render_tool_media_versions.js',

@@ -245,3 +245,79 @@ another session's in-flight temps included.
   reconcile unbounded; busy target dropped; rebuild unbounded; deferral or
   per-database finding hidden; deferred counted as applied; closing
   reconcile given a fresh budget.
+
+## Addendum 2026-10-21 — operator doors bounded; R4 narrows
+
+- **Finding (closure review cross-diffusion, S3):** the phantom-lang sweep
+  (`sweepPhantomLangs`, exclusive) and the public-tier ghost unpublish
+  (`unpublishGhosts`, shared) took each target's fence in `'wait'` mode: a
+  runner unit stuck on its target statement (R4) hung the operator's request
+  with it.
+- **Now:** every operator door — a door a person waits on — shares ONE
+  bound, `OPERATOR_FENCE_BOUND_MS` (120 s, `core/diffusion_bridge/target_lock.ts`;
+  `MEDIA_INDEX_FENCE_BOUND_MS` is now this constant), ONE budget per call
+  across every target it visits (`remainingFenceBudget`), overridable per
+  call with `boundMs`. A target still held when the budget is spent is
+  REPORTED, nothing is written to it:
+  - the sweep: `"<db>: publication target busy (sql:<db> held by a
+    publication writer past the sweep's wait) — nothing swept here; re-run
+    the sweep"` in `errors`;
+  - the ghost apply: `"<lockKey>: publication target busy (held by a
+    publication writer past the apply's wait) — N ghost(s) left; re-run the
+    reconcile"` in `failed`, those ghosts left for the next apply.
+- R4 narrows: a hung unit no longer pins the sweep or the ghost apply past
+  their budget. The unit itself is still unbounded (owner call unchanged).
+- Gate: `test/unit/diffusion_operator_fence_budget_native.test.ts`.
+  Mutation-verified: restoring `'wait'` on either door, a fresh budget per
+  database, or dropping either busy report — each red.
+
+## Addendum 2026-10-21 (b) — a target statement's lock WAIT is bounded; R4 narrows
+
+- **Now:** every statement a door runs on a `sql:` target inside its unit
+  waits for another session's lock (metadata or row) at most
+  `SQL_TARGET_LOCK_WAIT_S` (30 s), then fails with errno 1205 and the unit
+  rolls back, releasing the target (`boundSqlTargetStatement`,
+  `core/diffusion_bridge/target_lock.ts`). Shapes per door, and the gate:
+  `WC-2026-10-21-target-statement-lock-wait`.
+- R4 narrows: the MariaDB lock-wait half is closed. Still an owner call: a
+  statement that WORKS for long, and a write on a half-open TCP connection
+  (no socket timeout on the target pool) — the wall-clock / socket bound.
+
+## Addendum 2026-10-22 — no hold-and-wait, enforced at runtime (owner decision 6)
+
+- **Finding:** all-or-none covered the keys of ONE call only. A transaction
+  that already held a target lock (a door nested in another unit, or a second
+  door inside the same ambient transaction, which keeps the first key until it
+  ends) could still ask for another target and wait for it holding the first —
+  a cycle with B's holder waiting on A sits for each side's whole mode
+  (`'wait'`: forever).
+- **Now:** the keys a try takes are recorded on its transaction
+  (`getTransactionMemo`, dying with it). A `withTargetLock(s)` call whose
+  transaction holds target locks may only RE-ENTER them: the same keys, in a
+  covering mode (exclusive covers both; shared covers shared). Another target,
+  or an upgrade shared → exclusive, throws `internal.invariant`
+  (coordinates `operation: 'target_lock.hold_and_wait'`, `held`, `requested`)
+  BEFORE the first try — nothing taken, nothing waited for, any mode. A door
+  that needs several targets names them all in one `withTargetLocks` call. A
+  door detached from the transaction (`runDetachedFromTransaction`, the
+  media-copy worker lane) is another session and holds nothing.
+- Callers audited 2026-10-22: the only nesting is the ghost unpublish's SHARED
+  `sql:<db>` re-entered SHARED by the delete executor (same key — allowed).
+  A record delete composed inside an ambient transaction whose record has two
+  or more publication targets now leaves the later targets PENDING (the
+  refusal is caught by `deleteDiffusionRecord`, the dd1758 retry settles them
+  outside the transaction) instead of holding the first target for the rest of
+  the ambient transaction. No wire shape changes.
+- Gate: `test/unit/target_lock_hold_and_wait_native.test.ts`. Mutation-verified:
+  no refusal, no record on either path, upgrade allowed, a shared re-entry
+  weakening an exclusive holding, no memo — each red.
+
+## Addendum 2026-10-22 — R3's drain list gains the media_index apply
+
+- R3's patient drains are now: a run's start, a `media_index` apply that HELD the fence
+  (`src/diffusion/api/reconcile.ts` `runMediaIndexReconcile` — the periodic registry run,
+  boot + every 10 min, drains the pending-unpublish queue after its exclusive hold, and
+  takes no fence at all when an unfenced probe finds the store in sync),
+  `retry_pending_deletions`, the maintenance widget's retry. There is no boot drain of its
+  own. Shape and gates: `WC-2026-10-22-reconcile-deferred-rearm` (addendum of the same
+  day) — `unpublish_debt_native` LAW 5, `media_index_reconcile_fence_native` clean-store leg.

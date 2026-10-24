@@ -27,6 +27,22 @@ import { refusalOf } from '../helpers/refusal.ts';
 /** An ontology section with real rows in the suite DB: a sweep would resolve 216. */
 const POPULATED_SECTION = 'test0';
 
+/**
+ * This file's OWN governed scratch section (tld `zzqw`, owned here alone —
+ * scratch_tld_uniqueness_tripwire). Nothing ever writes to it: every case that
+ * names it asserts it EMPTY first, so "absent record / nothing written" is
+ * measured, never assumed from the ambient DB.
+ */
+const EMPTY_GOVERNED_SECTION = 'zzqw0';
+
+async function scratchSectionRecords(): Promise<number> {
+	const rows = (await sql.unsafe(
+		'SELECT count(*)::int AS c FROM matrix_ontology WHERE section_tipo = $1',
+		[EMPTY_GOVERNED_SECTION],
+	)) as { c: number }[];
+	return rows[0]?.c ?? 0;
+}
+
 const DEVELOPER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const PLAIN_USER: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper: false };
 
@@ -89,16 +105,30 @@ describe('setRecordsInDdOntology — no whole-section default', () => {
 		expect(response.total).not.toBe(populatedTotal);
 	});
 
-	test('wholeSection:true is still available to internal rebuild callers', async () => {
-		// The ontology-file import re-derives a whole TLD deliberately. A tipo with
-		// no matrix table stops it harmlessly while proving the guard lets it past.
+	test('there is no whole-section scope: a retired `wholeSection` flag is UNSCOPED, refused', async () => {
+		// The flag's last caller (the installer's upsert-only re-derive) is retired — a whole tld
+		// is ontology_state.rebuildOntology's. A caller still sending it (stale code, a JS
+		// object built by hand) reaches the no-scope refusal, never the unbounded scan: measured
+		// on the POPULATED section, where a sweep would have counted every record.
 		const response = await setRecordsInDdOntology({
-			sectionTipo: 'zzz999',
+			sectionTipo: POPULATED_SECTION,
 			wholeSection: true,
 			userId: -1,
+		} as never);
+		expect(response.ok).toBe(false);
+		expect(response.total).toBe(0);
+		expect(response.processed_count).toBe(0);
+		expect(response.errors.join(' ')).toMatch(/no scope/i);
+	});
+
+	test('a section no ontology tld governs is refused before any scope work (ONT-2)', async () => {
+		const response = await setRecordsInDdOntology({
+			sectionTipo: 'zzz999',
+			sectionIds: [1],
+			userId: -1,
 		});
-		expect(response.errors.join(' ')).toMatch(/matrix table/i);
-		expect(response.errors.join(' ')).not.toMatch(/no scope/i);
+		expect(response.ok).toBe(false);
+		expect(response.errors.join(' ')).toMatch(/not governed/i);
 	});
 });
 
@@ -145,14 +175,30 @@ describe('the handler takes its scope from the request', () => {
 	});
 
 	test('EDIT mode (an explicit section_id) still passes the scope guard', async () => {
-		// A tipo with no matrix table stops the run harmlessly AFTER the scope
-		// check, proving the guard does not block the single-record path.
+		// A governed section whose record is absent stops the run harmlessly AFTER the
+		// scope check, proving the guard does not block the single-record path.
+		expect(await scratchSectionRecords()).toBe(0);
+		const refusal = await refusalOf(
+			toolOntologySetRecords(
+				ctx(DEVELOPER, { section_tipo: EMPTY_GOVERNED_SECTION, section_id: 1 }),
+			),
+		);
+		expect(refusal.code).toBe('tool.action_failed');
+		// The write's per-check detail joins the LOG-only message. POSITIVE proof the run got
+		// PAST the scope guard: the per-record step (the absent record projects nothing) ran …
+		expect(refusal.message).toContain(
+			`Failed to process dd_ontology record for section_tipo: ${EMPTY_GOVERNED_SECTION}, section_id: 1`,
+		);
+		// … and neither the guard's refusal nor a request-sqo path is what stopped it.
+		expect(refusal.message).not.toMatch(/no scope/i);
+		expect(refusal.message).not.toMatch(/sqo/i);
+	});
+
+	test('a section that is not an ontology node section is refused as invalid options (ONT-2)', async () => {
 		const refusal = await refusalOf(
 			toolOntologySetRecords(ctx(DEVELOPER, { section_tipo: 'zzz999', section_id: 1 })),
 		);
-		expect(refusal.code).toBe('tool.action_failed');
-		// The write's per-check detail joins the LOG-only message.
-		expect(refusal.message).toMatch(/matrix table/i);
-		expect(refusal.message).not.toMatch(/sqo/i);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(String(refusal.publicMessage)).toContain('is not an ontology node section');
 	});
 });

@@ -70,13 +70,17 @@ it, its button opens in a **modal** (not a separate window).
      record or a **new** one will be created;
    - when there is an auction house name, a **Company** picker — search for the real Entity record
      it should link to, or create a new one. It runs an automatic search as soon as the list
-     appears, and preselects an exact name match when it finds one.
+     appears, and preselects an exact name match when it finds one. Only your latest search
+     counts: an older one that answers late never replaces your choice. A search that fails is
+     shown as an error, not as "no candidates".
    - a checklist of every lot found, checked by default, each with its number, weight, diameter and
      a description snippet.
 5. **Curate the list.** Use *Select all* / *Deselect all*, an include/exclude keyword filter against
    the lot's description and title, or an include/exclude **lot-number range** (the lot's own
    catalog number, not its position in the list).
-6. **Click Confirm import.** The tool creates one record per kept lot in the background, with live
+6. **Click Confirm import.** When the auction names a house, Confirm waits until its Entity is
+   chosen (a match, or *Create new Entity*): it refuses rather than import the lots without the
+   auction's company link. The tool creates one record per kept lot in the background, with live
    progress, and reports one result line per lot: the fields written, whether the Auction was linked
    (created or reused, or why it could not be), whether a Type was matched (and if a citation was
    found but nothing in the catalog matched it), and whether the image import succeeded.
@@ -119,6 +123,18 @@ it, its button opens in a **modal** (not a separate window).
 !!! warning "A single batch is capped at 3000 lots"
     Preview shows at most the first 3000 lots found at one URL (reporting how many more were left
     out); Confirm import refuses outright, rather than silently trimming, a batch larger than that.
+
+!!! note "If the panel loses a job's progress"
+    When the connection that reports a preview's or an import's progress drops before the job
+    ends, the panel says it lost the job's status and that the job may still be running (with its
+    process number), and keeps its button disabled — a second click could start a second import
+    beside the first. Click **Check again** to reconnect to the same job and see how it ended.
+    A progress report that falls silent for 15 seconds is treated the same way.
+
+    When the server does not confirm whether a job started at all (the request timed out or the
+    connection dropped), the panel says the job may be running and keeps its button disabled.
+    Click **Check my jobs** to list your jobs of this kind: **Show this job** follows the one that
+    started, and a new attempt is offered only when none of them is running or queued.
 
 !!! tip "Stopping a long import is safe"
     Cancelling a running Confirm import stops it before starting the next lot — it never leaves a

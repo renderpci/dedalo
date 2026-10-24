@@ -24,7 +24,7 @@ export class ParamsCollector {
 	 * @param firstPlaceholder — the number of this collector's FIRST placeholder
 	 * (default `$1`). A fragment built for a statement that already binds N
 	 * values of its own starts at N+1 (search/sql_assembler.ts
-	 * buildAnyRowInScopeSql): the statement's params are then the other
+	 * buildRowsInScopeSql): the statement's params are then the other
 	 * fragment's followed by `toArray()`, and no value is deduplicated ACROSS
 	 * the two — a shared `$N` would have to carry one type in both, and the two
 	 * fragments cast independently.

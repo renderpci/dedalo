@@ -24,9 +24,18 @@
  * children with properties.inverse_relations === true; matrix_test joins in
  * dev, matching this install's PHP).
  *
- * COUNT (countInverseReferences): the relation_list paginator total —
- * COUNT of DISTINCT owners on the index, optionally grouped by section_tipo
- * (the only grouping any caller uses; identifier-regex-validated, PHP SEC rule).
+ * COUNT (countInverseReferences): the relation_list paginator total — the
+ * owners of the find engine's own question counted in SQL, optionally grouped
+ * by section_tipo (the only grouping any caller uses; identifier-regex-validated,
+ * PHP SEC rule).
+ *
+ * ONE SCOPED QUESTION (D1, 2026-10-21): this sink is principal-free, but its
+ * user-facing askers — the page (findInverseReferences), the count and the
+ * past-the-page probe (anyInverseReferencePast) — take the caller's `scope`
+ * (security/record_scope.ts rowScopeFor) and apply it IN SQL to the same owner
+ * question (inverseReferencesQuery) before counting / windowing / probing. So
+ * the count equals the paged walk equals the probe for every principal, and no
+ * asker enumerates owners into the application to filter them there.
  *
  * BREAKDOWN (findInverseReferenceLocators): cross-join with
  * jsonb_path_query(relation, '$.*[*]') so each individual locator entry is
@@ -204,15 +213,25 @@ function locatorIndexClause(
  * resolver) and the 'table' ordering is reproduced IN SQL via a CASE over the
  * (small) set of owning tipos so LIMIT/OFFSET stay correct. Measured vs the
  * retired flat GIN: st_si 14→0.3ms, fct_st_si 6→0.2ms, ty_st 1014→54ms.
+ *
+ * SCOPED (D1, 2026-10-21): with `options.scope` the owner set is narrowed IN
+ * SQL before it is ordered and windowed — the page is a window of the SCOPED
+ * sequence, the same set countInverseReferences counts and
+ * anyInverseReferencePast probes. Without it (system walks) the SQL is the
+ * unscoped question, unchanged.
  */
 async function findInverseReferencesViaIndex(
 	locators: RelatedLocatorFilter[],
 	options: NonNullable<Parameters<typeof findInverseReferences>[1]>,
 ): Promise<InverseReferenceHit[]> {
-	const { selectSql, orderSql, params, tableByTipo } = await inverseReferencesQuery(
-		locators,
-		options,
-	);
+	const question = await inverseReferencesQuery(locators, options);
+	const scoped = await scopedQuestion(question, options.scope);
+	const params = [...scoped.params];
+	const push = (value: string): string => {
+		params.push(value);
+		return `$${params.length}`;
+	};
+	const { orderSql, tableByTipo } = await inverseReferencesOrder(options.order, question, push);
 
 	// options.tables narrowing (children engine): table = f(section_tipo),
 	// which the SQL cannot see, so it is applied AFTER the fetch. With a
@@ -223,10 +242,16 @@ async function findInverseReferencesViaIndex(
 	const window = pageWindow(options.limit, options.offset, 'findInverseReferences');
 	const windowInJs = options.tables !== undefined && window.limit !== null;
 
+	// The scoped set is re-aliased `r`, so the ORDER BY (written over the index
+	// alias) reads the same two columns on either shape.
+	const selectSql =
+		options.scope === undefined
+			? question.selectSql
+			: `SELECT r.section_tipo, r.section_id FROM (${scoped.sql}) AS r`;
 	const rows = (await sql.unsafe(
 		`${selectSql}
 		 ORDER BY ${orderSql}${windowInJs ? '' : windowSql(window)}`,
-		params,
+		params as (string | number | null)[],
 	)) as { section_tipo: string; section_id: number }[];
 
 	const hits = await hitsWithTables(rows, tableByTipo);
@@ -262,25 +287,48 @@ async function hitsWithTables(
 }
 
 /**
- * The find engine's QUESTION, unwindowed: the grouped SELECT over
- * matrix_relation_index (rows `section_tipo, section_id`), its ORDER BY, and
- * the params both are bound to. ONE derivation, shared by the windowed read
- * (findInverseReferencesViaIndex) and the tail a scoped probe asks about
- * (findInverseReferencesPast), so the probe can never ask another question
- * than the page it judges.
+ * A bound row-set question (`section_tipo, section_id` rows on its own
+ * `$1..$N`) — what a {@link RowScope} narrows. Structurally the record-scope
+ * module's `BoundRows`; declared here so this principal-free sink never
+ * imports the security layer.
+ */
+export interface BoundRowSet {
+	sql: string;
+	params: readonly unknown[];
+}
+
+/**
+ * The caller's scope over the owner set — `security/record_scope.ts`
+ * `rowScopeFor` bound to the caller at every user-facing door, absent on a
+ * system walk.
+ * It returns the SCOPED rows as SQL (same columns), never a row list: the
+ * count, the page and the probe of one related question then ask the database
+ * about the same scoped set (D1, 2026-10-21).
+ */
+export type RowScope = (rows: BoundRowSet) => Promise<BoundRowSet>;
+
+/** The owner set of `question`, through `scope` when one is given. */
+async function scopedQuestion(
+	question: { selectSql: string; params: readonly string[] },
+	scope: RowScope | undefined,
+): Promise<BoundRowSet> {
+	const rows: BoundRowSet = { sql: question.selectSql, params: [...question.params] };
+	return scope === undefined ? rows : scope(rows);
+}
+
+/**
+ * The find engine's QUESTION, unordered and unwindowed: the grouped SELECT
+ * over matrix_relation_index (rows `section_tipo, section_id` — one per
+ * owner), its WHERE and the params both are bound to. ONE derivation, shared
+ * by the page (findInverseReferencesViaIndex), the count
+ * (countInverseReferences) and the past-the-page probe
+ * (anyInverseReferencePast), so no asker can ask another question than the
+ * others — and each scopes it through the same {@link RowScope}.
  */
 async function inverseReferencesQuery(
 	locators: RelatedLocatorFilter[],
-	options: Pick<
-		NonNullable<Parameters<typeof findInverseReferences>[1]>,
-		'sectionTipos' | 'order' | 'op'
-	>,
-): Promise<{
-	selectSql: string;
-	orderSql: string;
-	params: string[];
-	tableByTipo: Map<string, string>;
-}> {
+	options: Pick<NonNullable<Parameters<typeof findInverseReferences>[1]>, 'sectionTipos' | 'op'>,
+): Promise<{ selectSql: string; params: string[]; where: string[] }> {
 	const params: string[] = [];
 	const push = (value: string): string => {
 		params.push(value);
@@ -294,13 +342,27 @@ async function inverseReferencesQuery(
 		options.op === 'AND' && clauses.length > 1
 			? ` HAVING ${clauses.map((clause) => `bool_or(${clause})`).join(' AND ')}`
 			: '';
+	return {
+		selectSql: `SELECT r.section_tipo, r.section_id FROM matrix_relation_index r
+		 WHERE ${where.join(' AND ')}
+		 GROUP BY r.section_tipo, r.section_id${having}`,
+		params,
+		where,
+	};
+}
 
-	// 'table' ordering: table = f(section_tipo); materialize the mapping for
-	// the owning tipos actually present so the ORDER BY runs in SQL and
-	// LIMIT/OFFSET stay exact.
-	let orderSql = 'r.section_id ASC';
-	let tableByTipo = new Map<string, string>();
-	if (options.order === 'section_tipo_section_id') {
+/**
+ * The page's ORDER BY over alias `r` (`section_tipo`, `section_id`), its CASE
+ * values bound through `push` (the statement's own params). 'table' ordering:
+ * table = f(section_tipo); the mapping is materialized for the owning tipos
+ * actually present so the ORDER BY runs in SQL and LIMIT/OFFSET stay exact.
+ */
+async function inverseReferencesOrder(
+	order: NonNullable<Parameters<typeof findInverseReferences>[1]>['order'],
+	question: { where: readonly string[]; params: readonly string[] },
+	push: (value: string) => string,
+): Promise<{ orderSql: string; tableByTipo: Map<string, string> }> {
+	if (order === 'section_tipo_section_id') {
 		// PHP related-search DEFAULT order (v6 core/search/class.search_related.php
 		// :189 — `ORDER BY section_tipo, section_id ASC` when the SQO sets none):
 		// pure SQL over the index columns. Deliberately NOT routed through the
@@ -308,28 +370,18 @@ async function inverseReferencesQuery(
 		// over matrix_relation_index (9.7M rows) to materialize the tipo→table
 		// mapping, a cost the observer WRITE path (which runs this per save)
 		// must not pay for an ordering the index already expresses.
-		orderSql = 'r.section_tipo ASC, r.section_id ASC';
-	} else if (options.order !== 'section_id') {
-		const tableOrder = await tableOrderSql(where, params, push);
-		tableByTipo = tableOrder.tableByTipo;
-		orderSql = tableOrder.orderSql;
+		return { orderSql: 'r.section_tipo ASC, r.section_id ASC', tableByTipo: new Map() };
 	}
-
-	return {
-		selectSql: `SELECT r.section_tipo, r.section_id FROM matrix_relation_index r
-		 WHERE ${where.join(' AND ')}
-		 GROUP BY r.section_tipo, r.section_id${having}`,
-		orderSql,
-		params,
-		tableByTipo,
-	};
+	if (order === 'section_id') return { orderSql: 'r.section_id ASC', tableByTipo: new Map() };
+	return tableOrderSql(question.where, question.params, push);
 }
 
 /**
  * The 'table' ordering: table = f(section_tipo), so the mapping is
  * materialized for the owning tipos actually present (one DISTINCT over the
- * index, bound to the WHERE built so far) and the ORDER BY runs in SQL as a
- * CASE — LIMIT/OFFSET stay exact. No owner matched → the plain id order.
+ * index, bound to the question's own WHERE and params) and the ORDER BY runs
+ * in SQL as a CASE — LIMIT/OFFSET stay exact. No owner matched → the plain id
+ * order.
  */
 async function tableOrderSql(
 	where: readonly string[],
@@ -396,6 +448,13 @@ export async function findInverseReferences(
 		tables?: string[];
 		/** Locator-clause join (PHP filter_by_locators_op; default OR). */
 		op?: 'OR' | 'AND';
+		/**
+		 * The caller's scope (D1): a user-facing door passes
+		 * its principal's record-scope (security/record_scope.ts rowScopeFor)
+		 * and the window is cut from the SCOPED owner
+		 * sequence; a system walk passes none and sees every owner.
+		 */
+		scope?: RowScope;
 	} = {},
 ): Promise<InverseReferenceHit[]> {
 	if (locators.length === 0) {
@@ -433,24 +492,24 @@ export interface InverseScanSql {
 }
 
 /**
- * findInverseReferences' rows PAST `offset` — the same question, owning-section
- * axis and order — as a bound SELECT `(section_tipo, section_id)`, for a door
- * that asks a SCOPED question of the whole tail in ONE statement
- * (security/record_scope.ts anyRowInScope; READ-4's "is anything past this
- * page yours") instead of reading it window by window.
+ * Is there any owner PAST `offset` in the SCOPED owner set of this question —
+ * i.e. does the scoped set hold more than `offset` owners? The search.page_clamped
+ * probe of get_relation_list / related_search (READ-4): "is there anything for
+ * you past this page". ONE statement over the same scoped set the page windows
+ * and the count counts (D1) — never a read of the tail. An order is not needed:
+ * the answer is a cardinality, and the page it judges is a window of that same
+ * set.
  *
- * UNSCOPED, like the scan it renders: a user-facing caller must scope it, and
- * it is a `findInverseReference*` name so the AUTHZ-05 door registry
- * (security_audit_2026_07_23_tripwire) classifies every caller.
+ * `scope` is REQUIRED: the only askers are user-facing doors (a principal-free
+ * walk has no notice to decide). It is a `*InverseReference*` name so the
+ * AUTHZ-05 door registry (security_audit_2026_07_23_tripwire) classifies every
+ * caller.
  */
-export async function findInverseReferencesPast(
+export async function anyInverseReferencePast(
 	locators: RelatedLocatorFilter[],
-	options: Pick<
-		NonNullable<Parameters<typeof findInverseReferences>[1]>,
-		'sectionTipos' | 'order' | 'op'
-	>,
+	options: { sectionTipos?: string[] | 'all'; op?: 'OR' | 'AND'; scope: RowScope },
 	offset: number,
-): Promise<InverseScanSql> {
+): Promise<boolean> {
 	if (locators.length === 0) {
 		throw new DedaloError('search.invalid_sqo', {
 			message: 'search_related: filter_by_locators is required',
@@ -458,10 +517,17 @@ export async function findInverseReferencesPast(
 		});
 	}
 	await requireRelationIndex(await getRelationTables());
-	const window = pageWindow(false, offset, 'findInverseReferencesPast');
-	const { selectSql, orderSql, params } = await inverseReferencesQuery(locators, options);
+	const window = pageWindow(false, offset, 'anyInverseReferencePast');
+	const scoped = await scopedQuestion(
+		await inverseReferencesQuery(locators, options),
+		options.scope,
+	);
 	const offsetSql = window.offset > 0 ? ` OFFSET ${window.offset}` : '';
-	return { sql: `${selectSql}\n\t\t ORDER BY ${orderSql}${offsetSql}`, params };
+	const found = (await sql.unsafe(
+		`SELECT EXISTS (SELECT 1 FROM (${scoped.sql}) AS r${offsetSql}) AS found`,
+		scoped.params as (string | number | null)[],
+	)) as { found: boolean }[];
+	return found[0]?.found === true;
 }
 
 /** One breakdown hit: the exact locator entry that matched, plus its owner. */
@@ -1062,15 +1128,20 @@ export interface RelatedCountResult {
 }
 
 /**
- * COUNT the inverse references (PHP trait.count with mode 'related'):
- * COUNT of DISTINCT owners over matrix_relation_index; with
- * groupBy ['section_tipo'], per-group rows are collected as
- * {key: [group values], value} alongside the total. Invalid group_by entries
- * are dropped (PHP identifier regex); other valid shapes throw (no caller).
+ * COUNT the inverse references (PHP trait.count with mode 'related'): the
+ * owners of the find engine's own question ({@link inverseReferencesQuery} —
+ * one row per owner), counted IN SQL, optionally grouped by section_tipo as
+ * {key: [section_tipo], value} alongside the total (ordered by section_tipo).
+ * With `scope` (D1 — every user-facing door) the owners are the SCOPED set:
+ * the same set the page windows and the probe asks about, so a paginator's
+ * walk of ceil(total / limit) pages is exactly `total` records. Bounded: the
+ * statement returns one row (or one per section), whatever the owner count.
+ * Invalid group_by entries are dropped (PHP identifier regex); other valid
+ * shapes throw (no caller).
  */
 export async function countInverseReferences(
 	locators: RelatedLocatorFilter[],
-	options: { sectionTipos?: string[] | 'all'; groupBy?: string[] } = {},
+	options: { sectionTipos?: string[] | 'all'; groupBy?: string[]; scope?: RowScope } = {},
 ): Promise<RelatedCountResult> {
 	if (locators.length === 0) {
 		throw new DedaloError('search.invalid_sqo', {
@@ -1095,50 +1166,39 @@ export async function countInverseReferences(
 	// columns; the index carries owner identity only — a novel grouping shape
 	// is a loud error, not a silent degradation (add it to the index query if
 	// a real caller ever appears).
-	const groupByRaw = groupByFiltered;
-	if (groupByRaw.length > 0 && !(groupByRaw.length === 1 && groupByRaw[0] === 'section_tipo')) {
+	if (
+		groupByFiltered.length > 0 &&
+		!(groupByFiltered.length === 1 && groupByFiltered[0] === 'section_tipo')
+	) {
 		throw new DedaloError('engine.uncovered_scope', {
-			message: `search_related: group_by [${groupByRaw.join(', ')}] is not supported by the relation index (only 'section_tipo'; flat-function scan removed 2026-07-20)`,
+			message: `search_related: group_by [${groupByFiltered.join(', ')}] is not supported by the relation index (only 'section_tipo'; flat-function scan removed 2026-07-20)`,
 		});
 	}
 	await requireRelationIndex(tables);
-	{
-		const params: string[] = [];
-		const push = (value: string): string => {
-			params.push(value);
-			return `$${params.length}`;
-		};
-		const clauses = locators.map((locator) => locatorIndexClause(locator, push));
-		const where: string[] = [`(${clauses.join(' OR ')})`];
-		if (options.sectionTipos !== undefined && options.sectionTipos !== 'all') {
-			const validated = options.sectionTipos.map((tipo) =>
-				assertValidTipo(tipo, 'search_related.target_section'),
-			);
-			where.push(
-				`r.section_tipo IN (SELECT jsonb_array_elements_text(${push(JSON.stringify(validated))}::text::jsonb))`,
-			);
-		}
-		if (groupByRaw.length === 1) {
-			const rows = (await sql.unsafe(
-				`SELECT r.section_tipo, COUNT(DISTINCT r.section_id)::int AS full_count
-				 FROM matrix_relation_index r WHERE ${where.join(' AND ')} GROUP BY r.section_tipo`,
-				params,
-			)) as { section_tipo: string; full_count: number }[];
-			let total = 0;
-			const totalsGroup: { key: string[]; value: number }[] = [];
-			for (const row of rows) {
-				const value = Number(row.full_count);
-				total += value;
-				if (value > 0) totalsGroup.push({ key: [row.section_tipo], value });
-			}
-			return { total, totals_group: totalsGroup };
-		}
+	const owners = await scopedQuestion(
+		await inverseReferencesQuery(locators, { sectionTipos: options.sectionTipos }),
+		options.scope,
+	);
+	const params = owners.params as (string | number | null)[];
+	if (groupByFiltered.length === 1) {
 		const rows = (await sql.unsafe(
-			`SELECT COUNT(*)::int AS full_count FROM (
-				SELECT 1 FROM matrix_relation_index r WHERE ${where.join(' AND ')}
-				GROUP BY r.section_tipo, r.section_id) owners`,
+			`SELECT owners.section_tipo, COUNT(*)::int AS full_count
+			 FROM (${owners.sql}) AS owners
+			 GROUP BY owners.section_tipo ORDER BY owners.section_tipo`,
 			params,
-		)) as { full_count: number }[];
-		return { total: Number(rows[0]?.full_count ?? 0) };
+		)) as { section_tipo: string; full_count: number }[];
+		let total = 0;
+		const totalsGroup: { key: string[]; value: number }[] = [];
+		for (const row of rows) {
+			const value = Number(row.full_count);
+			total += value;
+			if (value > 0) totalsGroup.push({ key: [row.section_tipo], value });
+		}
+		return { total, totals_group: totalsGroup };
 	}
+	const rows = (await sql.unsafe(
+		`SELECT COUNT(*)::int AS full_count FROM (${owners.sql}) AS owners`,
+		params,
+	)) as { full_count: number }[];
+	return { total: Number(rows[0]?.full_count ?? 0) };
 }

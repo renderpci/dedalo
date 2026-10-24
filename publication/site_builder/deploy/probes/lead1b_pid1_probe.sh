@@ -209,14 +209,19 @@ APID=$(systemctl show -p MainPID --value "$AINST")
 echo "INFO instance name form: $AINST (MainPID $APID)"
 # The daemon's instance grammar (agent_identity.ts INSTANCE_SUFFIX_SOURCE): <=257 nr-pid-uid, >=258 nr-cookie-pid_pidfdid-uid | nr-cookie-pid-uid.
 echo "$AINST" | grep -Eq -- "-s1-turn@[0-9]+-[0-9]+-[0-9]+(_[0-9]+-[0-9]+|-[0-9]+)?\.service$" && ok "P2 instance name '$AINST' matches the daemon's grammar on $VN" || bad "P2 instance name '$AINST' is outside the daemon's grammar on $VN"
-OUT=$(conn s2-turn "echo B uid=\$(id -u); ls -d /proc/$APID 2>&1; cat /proc/$APID/environ 2>&1 | head -c 80; ls /proc/$APID/root/run/dedalo-egress 2>&1; ls /run/$P 2>&1; ls /var/lib/$P/s1 2>&1")
+# ONE VERDICT PER PATH, by name: a read that SUCCEEDS is a leak (VISIBLE), a refusal of any kind
+# (absent, denied) is not. Before, the leg counted "No such file" lines and passed at 4 of 5 —
+# one leaking path rode through.
+OUT=$(conn s2-turn "echo B uid=\$(id -u); ls -d /proc/$APID >/dev/null 2>&1 && echo 'B VISIBLE /proc/$APID' || echo 'B HIDDEN /proc/$APID'; cat /proc/$APID/environ >/dev/null 2>&1 && echo 'B VISIBLE /proc/$APID/environ' || echo 'B HIDDEN /proc/$APID/environ'; ls /proc/$APID/root/run/dedalo-egress >/dev/null 2>&1 && echo 'B VISIBLE /proc/$APID/root/run/dedalo-egress' || echo 'B HIDDEN /proc/$APID/root/run/dedalo-egress'; ls /run/$P >/dev/null 2>&1 && echo 'B VISIBLE /run/$P' || echo 'B HIDDEN /run/$P'; ls /var/lib/$P/s1 >/dev/null 2>&1 && echo 'B VISIBLE /var/lib/$P/s1' || echo 'B HIDDEN /var/lib/$P/s1'")
 echo "$OUT" | sed 's/^/  B> /'
 AUID=$(grep -o 'A uid=[0-9]*' /tmp/$P.A | cut -d= -f2); BUID=$(echo "$OUT" | grep -o 'B uid=[0-9]*' | cut -d= -f2)
 [ -n "$AUID" ] && [ -n "$BUID" ] && [ "$AUID" != "$BUID" ] && ok "P2 distinct uids ($AUID vs $BUID)" || bad "P2 uids not distinct/absent ($AUID/$BUID)"
 grep -q 'A own egress: egress-ok' /tmp/$P.A && ok "P2 A reaches its own egress socket (connect over a READ-ONLY bind)" || bad "P2 A cannot reach its own egress socket"
 grep -q 'A no-plant' /tmp/$P.A && [ ! -e /run/$P/egress/s1/planted ] && ok "P2 A cannot plant in its own egress directory (read-only bind)" || bad "P2 A planted in its egress directory"
 runuser -u $P-svc -- mv /run/$P/egress/s1 /run/$P/egress/s1x 2>/dev/null && bad "P2 the service user renamed a root-provisioned egress directory" || ok "P2 the service user cannot rename or re-point an egress directory (root's parent)"
-[ "$(echo "$OUT" | grep -c 'No such file or directory')" -ge 4 ] && ok "P2 B cannot see A's /proc entries, /run/$P or s1 state" || bad "P2 B saw something of A"
+[ "$(echo "$OUT" | grep -c 'B HIDDEN ')" -eq 5 ] && ! echo "$OUT" | grep -q 'B VISIBLE ' \
+  && ok "P2 B cannot see A's /proc entries, /run/$P or s1 state (5 of 5 hidden)" \
+  || bad "P2 B saw something of A: $(echo "$OUT" | grep 'B VISIBLE ' | tr '\n' ' ')(or a verdict is missing)"
 setpriv --reuid=$P-a2 --regid=$P-inst --init-groups python3 -c "import socket;s=socket.socket(socket.AF_UNIX);s.connect('/run/$P/egress/s1/p.sock')" 2>/dev/null \
   && bad "P2 identity 2 connected to site 1's egress socket (host DAC)" || ok "P2 identity 2 refused by DAC on site 1's egress socket"
 

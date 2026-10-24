@@ -103,13 +103,18 @@ export const SEED_SCRATCH_PREFIXES: readonly string[] = Object.freeze([
 /** The throwaway root password the verify install sets (and checks) — never shipped. */
 export const SEED_VERIFY_ROOT_PASSWORD = 'Verify-Seed-Kestrel-Harbor-47';
 
-/** Root's audit locators, shared by every canonical record. */
+/**
+ * Root's audit locators, shared by every canonical record. Every record address
+ * below is an INT (WC-2026-08-10-section-id-int-canonical: writers mint int; the
+ * seed is a writer — WC-2026-10-21-seed-and-thesaurus-int-clean); the PHP-era
+ * string form is never re-minted here.
+ */
 const BY_ROOT = {
 	dd197: [
-		{ id: 1, type: 'dd151', section_id: '-1', section_tipo: 'dd128', from_component_tipo: 'dd197' },
+		{ id: 1, type: 'dd151', section_id: -1, section_tipo: 'dd128', from_component_tipo: 'dd197' },
 	],
 	dd200: [
-		{ id: 1, type: 'dd151', section_id: '-1', section_tipo: 'dd128', from_component_tipo: 'dd200' },
+		{ id: 1, type: 'dd151', section_id: -1, section_tipo: 'dd128', from_component_tipo: 'dd200' },
 	],
 };
 
@@ -128,11 +133,13 @@ export interface SeedRecord {
 }
 
 /**
- * The canonical records every install is born with — byte-for-byte the rows
- * the vendored seed has always shipped (PHP installer_data_seeder): root
- * (dd128/-1, NO password: installer root_pw.ts sets it), the General project
- * (dd153/1) and the Admin/User profiles (dd234/1,2). No test3 row: the
- * playground is the SUITE's (scripts/test_db_setup.ts), never an install's.
+ * The canonical records every install is born with — the rows the vendored seed
+ * has always shipped (PHP installer_data_seeder), their record addresses in the
+ * canonical INT form (the PHP-era seed shipped them as strings — the repealed
+ * shape): root (dd128/-1, NO password: installer root_pw.ts sets it), the
+ * General project (dd153/1) and the Admin/User profiles (dd234/1,2). No test3
+ * row: the playground is the SUITE's (scripts/test_db_setup.ts), never an
+ * install's. Gate: seed_section_id_int_clean_native (a).
  */
 export const SEED_RECORDS: readonly SeedRecord[] = Object.freeze([
 	{
@@ -152,7 +159,7 @@ export const SEED_RECORDS: readonly SeedRecord[] = Object.freeze([
 				{
 					id: 1,
 					type: 'dd151',
-					section_id: '1',
+					section_id: 1,
 					section_tipo: 'dd64',
 					from_component_tipo: 'dd131',
 				},
@@ -162,7 +169,7 @@ export const SEED_RECORDS: readonly SeedRecord[] = Object.freeze([
 				{
 					id: 1,
 					type: 'dd151',
-					section_id: '2',
+					section_id: 2,
 					section_tipo: 'dd64',
 					from_component_tipo: 'dd244',
 				},
@@ -171,7 +178,7 @@ export const SEED_RECORDS: readonly SeedRecord[] = Object.freeze([
 				{
 					id: 1,
 					type: 'dd151',
-					section_id: '2',
+					section_id: 2,
 					section_tipo: 'dd234',
 					from_component_tipo: 'dd1725',
 				},

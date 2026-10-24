@@ -63,6 +63,8 @@ import {
 } from '../../../core/diffusion_bridge/published_files.ts';
 import {
 	fileTargetLockKey,
+	OPERATOR_FENCE_BOUND_MS,
+	remainingFenceBudget,
 	sqlTargetLockKey,
 	withTargetLock,
 } from '../../../core/diffusion_bridge/target_lock.ts';
@@ -472,17 +474,23 @@ async function elementServiceName(elementTipo: string): Promise<string | null> {
  * never repaired here (publishing is a job). Returns how many ghosts left the
  * tier; the ones that did not are reported in `failed`.
  *
- * Each publication TARGET is unpublished under its fence
- * (jobs/target_fence.ts, 'wait', SHARED — the lock a publication run's batch
- * holds exclusively, so a ghost never leaves while a runner writes the target —
- * `sql:<database>` for a MariaDB target and its markers, `files:<type>/<service>`
- * for a per-record file directory), targets in sorted order. A ghost is never
- * removed while an exclusive writer is inside the same target.
+ * Each publication TARGET is unpublished under its fence (SHARED — the lock a
+ * publication run's batch holds exclusively, so a ghost never leaves while a
+ * runner writes the target — `sql:<database>` for a MariaDB target and its
+ * markers, `files:<type>/<service>` for a per-record file directory), targets
+ * in sorted order. A ghost is never removed while an exclusive writer is inside
+ * the same target. The apply waits for writers on ONE budget (`boundMs`,
+ * default OPERATOR_FENCE_BOUND_MS) across every target: a runner's unit can
+ * hold its target for as long as its target statement runs (R4), so a target
+ * still held when the budget is spent is reported in `failed`, its ghosts left
+ * for the next apply — never waited on.
  */
 export async function unpublishGhosts(
 	ghosts: readonly PublicTierGhost[],
+	options: { boundMs?: number } = {},
 ): Promise<{ removed: number; failed: string[] }> {
 	const outcome = { removed: 0, failed: [] as string[] };
+	const deadline = Date.now() + (options.boundMs ?? OPERATOR_FENCE_BOUND_MS);
 	const byTarget = new Map<string, PublicTierGhost[]>();
 	for (const ghost of ghosts) {
 		const lockKey = ghostLockKey(ghost);
@@ -491,10 +499,15 @@ export async function unpublishGhosts(
 	for (const lockKey of [...byTarget.keys()].sort()) {
 		const group = byTarget.get(lockKey) as PublicTierGhost[];
 		// SHARED (a delete-only door): excludes a writing runner, not a record delete.
-		await withTargetLock(lockKey, () => unpublishTargetGhosts(group, outcome), {
-			mode: 'wait',
+		const fenced = await withTargetLock(lockKey, () => unpublishTargetGhosts(group, outcome), {
+			mode: remainingFenceBudget(deadline),
 			shared: true,
 		});
+		if (!fenced.acquired) {
+			outcome.failed.push(
+				`${lockKey}: publication target busy (held by a publication writer past the apply's wait) — ${group.length} ghost(s) left; re-run the reconcile`,
+			);
+		}
 	}
 	return outcome;
 }

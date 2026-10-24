@@ -195,6 +195,34 @@ desk number is a floor, in either direction. So:
   and refuses the same way, before measuring; only the READ doors, `--check` and
   `--report`, stay open. `baselines:bank --with-db`'s unit row therefore fails on a desk
   by design. Gate: `suite_assertion_floor_tripwire`.
+- **The baseline names the image it was recorded in (2026-10-23, W2a/GATE-1).** The
+  full writer stamps `ci_image.fingerprint` = the image's own `/etc/dedalo-ci-image` (the
+  same value `ci/image.json` locks beside its digest; the digest itself is not observable
+  from inside a container, so the fingerprint is the stamp). `--check` and `--check --json`
+  compare it, BEFORE measuring, with the running image — off the image, with the image this
+  checkout defines — and REFUSE a foreign stamp (`FOREIGN CI IMAGE`, both fingerprints
+  named), a malformed one, and a missing one (`red_baseline.ts ciImageStampVerdict`).
+  Consequence: a changed `ci/Dockerfile` or `.bun-version` is a new platform, so the
+  baseline is re-recorded in the new image before the db tier is green again.
+  `--record-new` carries the stamp over only when it is THIS image's, and refuses
+  otherwise (a new floor joins floors of one image). **Transition:** the artifact recorded
+  before the stamp existed carries none, and no write path stamps old floors (that would
+  launder them), so `UNIT_TIER.unstampedTransition` honours exactly that file — pinned by
+  the sha256 of its bytes AND by the fingerprint of the image its floors were recorded in
+  (`93116f58…`, verified from the recording commits' history; a foreign image refuses the
+  transition exactly as it refuses a foreign stamp, so a `.bun-version`/`ci/Dockerfile` bump
+  during the transition re-records too), printed `UNSTAMPED (transition)` on every check — until the next
+  GREEN full record stamps it; that record's commit sets the transition to `null` (a
+  stamped file beside a live transition is refused; `ci:local` says so when it copies the
+  record). **ENDED 2026-10-23**: the first stamped full record (CI image `93116f58…`)
+  landed with the transition set to `null`. Any other unstamped file is refused. Gate: `suite_assertion_floor_tripwire`
+  (planted match / foreign / missing / edited / stale-transition / foreign-image transition
+  through the CLI seam, `runningCiImage`'s marker branch through its path seam, and
+  the LIVE artifact: stamped, or byte-identical to the transition). HONEST LIMITS: the
+  fingerprint names the image's DEFINITION, not one build — a rebuild of the same
+  definition (`ci-image.yml`'s weekly cache-off cron, then a re-pin) can move package
+  versions without moving the stamp, and such drift still surfaces only as floor drift; a
+  hand-typed stamp is as undetectable as any other hand edit of the floors.
 - **The door is `ci:local --docker --record-unit-baseline`** — the db tier alone, in the
   image, with `db_tier.sh`'s unit stage in RECORD MODE (`DEDALO_CI_UNIT_RECORD_OUT`,
   `DEDALO_CI_UNIT_RECORD_ALLOW`): the same suite build, MariaDB start, installs and

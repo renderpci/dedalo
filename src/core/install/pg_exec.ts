@@ -210,15 +210,24 @@ export interface PsqlRunResult {
 }
 
 /**
- * Run psql against `conn` with the given extra args (e.g. `['-c', 'SELECT 1']`).
- * `stdin`, when provided, is piped in (used by \copy … FROM STDIN and --file via
- * stdin). ON_ERROR_STOP is the caller's responsibility (pass it in `args`).
+ * Run psql against `conn` with the given extra args (e.g. `['-1', '-f', path]`).
+ * SQL TEXT never goes in `args` — it goes through runPsqlScript (stdin). `stdin`,
+ * when provided, is piped in (used by \copy … FROM STDIN and --file via stdin).
+ * ON_ERROR_STOP is the caller's responsibility (pass it in `args`).
+ *
+ * A STREAMED stdin (a ReadableStream — the hierarchy import, cross-ops:r2) is read
+ * by the child with backpressure, so a gigabyte script is never held in this
+ * process; `signal` then KILLS the child (SIGKILL) when it fires — the producer's
+ * failure must end the session BEFORE its input ends (psql reading an early EOF
+ * would run what it got).
  */
 export async function runPsql(
 	conn: DbConnDescriptor,
 	args: string[],
 	options: {
-		stdin?: Uint8Array | string;
+		stdin?: Uint8Array | string | ReadableStream<Uint8Array>;
+		/** Kills the child when it fires (see above). */
+		signal?: AbortSignal;
 		database?: string;
 		/**
 		 * The session's application_name (PGAPPNAME): the seed restore names itself
@@ -233,10 +242,11 @@ export async function runPsql(
 	// `--dbname=<db>` as ONE glued token: getopt takes everything after the
 	// first `=` as the value, so even a `--command=…`-shaped database can never
 	// be re-parsed as a psql option (CMD-01). Was a bare positional argv element.
+	const streamed = options.stdin instanceof ReadableStream ? options.stdin : null;
 	const child = Bun.spawn(
 		[resolvePgBinary('psql'), `--dbname=${database}`, ...connArgs(conn), ...args],
 		{
-			stdin: options.stdin !== undefined ? 'pipe' : 'ignore',
+			stdin: streamed ?? (options.stdin !== undefined ? 'pipe' : 'ignore'),
 			stdout: 'pipe',
 			stderr: 'pipe',
 			env: installSessionEnv(conn, options.appName),
@@ -245,10 +255,9 @@ export async function runPsql(
 	const tracked = psqlChildScope.getStore();
 	tracked?.add(child);
 	void child.exited.finally(() => tracked?.delete(child));
-	if (options.stdin !== undefined && child.stdin) {
-		child.stdin.write(options.stdin);
-		await child.stdin.end();
-	}
+	killOnAbort(child, options.signal);
+	if (streamed === null)
+		await writeWholeStdin(child, options.stdin as Uint8Array | string | undefined);
 	const [exitCode, stdout, stderr] = await Promise.all([
 		child.exited,
 		new Response(child.stdout).text(),
@@ -257,10 +266,70 @@ export async function runPsql(
 	return { exitCode, stdout: stdout.trim(), stderr: stderr.trim() };
 }
 
+/** SIGKILL `child` when `signal` fires (or already fired); the listener goes with the child. */
+function killOnAbort(child: Subprocess, signal: AbortSignal | undefined): void {
+	if (signal === undefined) return;
+	const kill = () => child.kill('SIGKILL');
+	if (signal.aborted) kill();
+	signal.addEventListener('abort', kill, { once: true });
+	void child.exited.finally(() => signal.removeEventListener('abort', kill));
+}
+
+/** A whole (non-streamed) stdin, written and closed. */
+async function writeWholeStdin(
+	child: Subprocess,
+	stdin: Uint8Array | string | undefined,
+): Promise<void> {
+	if (stdin === undefined || !child.stdin) return;
+	const sink = child.stdin as import('bun').FileSink;
+	sink.write(stdin);
+	await sink.end();
+}
+
+/**
+ * THE ONE DOOR FOR SQL TEXT TO PSQL: the statement(s) ride the child's STDIN
+ * (`-f -`), NEVER an argv element. Two reasons, both measured:
+ *  - Linux caps ONE argv string at MAX_ARG_STRLEN (128 KiB): a `-c <sql>` past it
+ *    fails posix_spawn with E2BIG (the int-clean census died this way in the CI
+ *    image while macOS, with no per-string cap, stayed green — 4ad77190d7);
+ *  - argv is world-readable in the process table for the child's whole life.
+ *
+ * Always `-X` (no ~/.psqlrc: its \set / \pset would reach stdout and the variable
+ * table) and `ON_ERROR_STOP=1` — without it a script's failing statement leaves the
+ * exit code 0, where `-c` answered 1; with it a failure exits non-zero (3) and
+ * nothing after it runs. `flags` adds the caller's output shape (`-tA`, `-q`, `-1`,
+ * `-v name=value`); a `-c`/`--command` there is the shape this door replaces
+ * (psql_argv_sql_tripwire censuses src/ for it).
+ *
+ * WHAT STDIN CHANGES vs `-c` (each caller is written for it): the text is LEXED by
+ * psql — quoted literals ('…', $tag$…$tag$, "…") reach the server verbatim, a
+ * backslash outside them starts a meta-command (`\copy` is one, to the end of its
+ * line), `:name` outside them is substituted only for a SET variable (with -X,
+ * psql's built-ins and the caller's `-v`), and each statement autocommits on its
+ * own unless the caller passes `-1` (a multi-statement `-c` string was one
+ * implicit transaction).
+ */
+export async function runPsqlScript(
+	conn: DbConnDescriptor,
+	sql: string,
+	options: {
+		flags?: readonly string[];
+		database?: string;
+		appName?: string;
+		signal?: AbortSignal;
+	} = {},
+): Promise<PsqlRunResult> {
+	const { flags = [], ...rest } = options;
+	return runPsql(conn, ['-X', '-v', 'ON_ERROR_STOP=1', ...flags, '-f', '-'], {
+		...rest,
+		stdin: sql,
+	});
+}
+
 /** `SELECT 1` liveness against a connection (optionally a different database). */
 export async function psqlSelect1(
 	conn: DbConnDescriptor,
 	database?: string,
 ): Promise<PsqlRunResult> {
-	return runPsql(conn, ['-tAc', 'SELECT 1', '-v', 'ON_ERROR_STOP=1'], { database });
+	return runPsqlScript(conn, 'SELECT 1', { flags: ['-tA'], database });
 }

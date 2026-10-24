@@ -65,6 +65,7 @@ import {
 	withMaintenanceTransaction,
 } from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/index.ts';
+import { COMMIT_ONLY_ACTIONS_DROPPED_LINE } from '../scripts.ts';
 import type { MoveWidgetId } from './definitions.ts';
 import { listDefinitionFiles, loadDefinitionFile } from './definitions.ts';
 import { TransformRecorder, type TransformReport } from './report.ts';
@@ -375,8 +376,9 @@ function reportFailedFile(
 	if (outcome === 'committed') {
 		// COMMIT is sent only once the work finished, so its deltas are the file's.
 		if (attempt.finished !== undefined) recorder.absorb(attempt.finished);
+		// ONE line: what the transaction did AND what its commit-only actions did not do.
 		recorder.error(
-			`${fileName}: ${why} — but PostgreSQL reports its transaction COMMITTED: this file WAS applied; do not re-run it`,
+			`${fileName}: ${why} — but PostgreSQL reports its transaction COMMITTED: this file WAS applied; do not re-run it; ${COMMIT_ONLY_ACTIONS_DROPPED_LINE}`,
 		);
 		return 'continue';
 	}

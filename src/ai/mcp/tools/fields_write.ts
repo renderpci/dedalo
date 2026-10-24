@@ -333,31 +333,8 @@ export async function findOrCreate(
 		});
 	}
 
-	const found = await searchRecords(principal, {
-		section_tipo: sectionTipo,
-		filter: {
-			and: input.match.map((rule) => ({
-				field: rule.field,
-				op: 'eq' as const,
-				value: rule.value,
-				lang: rule.lang,
-			})),
-		},
-		limit: 5,
-	});
-	const hits = found.data.hits;
-	if (hits.length === 1) {
-		const hit = hits[0] as { section_tipo: string; section_id: number };
-		return { section_tipo: hit.section_tipo, section_id: hit.section_id, created: false };
-	}
-	if (hits.length > 1) {
-		throw new DedaloError('mcp.ambiguous_match', {
-			publicMessage: `${hits.length} records match in '${sectionTipo}'.`,
-			extend: {
-				candidates: hits,
-			},
-		});
-	}
+	const existing = await findExactMatch(principal, sectionTipo, input.match);
+	if (existing !== null) return { ...existing, created: false };
 
 	// No hit: create + fill (match fields first — they define the identity).
 	//
@@ -381,9 +358,20 @@ export async function findOrCreate(
 			'mcp.find_or_create.field',
 		);
 	}
-	const { withTransaction } = await import('../../../core/db/postgres.ts');
+	const { acquireNodeLock, withTransaction } = await import('../../../core/db/postgres.ts');
 	const { createSectionRecord } = await import('../../../core/section/record/create_record.ts');
-	const sectionId = await withTransaction(async () => {
+	const outcome = await withTransaction(async () => {
+		// THE FIND IS RE-ASKED UNDER A LOCK (review-diff 2026-10-21). The search above
+		// ran outside any lock, so two concurrent calls with the same match both
+		// missed and both created. The miss path is serialized per SECTION
+		// (acquireNodeLock — a section-wide key, never a hash of the match values: a
+		// key finer than the search's own equality (f_unaccent) would let two
+		// equal values take different locks), then searched again: a record a
+		// concurrent call created meanwhile is returned (or named ambiguous), never
+		// duplicated.
+		await acquireNodeLock(sectionTipo, 'mcp_find_or_create');
+		const raced = await findExactMatch(principal, sectionTipo, input.match);
+		if (raced !== null) return { ...raced, created: false };
 		const createdId = await createSectionRecord(sectionTipo, principal.userId);
 		for (const rule of rules) {
 			await setField(principal, {
@@ -395,9 +383,44 @@ export async function findOrCreate(
 				mode: 'append',
 			});
 		}
-		return createdId;
+		return { section_tipo: sectionTipo, section_id: createdId, created: true };
 	});
-	return { section_tipo: sectionTipo, section_id: sectionId, created: true };
+	return outcome;
+}
+
+/**
+ * The ONE record whose `match` fields equal the given values (exact search,
+ * principal-scoped), null when none; several THROW `mcp.ambiguous_match` with the
+ * candidates (the model refines or picks one explicitly).
+ */
+async function findExactMatch(
+	principal: Principal,
+	sectionTipo: string,
+	match: { field: string; value: string; lang?: string }[],
+): Promise<{ section_tipo: string; section_id: number } | null> {
+	const found = await searchRecords(principal, {
+		section_tipo: sectionTipo,
+		filter: {
+			and: match.map((rule) => ({
+				field: rule.field,
+				op: 'eq' as const,
+				value: rule.value,
+				lang: rule.lang,
+			})),
+		},
+		limit: 5,
+	});
+	const hits = found.data.hits;
+	if (hits.length > 1) {
+		throw new DedaloError('mcp.ambiguous_match', {
+			publicMessage: `${hits.length} records match in '${sectionTipo}'.`,
+			extend: {
+				candidates: hits,
+			},
+		});
+	}
+	const hit = hits[0] as { section_tipo: string; section_id: number } | undefined;
+	return hit === undefined ? null : { section_tipo: hit.section_tipo, section_id: hit.section_id };
 }
 
 /** Duplicate a record including its component values (same engines gates). */

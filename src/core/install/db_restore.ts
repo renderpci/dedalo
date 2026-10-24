@@ -38,7 +38,7 @@
  * is therefore never adopted and never wiped.
  */
 
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -52,6 +52,7 @@ import {
 	type DbConnDescriptor,
 	installSessionEnv,
 	runPsql,
+	runPsqlScript,
 } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
@@ -100,7 +101,9 @@ export interface DbRestoreResult {
 
 /** Is the target DB empty (no matrix_users table)? */
 async function targetIsEmpty(conn: DbConnDescriptor): Promise<boolean> {
-	const probe = await runPsql(conn, ['-tAc', "SELECT to_regclass('public.matrix_users')"]);
+	const probe = await runPsqlScript(conn, "SELECT to_regclass('public.matrix_users')", {
+		flags: ['-tA'],
+	});
 	if (probe.exitCode !== 0) {
 		// Cannot even query → treat as "not safely empty"; the caller reports it.
 		return false;
@@ -172,25 +175,35 @@ export async function restoreSeed(
 	stampInstallId?: string,
 ): Promise<void> {
 	// Decompress the seed to a temp .sql and restore with `psql -f` — far more
-	// robust than streaming ~14 MB through stdin (backpressure/EPIPE). The temp
-	// file is always removed.
-	const tmpSql = join(tmpdir(), `dedalo_seed_${process.pid}_${Date.now()}.sql`);
+	// robust than streaming ~14 MB through stdin (backpressure/EPIPE).
+	//
+	// psql EXECUTES this file as the install's role, so it lives where nobody
+	// else can reach it (cross-ops:r0, 2026-10-21): a fresh mkdtemp directory
+	// (0700, unguessable name), the file created EXCLUSIVELY in it ('wx' — never
+	// following or truncating an entry that is already there). It used to be
+	// `<tmpdir>/dedalo_seed_<pid>_<ms>.sql`, opened O_CREAT|O_TRUNC: a local user
+	// who planted that name got the seed written THROUGH their file or symlink,
+	// and could append SQL before psql ran it. The directory is always removed.
+	// Gate: test/unit/seed_restore_temp_confinement_native.test.ts.
 	const stamp = stampInstallId === undefined ? '' : installStampSql(stampInstallId);
+	let scratch: string | null = null;
 	try {
-		writeFileSync(
-			tmpSql,
-			Buffer.concat([gunzipSync(readFileSync(seedPath)), Buffer.from(stamp, 'utf8')]),
-			{ mode: 0o600 },
-		);
-	} catch (error) {
-		rmSync(tmpSql, { force: true });
-		refuseInstall(
-			'install.step_failed',
-			`Cannot read/decompress seed: ${(error as Error).message}`,
-			error,
-		);
-	}
-	try {
+		let tmpSql: string;
+		try {
+			scratch = mkdtempSync(join(tmpdir(), 'dedalo_seed_'));
+			tmpSql = join(scratch, 'seed.sql');
+			writeFileSync(
+				tmpSql,
+				Buffer.concat([gunzipSync(readFileSync(seedPath)), Buffer.from(stamp, 'utf8')]),
+				{ mode: 0o600, flag: 'wx' },
+			);
+		} catch (error) {
+			refuseInstall(
+				'install.step_failed',
+				`Cannot read/decompress seed: ${(error as Error).message}`,
+				error,
+			);
+		}
 		const restore = await runPsql(
 			connection,
 			['-v', 'ON_ERROR_STOP=1', '--single-transaction', '--quiet', '-f', tmpSql],
@@ -203,7 +216,7 @@ export async function restoreSeed(
 			);
 		}
 	} finally {
-		rmSync(tmpSql, { force: true });
+		if (scratch !== null) rmSync(scratch, { recursive: true, force: true });
 	}
 }
 
@@ -225,7 +238,7 @@ export async function installDbFromSeed(
 	const connection = conn ?? connFromConfig();
 
 	// Empty-DB gate: never restore over an existing install.
-	const reachable = await runPsql(connection, ['-tAc', 'SELECT 1']);
+	const reachable = await runPsqlScript(connection, 'SELECT 1', { flags: ['-tA'] });
 	if (reachable.exitCode !== 0) {
 		refuseInstall('install.step_failed', `Database not reachable: ${reachable.stderr}`);
 	}
@@ -254,7 +267,7 @@ async function scalar(
 	query: string,
 	database?: string,
 ): Promise<string | null> {
-	const run = await runPsql(conn, ['-tAc', query, '-v', 'ON_ERROR_STOP=1'], { database });
+	const run = await runPsqlScript(conn, query, { flags: ['-tA'], database });
 	return run.exitCode === 0 ? run.stdout.trim() : null;
 }
 
@@ -596,6 +609,230 @@ export async function installDbFromSeedForInstall(installId: string): Promise<Db
 	return { ok: true, msg: await completeFreshInstall() };
 }
 
+/** The install lock's key (holdInstallLock): ONE install per database. */
+const INSTALL_LOCK_KEY_SQL = "hashtext('dedalo_install')";
+
+/** How many times resetDatabaseToEmpty runs its transaction when it is rolled back as retryable. */
+export const RESET_ATTEMPTS = 4;
+
+/**
+ * SQLSTATEs after which the reset's transaction ROLLED BACK and may simply run
+ * again: deadlock_detected (the server chose it as the victim) and
+ * lock_not_available (its lock_timeout elapsed behind another session).
+ */
+const RETRYABLE_RESET_SQLSTATES: readonly string[] = ['40P01', '55P03'];
+
+/** How long one attempt waits for any single lock before it is a lock timeout (55P03), ms. */
+const RESET_LOCK_TIMEOUT_MS = 30000;
+
+/** How long the ended sessions may take to be gone, all together (ms) — loud past it. */
+const SESSIONS_GONE_TIMEOUT_MS = 15000;
+
+/**
+ * Who may this role signal (mirrors the server's own rule, signalfuncs.c):
+ * a backend with a role — never a superuser's unless this role is one — when
+ * this role has that role's privileges or pg_signal_backend's; a backend
+ * WITHOUT a role (autovacuum and other workers) only as a superuser, or as an
+ * autovacuum worker with pg_signal_autovacuum_worker (Postgres 18+; the role is
+ * looked up, so an older server answers no). A backend it may not signal is
+ * left alone and named — never an error mid-sweep.
+ */
+const MAY_SIGNAL_SQL = `CASE WHEN a.usesysid IS NULL THEN
+      me.rolsuper OR (a.backend_type = 'autovacuum worker'
+        AND coalesce(pg_has_role(current_user, to_regrole('pg_signal_autovacuum_worker'), 'USAGE'), false))
+    ELSE (me.rolsuper OR NOT coalesce((SELECT r.rolsuper FROM pg_roles r WHERE r.oid = a.usesysid), false))
+      AND (pg_has_role(current_user, a.usesysid, 'USAGE') OR pg_has_role(current_user, 'pg_signal_backend', 'USAGE'))
+  END`;
+
+/** What endOtherSessions did: the backends it ended, and those it may not signal (named). */
+interface SessionSweep {
+	ended: number[];
+	kept: string[];
+}
+
+/**
+ * END EVERY OTHER SESSION ON THE TARGET DATABASE before the reset (GATE-1,
+ * 2026-10-24: a backend still on the database deadlocked the reset's `DROP
+ * EXTENSION pg_trgm CASCADE`; one idle in a transaction makes it wait
+ * forever). Only backends whose `datname` IS the target — never another
+ * database's — and never this backend, nor the one holding the INSTALL LOCK:
+ * every caller holds it (the executor locks before any --abort), so that
+ * session is the caller's own and ending it would free the lock mid-reset.
+ * Each is signalled with pg_terminate_backend (a backend it may not signal is
+ * kept and named — MAY_SIGNAL_SQL), then this waits, bounded, until every
+ * ended pid is gone from pg_stat_activity, and refuses loudly if one is not.
+ * Whatever such a session was doing rolls back: the database is about to be
+ * emptied anyway, and it is this install's (its stamp — checked first).
+ */
+async function endOtherSessions(conn: DbConnDescriptor): Promise<SessionSweep> {
+	// pg_terminate_backend sits in a CASE of the filtered rows' SELECT list (OFFSET 0
+	// fences the filter) — never where the planner could call it for a row it may not signal.
+	// ONE JSON object, never delimited text: an empty first field must survive the
+	// whitespace trims on the way back (runPsql trims stdout — a leading tab separator
+	// was eaten, and a kept-only sweep parsed as ended=[NaN]). backend_type is NULL to a
+	// role without pg_read_all_stats for another role's backend: named as hidden, never a null entry.
+	const run = await runPsqlScript(
+		conn,
+		`SELECT json_build_object(
+		          'ended', coalesce(json_agg(pid ORDER BY pid) FILTER (WHERE signalled IS NOT NULL), '[]'::json),
+		          'kept', coalesce(json_agg(pid || ' (' || coalesce(backend_type, 'backend type hidden') || coalesce(', role ' || usename, '') || ')' ORDER BY pid) FILTER (WHERE NOT may_end), '[]'::json))
+		   FROM (SELECT pid, backend_type, usename, may_end,
+		                CASE WHEN may_end THEN pg_terminate_backend(pid) END AS signalled
+		           FROM (SELECT a.pid, a.backend_type, a.usename::text AS usename, coalesce(${MAY_SIGNAL_SQL}, false) AS may_end
+		                   FROM pg_stat_activity a CROSS JOIN (SELECT coalesce(bool_or(rolsuper), false) AS rolsuper
+		                                                        FROM pg_roles WHERE rolname = current_user) me
+		                  WHERE a.datname = current_database() AND a.pid <> pg_backend_pid()
+		                    AND NOT EXISTS (SELECT 1 FROM pg_locks l
+		                                     WHERE l.pid = a.pid AND l.locktype = 'advisory' AND l.granted
+		                                       AND l.database = (SELECT oid FROM pg_database WHERE datname = current_database())
+		                                       AND l.objsubid = 1
+		                                       AND ((l.classid::bigint << 32) | l.objid::bigint) = ${INSTALL_LOCK_KEY_SQL}::bigint)
+		                 OFFSET 0) AS others
+		         OFFSET 0) AS swept`,
+		{ flags: ['-tA'] },
+	);
+	if (run.exitCode !== 0) {
+		refuseInstall(
+			'install.step_failed',
+			`Cannot end the other sessions on '${conn.database}' before the reset: ${run.stderr}`,
+		);
+	}
+	const sweep = parseSessionSweep(run.stdout, conn.database);
+	await waitSessionsGone(conn, sweep.ended);
+	return sweep;
+}
+
+/**
+ * The sweep's JSON answer, checked: every ended pid a positive integer (it is
+ * interpolated into SQL by waitSessionsGone), every kept entry a string —
+ * anything else refuses loudly, never a guessed parse.
+ */
+export function parseSessionSweep(stdout: string, database: string): SessionSweep {
+	let parsed: unknown = null;
+	try {
+		parsed = JSON.parse(stdout);
+	} catch {
+		// refused below
+	}
+	const { ended, kept } = (parsed ?? {}) as { ended?: unknown; kept?: unknown };
+	const pidsOk =
+		Array.isArray(ended) && ended.every((pid) => Number.isInteger(pid) && (pid as number) > 0);
+	const keptOk = Array.isArray(kept) && kept.every((entry) => typeof entry === 'string');
+	if (!pidsOk || !keptOk) {
+		refuseInstall(
+			'install.step_failed',
+			`Cannot read which sessions were ended on '${database}' before the reset (answer: ${JSON.stringify(stdout)}) — nothing was reset`,
+		);
+	}
+	return { ended: ended as number[], kept: kept as string[] };
+}
+
+/** Wait (bounded by SESSIONS_GONE_TIMEOUT_MS) until none of `pids` is a backend any more; refuse loudly past it. */
+async function waitSessionsGone(conn: DbConnDescriptor, pids: readonly number[]): Promise<void> {
+	if (pids.length === 0) return;
+	const deadline = Date.now() + SESSIONS_GONE_TIMEOUT_MS;
+	let left: string | null = '';
+	do {
+		left = await scalar(
+			conn,
+			`SELECT coalesce(string_agg(pid::text, ', ' ORDER BY pid), '') FROM pg_stat_activity WHERE pid IN (${pids.join(',')})`,
+		);
+		if (left === '') return;
+		await Bun.sleep(100);
+	} while (Date.now() < deadline);
+	refuseInstall(
+		'install.step_failed',
+		`the session(s) ended on '${conn.database}' before the reset did not go within ${SESSIONS_GONE_TIMEOUT_MS / 1000} s (still there: ${left ?? 'cannot be asked'}) — nothing was reset`,
+	);
+}
+
+/** The SQLSTATE psql printed for the failing statement (VERBOSITY=verbose: `ERROR:  40P01: …`), or ''. */
+function failedSqlState(stderr: string): string {
+	return /ERROR:\s+([0-9A-Z]{5}):/.exec(stderr)?.[1] ?? '';
+}
+
+/** Options of resetDatabaseToEmpty. */
+export interface ResetDatabaseOptions {
+	/**
+	 * GATE SEAM (install_db_reset_sessions_native.test.ts): the script one attempt
+	 * (1-based) runs, given the reset's own — so a gate can have the SERVER raise
+	 * a retryable error inside the real transaction. Absent: the script as is.
+	 */
+	scriptForAttempt?: (script: string, attempt: number) => string;
+	/**
+	 * GATE SEAM: how long one attempt waits for any single lock before it is a
+	 * lock timeout (55P03), ms — a positive integer. Absent: RESET_LOCK_TIMEOUT_MS.
+	 */
+	lockTimeoutMs?: number;
+}
+
+/**
+ * Run the reset's ONE transaction: end the other sessions on the target, run
+ * it; a rolled-back retryable failure (RETRYABLE_RESET_SQLSTATES) is run again
+ * — sessions ended again first — up to RESET_ATTEMPTS times with a growing
+ * pause; anything else, or the last attempt, refuses loudly. Answers every pid
+ * it ended and every session it could not.
+ */
+async function runResetTransaction(
+	conn: DbConnDescriptor,
+	script: string,
+	options: ResetDatabaseOptions,
+): Promise<SessionSweep> {
+	const total: SessionSweep = { ended: [], kept: [] };
+	const scriptFor = options.scriptForAttempt ?? ((as: string) => as);
+	for (let attempt = 1; ; attempt++) {
+		const sweep = await endOtherSessions(conn);
+		total.ended.push(...sweep.ended);
+		total.kept = sweep.kept;
+		const run = await runPsqlScript(conn, scriptFor(script, attempt), {
+			flags: ['--quiet', '-v', 'VERBOSITY=verbose'],
+		});
+		if (run.exitCode === 0) return total;
+		refuseUnlessRetryable(run.stderr, attempt, total.kept);
+		await Bun.sleep(250 * 2 ** (attempt - 1));
+	}
+}
+
+/** The reset attempt failed: refuse loudly unless it is retryable and attempts remain. */
+function refuseUnlessRetryable(stderr: string, attempt: number, kept: readonly string[]): void {
+	const state = failedSqlState(stderr);
+	if (RETRYABLE_RESET_SQLSTATES.includes(state) && attempt < RESET_ATTEMPTS) return;
+	const unended = kept.length === 0 ? '' : ` (sessions it may not end: ${kept.join(', ')})`;
+	refuseInstall(
+		'install.step_failed',
+		`Database reset failed (rolled back; SQLSTATE ${state || 'unknown'}, ${attempt} attempts)${unended}: ${stderr}`,
+	);
+}
+
+/** The reset's per-lock wait (ms): the gate seam's when given — a positive integer, refused otherwise. */
+function resetLockTimeoutMs(options: ResetDatabaseOptions): number {
+	const ms = options.lockTimeoutMs ?? RESET_LOCK_TIMEOUT_MS;
+	if (!Number.isInteger(ms) || ms <= 0) {
+		refuseInstall(
+			'install.step_failed',
+			`reset lock timeout must be a positive integer of ms, got ${ms}`,
+		);
+	}
+	return ms;
+}
+
+/** The completed reset's report: the extensions kept, the sessions it ended, those it may not end (named). */
+function resetOutcome(
+	database: string,
+	preexistingExtensions: readonly string[],
+	sessions: SessionSweep,
+): string {
+	const ended =
+		sessions.ended.length === 0
+			? ''
+			: `; ended ${sessions.ended.length} other session(s) on it: pid ${sessions.ended.join(', ')}`;
+	const kept =
+		sessions.kept.length === 0
+			? ''
+			: `; left ${sessions.kept.length} session(s) it may not end: ${sessions.kept.join(', ')}`;
+	return `database '${database}' reset to empty (extensions kept: ${preexistingExtensions.join(', ') || 'none'}${ended}${kept})`;
+}
+
 /**
  * `--abort` ONLY: put the database back to the empty state the preflight
  * recorded — in ONE transaction: every extension the install added (CASCADE),
@@ -607,16 +844,18 @@ export async function installDbFromSeedForInstall(installId: string): Promise<Db
  * the reset's own transaction): its objects are the seed's, restored into a
  * database the step proved empty. An unstamped EMPTY database has nothing to
  * reset (a seed that never committed); anything else is refused.
- */
-/*
- * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
- * engineering/crap_coverage_exempt.json): mutates the machine (drops database
- * objects). Gated by outcome in test/unit/install_resume_drill.test.ts.
+ *
+ * OTHER SESSIONS ON IT (GATE-1, 2026-10-24): each attempt first ends every other
+ * session on the target database (endOtherSessions — never another database,
+ * never the caller's install-lock session), and a deadlock victim or a lock
+ * timeout — rolled back — runs again (runResetTransaction), bounded, then fails
+ * loudly. Gated in test/unit/install_db_reset_sessions_native.test.ts.
  */
 export async function resetDatabaseToEmpty(
 	conn: DbConnDescriptor,
 	preexistingExtensions: readonly string[],
 	installId: string,
+	options: ResetDatabaseOptions = {},
 ): Promise<string> {
 	assertInstallId(installId);
 	const stamp = await installStampOf(conn);
@@ -629,10 +868,12 @@ export async function resetDatabaseToEmpty(
 			`database '${conn.database}' is not stamped by this install (${stamp ?? 'no stamp'}; ${objects} objects) — refusing to reset it`,
 		);
 	}
+	const lockTimeoutMs = resetLockTimeoutMs(options);
 	const keep =
 		preexistingExtensions.map((name) => `'${name.replace(/'/g, "''")}'`).join(',') || "''";
 	const expected = `${INSTALL_STAMP_PREFIX}${installId}`;
 	const sql = `BEGIN;
+SET LOCAL lock_timeout = '${lockTimeoutMs}ms';
 DO $reset$
 DECLARE r record;
 BEGIN
@@ -672,10 +913,7 @@ BEGIN
 END
 $reset$;
 COMMIT;`;
-	const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '--quiet'], { stdin: sql });
-	if (run.exitCode !== 0) {
-		refuseInstall('install.step_failed', `Database reset failed (rolled back): ${run.stderr}`);
-	}
+	const sessions = await runResetTransaction(conn, sql, options);
 	const after = await inspectTargetDatabase(conn);
 	if (!after.emptyForInstall) {
 		refuseInstall(
@@ -683,7 +921,7 @@ COMMIT;`;
 			`Database reset left ${after.userObjectCount} object(s) (e.g. ${after.userObjects.slice(0, 5).join(', ')})`,
 		);
 	}
-	return `database '${conn.database}' reset to empty (extensions kept: ${preexistingExtensions.join(', ') || 'none'})`;
+	return resetOutcome(conn.database, preexistingExtensions, sessions);
 }
 
 /** A held install lock; `release` ends the holding session (the server frees the lock). */
@@ -725,7 +963,7 @@ export async function holdInstallLock(
 			env: installSessionEnv(conn, appName),
 		},
 	);
-	child.stdin.write("SELECT pg_try_advisory_lock(hashtext('dedalo_install'));\n");
+	child.stdin.write(`SELECT pg_try_advisory_lock(${INSTALL_LOCK_KEY_SQL});\n`);
 	await child.stdin.flush();
 	const reader = child.stdout.getReader();
 	let answer = '';

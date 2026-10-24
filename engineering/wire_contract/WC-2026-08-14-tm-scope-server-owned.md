@@ -113,3 +113,14 @@ grant on is refused; a non-admin `kind:'browse'` is refused),
 into a browse read). `list_definitions.test.ts` extended. The SQL backend is
 untouched, so `tm_filter`, `tm_sort_policy`, `tm_count_cache`,
 `tm_deep_offset_flip`, `tm_range_filter_barrier` and `tm_wallclock` stay green.
+
+## Addendum 2026-10-22 — scope opened around the whole handler; count gated; nested time_machine_list
+
+Amended by `WC-2026-10-22-tm-scope-whole-request`. The server-owned scope above is now derived ONCE
+per request and opened around the whole `read`/`count` handler body (`withTimeMachineReadScope`),
+so Gate A, Gate B, the §7.4 gate and the per-ddo floor judge the same caller section; `count` runs
+the same §7.4 gate as `read`; the `time_machine_list` lookup follows the recursive grant walk (a
+node under a `section_group`). A scoped surface is "the one section the user already has access
+to" at the SECTION level only: a §7.4 grant holder reads every record's history of that section,
+outside their projects and deleted records included (that entry's owner-decision addendum, which
+supersedes its r0 record-scope confinement).

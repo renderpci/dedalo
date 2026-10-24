@@ -1155,7 +1155,7 @@ function buildPathScope(
 }
 
 /**
- * One granted section's arm of {@link buildAnyRowInScopeSql}: a `scoped_rows`
+ * One granted section's arm of {@link buildRowsInScopeSql}: a `scoped_rows`
  * row of this section whose record exists in the section's table under the
  * main alias's per-record conditions (see there for the arm-by-arm list).
  */
@@ -1189,11 +1189,14 @@ async function scopedRowsSectionDisjunct(
 }
 
 /**
- * THE SCOPED EXISTENCE QUESTION, ASKED IN ONE STATEMENT (READ-4): does ANY of
- * `rows` — a caller's SELECT yielding `(section_tipo, section_id)`, already
- * bound to its own `$1..$N` — name a record THIS principal may see?
+ * THE PER-RECORD SCOPE OF A ROW SET, AS SQL (READ-4, D1 2026-10-21): the rows
+ * of `rows` — a caller's SELECT yielding `(section_tipo, section_id, …)`,
+ * already bound to its own `$1..$N` — that name a record THIS principal may
+ * see, as a bound SELECT of the same columns (`scoped_rows.*`). The caller
+ * counts it, windows it, or asks EXISTS of it; it never reads rows to filter
+ * them in the application.
  *
- * The per-record half of the scope (record_scope.ts anyRowInScope decides the
+ * The per-record half of the scope (record_scope.ts scopedRows decides the
  * section read grant first and passes only the GRANTED sections here) is the
  * WHERE a single-section, principal-scoped search ANDs onto its main alias
  * beyond the section_tipo guard, built from the SAME builders, arm for arm, so
@@ -1210,13 +1213,15 @@ async function scopedRowsSectionDisjunct(
  * door (scopeInverseReferenceHits) is gated record by record
  * (client_page_doors_native).
  *
- * WHY ONE STATEMENT: the question "is anything past this page yours" reads a
- * tail of unbounded length. Asked in windows from the application, it costs a
- * read per window (READ-4 review: a hidden tail of a million references was
- * twenty sequential deep-OFFSET reads for a zero-row page); asked here, it is
- * one EXISTS that stops at the first visible row and returns one row.
+ * WHY SQL: the related search's count, page and past-the-page probe ask about
+ * an owner set of unbounded length. Read into the application and filtered
+ * there, the count cost an owner enumeration per request (the D1 finding) and
+ * the page windowed the UNSCOPED sequence, so a reader's pages were short and
+ * the paginator's walk never reached the total; asked here, all three are one
+ * statement over the same scoped set (related_scope_equivalence_native).
+ * No granted section ⇒ the empty set (`WHERE false`), never the unscoped rows.
  */
-export async function buildAnyRowInScopeSql(
+export async function buildRowsInScopeSql(
 	rows: { sql: string; params: readonly unknown[] },
 	grantedSectionTipos: readonly string[],
 	principal: Principal,
@@ -1226,9 +1231,9 @@ export async function buildAnyRowInScopeSql(
 	for (const sectionTipo of [...new Set(grantedSectionTipos)]) {
 		disjuncts.push(await scopedRowsSectionDisjunct(sectionTipo, principal, params));
 	}
-	if (disjuncts.length === 0) return { sql: 'SELECT false AS found', params: [] };
+	const where = disjuncts.length === 0 ? 'false' : disjuncts.join(' OR ');
 	return {
-		sql: `SELECT EXISTS (SELECT 1 FROM (${rows.sql}) AS scoped_rows WHERE ${disjuncts.join(' OR ')}) AS found`,
+		sql: `SELECT scoped_rows.* FROM (${rows.sql}) AS scoped_rows WHERE ${where}`,
 		params: [...rows.params, ...params.toArray()],
 	};
 }

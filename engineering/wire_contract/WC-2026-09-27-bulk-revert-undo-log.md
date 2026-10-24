@@ -1353,3 +1353,24 @@ CLOSURE_PLAN Step 2 (TOOLS-5, CORE-1).
   recompute of that record driven by a LATER transaction (a referencer undeleted in a
   unit of its own) stamps it like any live record's.
 - Gates: `obligation_ledger_native` cases 10, 10b and 11.
+
+## Addendum 2026-10-21 — the live-run refusal's code; a cascade target refused before its scope is judged is unlocated
+
+W4 cross-write (audit 2026-09-26, S3-1 / S3-2).
+
+- **§4.1 names its code.** A revert of a run still writing, and the second of two
+  concurrent reverts of one run, fail with `tool.bulk_run_live`: HTTP 409, category
+  `conflict`, `retryable: true`, disclosure `public`, severity `info`
+  (`src/core/errors/registry.ts`); the client applies the `tool.*` default policy. The
+  refusal lifts when the run or the other revert ends. Gates:
+  `bulk_revert_undo_native` "a LIVE run is refused (D5), and revertable once it ends",
+  "two CONCURRENT reverts of one run: exactly one runs, the other is refused
+  tool.bulk_run_live".
+- **§4.5 / §5 — the disclosure law, stated for the missing-row undelete (SEC-16).** A
+  cascade target refused BEFORE its record scope was judged — a MISSING row whose role-4
+  snapshot is unusable, or whose address was taken during the undelete — is reported as
+  a coordinate-free `{reason: 'cascade_delete_not_reverted'}` entry: the section-level
+  pass of `mayUndelete` never discloses a record. A refusal whose record WAS judged (a
+  wiped row present at the address, a D2 refusal `created_record_kept`) stays located,
+  as before. Gate: `bulk_revert_undo_native` "a MISSING cascade target refused before
+  any record-scope check is never LOCATED (SEC-16)".

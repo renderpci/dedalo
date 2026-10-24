@@ -71,6 +71,12 @@ export interface EmitRowContext {
 	emission: EmissionContext;
 	/** The shared emitter (emitDdoData) — sources call it for generic components. */
 	emitDdo: EmitDdo;
+	/**
+	 * The reading principal (undefined: an internal resolution, no filter — the
+	 * ddoIsAuthorized posture). A source whose CELLS carry different components
+	 * per row (the dd15 raw snapshot) gates each cell on it.
+	 */
+	principal?: Principal;
 }
 
 /**

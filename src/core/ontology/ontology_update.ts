@@ -58,7 +58,7 @@ import {
 	validateDdOntologyIdentifierConstraints,
 } from '../db/dd_ontology.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
-import { connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsqlScript } from '../install/pg_exec.ts';
 import { engineOwnsInstall } from '../update/ownership.ts';
 import { clearOntologyDerivedCaches } from './cache_invalidation.ts';
 import { isSafeSectionTipo, setOntologyIoPath } from './data_io.ts';
@@ -74,6 +74,12 @@ import {
 import { reportMissingDependencies } from './dependency_report.ts';
 import { termByTipo } from './labels.ts';
 import {
+	inspectOntology,
+	type OntologyWriteResult,
+	rebuildFailure,
+	rebuildOntology,
+} from './ontology_state.ts';
+import {
 	type OntologyUpdateCatalog,
 	resolveUpdateTarget,
 	type StagedFile,
@@ -81,7 +87,8 @@ import {
 } from './ontology_update_target.ts';
 import {
 	createDdOntologyRootNode,
-	setRecordsInDdOntology,
+	ensureReferencedGrouperRecords,
+	isTypologyGrouperTld,
 	syncMainSectionFromDefinition,
 } from './ontology_write.ts';
 import { getOrderedSubtree } from './resolver.ts';
@@ -200,25 +207,93 @@ export async function importOntologyPackage(
 }
 
 /**
- * The dd_ontology re-derive of every imported package that projects nodes
- * (not matrix_dd, not override records). wholeSection: this IS the deliberate
- * full-TLD re-derive after an ontology-file import — not a request-driven batch
- * (WC-043).
+ * The dd_ontology re-derive of every imported package that projects nodes (not
+ * matrix_dd, not override records) — through the ONE whole-tld writer,
+ * ontology_state.rebuildOntology (ONT-1, WC-2026-10-21-ontology-update-rebuild):
+ * one transaction per tld, a node the package no longer carries is REMOVED (no
+ * orphan), a record declaring another tld is refused and named, surviving nodes
+ * keep their ids. `mainNode: 'existing'`: the registry is never written here
+ * (importOntologyPackage's provisioning owns it; the seed compiler's rows-only
+ * pass 1 has none, and keeps the `<tld>0` it holds).
+ *
+ * Severity (unchanged): every tld's message goes to `messages`; `errors` gets a
+ * rolled-back rebuild, each misfiled record, and a tld of which NO record declares
+ * a tld (wholesale failure) — a warning line in the update panel, fatal in the
+ * installer and the seed compiler. Drift without errors stays a message: mid-run a
+ * model may live in a tld not imported yet. A `model` column is converged twice
+ * over: against the parse inside rebuildOntology (same tld), then by pass 2 below
+ * (a model in another staged tld). One message per tld (its last derive).
+ *
+ * Pass 0 — a staged GROUPER package (ontologytype / hierarchytype / hierarchymtype) wiped
+ * the installation-made grouper records its scoped import does not carry; every typology
+ * still referenced is re-made BEFORE the sweep could delete its node
+ * (ontology_write.ensureReferencedGrouperRecords), and named in `messages`.
  */
 export async function deriveOntologyPackages(
 	staged: readonly StagedFile[],
 	userId: number,
 ): Promise<{ messages: string[]; errors: string[] }> {
+	const regrouped = await ensureStagedGrouperRecords(staged, userId);
+	const outcomes = new Map<string, OntologyWriteResult>();
+	for (const file of staged.filter(derivesNodes)) {
+		outcomes.set(file.tld, await rebuildOntology(file.tld, userId, { mainNode: 'existing' }));
+	}
+	if (outcomes.size > 1) await rederiveStaleModels(outcomes, userId);
+	const report = deriveReport(outcomes);
+	report.messages.unshift(...regrouped);
+	return report;
+}
+
+/** Pass 0 (see deriveOntologyPackages): one message per staged grouper tld that re-made records. */
+async function ensureStagedGrouperRecords(
+	staged: readonly StagedFile[],
+	userId: number,
+): Promise<string[]> {
+	const messages: string[] = [];
+	for (const file of staged.filter((item) => isTypologyGrouperTld(item.tld))) {
+		const remade = await ensureReferencedGrouperRecords(file.tld, userId);
+		if (remade.length > 0) {
+			messages.push(
+				`${file.tld}: re-made grouper record(s) ${remade.join(', ')} — referenced by this installation, absent from the package`,
+			);
+		}
+	}
+	return messages;
+}
+
+/**
+ * Pass 2 — CROSS-PACKAGE MODELS. A node's `model` is its model node's term, read from the
+ * stored row (a same-tld model resolves inside rebuildOntology). A tld derived BEFORE the tld
+ * that adds or renames one of its models was parsed against the old row, so every tld that
+ * committed in pass 1 is re-inspected AFTER all of them and re-derived when a `model` column
+ * is stale — one pass reaches the fixpoint (no node's term depends on another node). A
+ * rolled-back tld keeps its failure. Gate: ontology_derive_packages_native G1f.
+ */
+async function rederiveStaleModels(
+	outcomes: Map<string, OntologyWriteResult>,
+	userId: number,
+): Promise<void> {
+	for (const [tld, first] of outcomes) {
+		if (first.applied.length === 0 || !(await hasStaleModel(tld))) continue;
+		outcomes.set(tld, await rebuildOntology(tld, userId, { mainNode: 'existing' }));
+	}
+}
+
+async function hasStaleModel(tld: string): Promise<boolean> {
+	const { drift } = await inspectOntology(tld);
+	return drift.some((item) => item.kind === 'stale' && item.diffColumns.includes('model'));
+}
+
+/** Every tld's last derive → the step messages and error lines (module doc: severity). */
+function deriveReport(outcomes: ReadonlyMap<string, OntologyWriteResult>): {
+	messages: string[];
+	errors: string[];
+} {
 	const result = { messages: [] as string[], errors: [] as string[] };
-	for (const file of staged) {
-		if (!derivesNodes(file)) continue;
-		const rebuilt = await setRecordsInDdOntology({
-			sectionTipo: file.sectionTipo,
-			wholeSection: true,
-			userId,
-		});
+	for (const [tld, rebuilt] of outcomes) {
+		const failure = rebuildFailure(tld, rebuilt);
 		result.messages.push(rebuilt.msg);
-		if (rebuilt.ok !== true) result.errors.push(...rebuilt.errors);
+		result.errors.push(...rebuilt.errors, ...(failure === null ? [] : [failure]));
 	}
 	return result;
 }
@@ -323,7 +398,7 @@ export async function snapshotTableRows(
 	const columns = MATRIX_COPY_COLUMNS.map((column) => `"${column}"`).join(',');
 	const where = sectionTipo === null ? '' : ` WHERE section_tipo = '${sectionTipo}'`;
 	const copy = `\\copy (SELECT ${columns} FROM "${table}"${where} ORDER BY section_id ASC) TO '${outFile}'`;
-	const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', copy]);
+	const run = await runPsqlScript(conn, copy);
 	return run.exitCode === 0;
 }
 
@@ -335,9 +410,9 @@ async function optimizeTables(
 	const errors: string[] = [];
 	for (const table of tables) {
 		if (!/^[a-zA-Z0-9_.]+$/.test(table)) continue;
-		const reindex = await runPsql(conn, ['-c', `REINDEX TABLE CONCURRENTLY ${table};`]);
+		const reindex = await runPsqlScript(conn, `REINDEX TABLE CONCURRENTLY ${table};`);
 		if (reindex.exitCode !== 0) errors.push(`REINDEX ${table}: ${reindex.stderr.trim()}`);
-		const vacuum = await runPsql(conn, ['-c', `VACUUM ANALYZE ${table};`]);
+		const vacuum = await runPsqlScript(conn, `VACUUM ANALYZE ${table};`);
 		if (vacuum.exitCode !== 0) errors.push(`VACUUM ${table}: ${vacuum.stderr.trim()}`);
 	}
 	return errors;
@@ -465,6 +540,10 @@ export async function updateOntology(
 	// their import (defect D7): those writes are NOT covered by the Phase-B
 	// snapshots, so a restore cannot undo them.
 	const provisioned: string[] = [];
+	// Set once the shared layer reports the import COMPLETED: from then on the
+	// matrix rows and the dd_ontology derived from them agree, and a tail
+	// failure must never roll the rows back under it (restoreAfterThrow).
+	let landed = false;
 
 	try {
 		// ------------------------------------------------------------------
@@ -501,6 +580,7 @@ export async function updateOntology(
 			if (imported.msg !== null) response.msg = imported.msg;
 			return response;
 		}
+		landed = true;
 
 		// Declared dependencies this server lacks: REPORT ONLY, never installed
 		// (WC-2026-10-10-ontology-dependencies-hierarchy60). Here, not in the
@@ -552,7 +632,7 @@ export async function updateOntology(
 	} catch (error) {
 		const restored = await restoreAfterThrow(
 			error,
-			{ mutated, provisioned, errors: response.errors },
+			{ mutated, provisioned, errors: response.errors, landed },
 			{ conn, recoveryDir },
 		);
 		if (restored !== null) response.msg = restored;
@@ -597,7 +677,11 @@ export interface StagedImportResult {
  * registry record + root node, scoped DELETE+COPY, ONT-TLD normalization,
  * counter consolidation — any failure auto-restores the slices already
  * replaced), then the dd_ontology re-derive per TLD in staged order and the
- * ontology cache purge. It never resolves a target, downloads, takes the latch
+ * ontology cache purge. The import is `completed` (LANDED) once Phase C has
+ * committed every slice: a failure of the re-derive after that — rolled back or
+ * thrown — is an error line naming the tlds to rebuild, never a restore of the old
+ * rows under a tld already re-derived (gate: ontology_update_derive_throw_native).
+ * It never resolves a target, downloads, takes the latch
  * or runs the update panel's tail (grammar, optimize, schema file) — its
  * callers do: updateOntology (the maintenance panel) and the installer's
  * ontology door (src/core/install/ontology_install.ts). The caller holds the
@@ -626,12 +710,25 @@ export async function importStagedOntologyFiles(
 		for (const file of staged) {
 			if (!(await importStagedFile(file, ctx, result))) return result;
 		}
-		await deriveStagedNodes(staged, ctx.userId, result);
-		await clearOntologyDerivedCaches();
+		// THE IMPORT LANDED (cross-write:r3): every slice is the update's, committed.
+		// The re-derive below is one COMMITTED transaction per tld, so from its first
+		// commit on a restore would put the OLD rows back under a dd_ontology derived
+		// from the NEW ones. `completed` is therefore set HERE, and a derive throw is
+		// the landed import's reported failure (deriveLandedImport), never a restore.
 		result.completed = true;
+		await deriveLandedImport(staged, ctx.userId, result);
 		return result;
 	} catch (error) {
-		result.msg = await restoreAfterThrow(error, result, ctx);
+		result.msg = await restoreAfterThrow(
+			error,
+			{
+				mutated: result.mutated,
+				provisioned: result.provisioned,
+				errors: result.errors,
+				landed: result.completed,
+			},
+			ctx,
+		);
 		return result;
 	}
 }
@@ -641,12 +738,31 @@ export async function importStagedOntologyFiles(
  * panel's tail): its text joins the errors, and every slice already replaced is
  * restored from its snapshot. Answers the operator line, or null when nothing was
  * replaced (the caller keeps its own message). ONE home for both catch sites.
+ * A throw AFTER the import landed (`landed`) restores nothing (cross-write:r2).
  */
-async function restoreAfterThrow(
+export async function restoreAfterThrow(
 	error: unknown,
-	progress: { mutated: readonly StagedFile[]; provisioned: readonly string[]; errors: string[] },
+	progress: {
+		mutated: readonly StagedFile[];
+		provisioned: readonly string[];
+		errors: string[];
+		/** The import COMPLETED before the throw (a tail step failed). */
+		landed: boolean;
+	},
 	ctx: { conn: DbConnDescriptor; recoveryDir: string },
 ): Promise<string | null> {
+	if (progress.landed) {
+		// The update LANDED: its rows and the dd_ontology re-derived from them
+		// agree. Restoring the snapshots now would put the OLD rows back under the
+		// NEW dd_ontology — a state neither version was ever in. The tail failure
+		// is reported (a deliberate sentence; the raw text to the log — SEC-18),
+		// nothing is rolled back.
+		console.error('[ontology_update] a step after the landed import failed', error);
+		progress.errors.push(
+			'the ontology update landed; a final step failed (see the server log) — nothing was rolled back',
+		);
+		return 'Error. The ontology update landed, but a final step failed (see the server log)';
+	}
 	progress.errors.push((error as Error).message);
 	if (progress.mutated.length === 0) return null;
 	await restoreSnapshots(progress.mutated, ctx.recoveryDir, ctx.conn, progress.errors);
@@ -781,6 +897,34 @@ async function deriveStagedNodes(
 	const derived = await deriveOntologyPackages(staged, userId);
 	result.messages.push(...derived.messages);
 	result.errors.push(...derived.errors);
+}
+
+/**
+ * The re-derive of a LANDED import (Phase C committed every slice). A tld whose
+ * rebuild rolls back is already an error line of the derive; a THROW escaping it
+ * (a read failing after a tld committed — the inspect in rebuildOntology's catch
+ * or after its commit, pass 2's inspect) is reported the same way: the rows stand,
+ * the operator line names every node-deriving tld of the update to rebuild
+ * (ontology_state rebuildOntology converges each one, an already-derived tld
+ * included), the raw text goes to the log (SEC-18). The derived caches are purged
+ * either way — some tlds may have committed.
+ */
+async function deriveLandedImport(
+	staged: readonly StagedFile[],
+	userId: number,
+	result: StagedImportResult,
+): Promise<void> {
+	try {
+		await deriveStagedNodes(staged, userId, result);
+	} catch (error) {
+		console.error('[ontology_update] the re-derive of a landed import failed', error);
+		const tlds = staged.filter(derivesNodes).map((file) => file.tld);
+		result.errors.push(
+			`the ontology rows of this update were imported; re-deriving dd_ontology from them failed (see the server log) — rebuild the ontology of: ${tlds.join(', ')}`,
+		);
+	} finally {
+		await clearOntologyDerivedCaches();
+	}
 }
 
 /**

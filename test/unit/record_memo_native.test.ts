@@ -264,7 +264,10 @@ describe('memo wiring (structural — behavioural tests stay green if these reve
 		// import behind is exactly how this reverts, and a bare `toContain`
 		// would still match the surviving `import { runWithRecordMemo }` line.
 		expect(source).toMatch(/\brunWithRecordMemo\(/);
-		// …and it must WRAP the read, not merely be mentioned somewhere.
-		expect(source).toMatch(/return runWithRecordMemo\(\(\) =>/);
+		// …and it must WRAP the read, not merely be mentioned somewhere (it sits
+		// inside the TM scope opener, so the wrap is pinned on its argument: a
+		// call of the read, whatever its name — the memo is pinned here, not the
+		// read's authorization, which authz_substring_gate_tripwire keeps behavioural).
+		expect(source).toMatch(/runWithRecordMemo\(\(\) => \w+\(rqo, principal\)\)/);
 	});
 });

@@ -12,6 +12,22 @@
  * media-root chokepoint (`absoluteFromRelative`), so the test-media guard and
  * the traversal gate apply to an archive exactly as to an upload.
  *
+ * THE ONTOLOGY IT WRITES IS NEVER ANOTHER WRITER'S PROJECTION (ONT follow-up
+ * 2026-10-21). dd_ontology(tld) is the projection of matrix_ontology(<tld>0)
+ * wherever that tld has source records (ontology_state.ts). An archive carries
+ * dd_ontology rows WITHOUT their source records, so a row it planted into a
+ * SOURCED tld was an orphan (or a clobbered node) its tld's next rebuild — an
+ * ontology update, the parser tool, the reconcile — removed or reverted, taking
+ * the restored records' definitions with it. So the write (1) takes the
+ * projection lock of every tld it writes (dd_ontology.ts
+ * lockOntologyProjection: ordered against rebuild / teardown / the per-record
+ * and lifecycle doors) and (2) under that lock REFUSES a write into a tld that
+ * holds source records — the remedy is the ontology's own door (install or
+ * update the tld so it defines the node; the restore then finds it unchanged,
+ * or names the conflict). A tld with no source records here is the archive's
+ * own: its rows are restored as before. Gate:
+ * test/unit/archive_restore_projection_native.test.ts.
+ *
  * THE WRITE OBLIGATIONS ARE DECLARED, NOT SKIPPED. A restored row bypasses the
  * component chokepoint by design (it carries every column at once), so — like
  * the duplicate and create doors — it declares the post-write obligations for
@@ -23,7 +39,10 @@
  * REFUSES BEFORE IT WRITES. Everything that can be checked is checked first —
  * digests, the ontology conflict set, the existing-record set, the media
  * target set, and every locator's resolution — and the refusal names what it
- * found. Then the ontology and the rows (+ the audit stamp) are written; the
+ * found. (One check runs at the head of the ontology transaction instead, under
+ * the projection lock and before its first write — the derived-tld refusal
+ * above: it must see the destination as the lock orders it.) Then the
+ * ontology and the rows (+ the audit stamp) are written; the
  * media copies follow the commit, since the filesystem cannot join it and a
  * half-copied media tree is repairable by re-running the restore, whereas
  * half-written rows are not. (Ontology and rows are two transactions in that
@@ -54,6 +73,7 @@ import { dbTimestamp } from '../db/db_timestamp.ts';
 import {
 	type DdOntologyRow,
 	ddOntologyIdentifierViolations,
+	lockOntologyProjection,
 	readDdOntologyRow,
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';
@@ -68,12 +88,15 @@ import {
 	updateMatrixRecord,
 } from '../db/matrix_write.ts';
 import { withTransaction } from '../db/postgres.ts';
+import { openEpochIfReborn } from '../db/record_generation.ts';
 import { recordTimeMachine } from '../db/time_machine.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { MEDIA_DIR_MODE } from '../install/media_tree.ts';
 import { absoluteFromRelative } from '../media/path.ts';
 import { clearOntologyDerivedCaches } from '../ontology/cache_invalidation.ts';
+import { tldHasSourceRecords } from '../ontology/ontology_state.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
+import { getTldFromTipo } from '../ontology/tld.ts';
 import { afterRecordWrite } from '../section_record/record_write.ts';
 import {
 	type ArchiveAddress,
@@ -207,6 +230,87 @@ function refuseIdentifierViolations(row: DdOntologyRow): void {
 			violations: violations.map((v) => `${v.column}:${v.reason}`).join(','),
 		},
 	);
+}
+
+// ── write: ontology ─────────────────────────────────────────────────────────
+
+/** The tlds `rows` write into (their projection-lock keys), sorted, unique. */
+function writtenTlds(rows: readonly DdOntologyRow[]): string[] {
+	const tlds = new Set<string>();
+	for (const row of rows) {
+		const tld = row.tld ?? getTldFromTipo(row.tipo);
+		if (tld !== null && tld !== '') tlds.add(tld);
+	}
+	return [...tlds].sort();
+}
+
+/**
+ * Refuse a write into a tld whose nodes this installation DERIVES from source records (see the
+ * module header): the archive carries rows, not their sources, so its row would be an orphan or
+ * a clobbered node that the tld's next rebuild removes or reverts. Asked UNDER the projection
+ * lock, so a tld whose records land concurrently is seen.
+ */
+async function refuseDerivedTlds(rows: readonly DdOntologyRow[]): Promise<void> {
+	for (const tld of writtenTlds(rows)) {
+		if (!(await tldHasSourceRecords(tld))) continue;
+		const tipos = rows
+			.filter((row) => (row.tld ?? getTldFromTipo(row.tipo)) === tld)
+			.map((row) => row.tipo);
+		refuse(
+			`ontology node(s) ${tipos.map((tipo) => `'${tipo}'`).join(', ')} belong to tld '${tld}', whose nodes this installation derives from its source records (${tld}0) — a node the archive planted there would be removed or reverted by the tld's next rebuild, taking the restored records' definitions with it. Install or update the '${tld}' ontology so it defines them, then restore (they are then found unchanged, or named as a conflict)`,
+			{ tld, tipo: tipos[0] ?? '' },
+		);
+	}
+}
+
+/**
+ * The plan's rows RE-JUDGED under the projection lock. The plan read the destination
+ * before the lock, so a node another writer created in between was planned as an
+ * INSERT; writing it blindly would overwrite that writer's definition without the
+ * operator's consent. Re-read now: still absent → insert; now EQUAL → nothing to
+ * write; now DIFFERENT → the same conflict the plan would have named (refused unless
+ * `onOntologyConflict:'overwrite'`). A planned overwrite already carries consent.
+ */
+async function rowsToWrite(
+	plan: OntologyPlan,
+	onConflict: RestoreOptions['onOntologyConflict'],
+): Promise<{ insert: DdOntologyRow[]; overwrite: DdOntologyRow[]; unchanged: number }> {
+	const judged = { insert: [] as DdOntologyRow[], overwrite: [...plan.overwrite], unchanged: 0 };
+	for (const row of plan.insert) {
+		const existing = await readDdOntologyRow(row.tipo);
+		if (existing === null) judged.insert.push(row);
+		else if (ontologyRowsEqual(existing, row)) judged.unchanged += 1;
+		else if (onConflict === 'overwrite') judged.overwrite.push(row);
+		else {
+			refuse(
+				`ontology node '${row.tipo}' was created in the destination with a different definition while the restore was planned (pass onOntologyConflict:'overwrite' to replace it)`,
+				{ tipo: row.tipo },
+			);
+		}
+	}
+	return judged;
+}
+
+/**
+ * The ontology write: one transaction, under the written tlds' projection lock (module
+ * header), the plan re-judged under it (rowsToWrite). Answers what was actually written.
+ */
+async function writeOntology(
+	plan: OntologyPlan,
+	onConflict: RestoreOptions['onOntologyConflict'],
+): Promise<RestoreOutcome['ontology']> {
+	const planned = [...plan.insert, ...plan.overwrite];
+	return withTransaction(async () => {
+		await lockOntologyProjection(writtenTlds(planned));
+		await refuseDerivedTlds(planned);
+		const judged = await rowsToWrite(plan, onConflict);
+		for (const row of [...judged.insert, ...judged.overwrite]) await upsertDdOntologyNode(row);
+		return {
+			inserted: judged.insert.length,
+			unchanged: plan.unchanged + judged.unchanged,
+			overwritten: judged.overwrite.length,
+		};
+	});
 }
 
 // ── plan: locators ──────────────────────────────────────────────────────────
@@ -419,6 +523,13 @@ async function writeRecordRow(line: ArchiveRecordLine, ctx: RowWriteContext): Pr
 		ctx.outcome.records.overwritten += 1;
 	} else {
 		await insertMatrixRecordWithExplicitId(ctx.table, ctx.sectionTipo, line.section_id, {});
+		// A BIRTH at an explicit id, like every other explicit-id birth door
+		// (create_record.ts recordBirthMarker): the address may carry the history
+		// of a record that lived and died here — a DIFFERENT record (see LOCATORS
+		// above). The epoch puts that generation below the boundary every history
+		// reader applies, BEFORE the restore's own audit row, which sits above it.
+		// The overwrite branch is the live record itself: no new generation.
+		await openEpochIfReborn(ctx.sectionTipo, line.section_id);
 		ctx.outcome.records.inserted += 1;
 	}
 	await updateMatrixRecord(ctx.table, ctx.sectionTipo, line.section_id, values, {
@@ -526,11 +637,7 @@ export async function restoreArchive(options: RestoreOptions): Promise<RestoreOu
 	// commit is re-runnable (a second pass finds every node 'unchanged'), and
 	// definitions without records are inert — the harmful half-state, rows
 	// without their definitions, cannot occur.
-	await withTransaction(async () => {
-		for (const row of [...ontologyPlan.insert, ...ontologyPlan.overwrite]) {
-			await upsertDdOntologyNode(row);
-		}
-	});
+	outcome.ontology = await writeOntology(ontologyPlan, options.onOntologyConflict);
 	await clearOntologyDerivedCaches();
 	const timestamp = dbTimestamp();
 	await withTransaction(async () => {

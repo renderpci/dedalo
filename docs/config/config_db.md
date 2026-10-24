@@ -253,7 +253,9 @@ it finds a store missing or damaged, the observer mirror reconcile
 (`scripts/observer_reconcile.ts`) and the activity-log retention prune on a very large
 log. Choose a value comfortably above your slowest legitimate *request* — if searches
 or exports on very large sections are part of daily work, measure them first (see
-`DEDALO_SLOW_QUERY_MS`).
+`DEDALO_SLOW_QUERY_MS`). An export's record selection is computed under this ceiling
+as well, in the background lane too: an export whose selection takes longer to compute
+is refused with `db.statement_timeout` before its first line.
 
 ```bash
 DB_STATEMENT_TIMEOUT_MS=60000

@@ -21,6 +21,14 @@ import {
 } from '../../../core/services/service_autocomplete/js/view_default_autocomplete.js'
 import {data_manager} from '../../../core/common/js/data_manager.js'
 import {response_data} from '../../../core/common/js/api_error.js'
+import {common} from '../../../core/common/js/common.js'
+import {
+	SEARCH_PATHS_OWNER,
+	show_ddo_map,
+	search_paths,
+	expected_filter_paths,
+	relation_leaf_path
+} from './search_paths_fixture.js'
 
 
 
@@ -445,6 +453,97 @@ describe("SERVICE_AUTOCOMPLETE", function() {
 			assert.equal(datalist.childNodes.length, 0, 'latest (empty) response clears the datalist')
 		})
 	})//end describe run_search stale guard
+
+
+	// ───────────────────────────────────────────────────────────
+	// build_rqo_search — the CLIENT half of the relation-column search
+	// (WC-2026-10-01-relation-search-display-paths). The server writes a
+	// relation column's display ddos into the item's `search_paths`; the
+	// SHIPPED common.prototype.build_rqo_search must mint the filter_free
+	// paths from them — the deep [relation, display leaf] path, server order.
+	// Walking show/search.ddo_map instead sends the typed word to the
+	// relation's locator column, which the server refuses (request.invalid,
+	// WC-2026-09-23). The fixture is shared with the server half
+	// (test/unit/search_paths_client_fixture_native.test.ts), which proves
+	// the engine emits `search_paths` and answers `expected_filter_paths`.
+	// Backend-free: a plain caller object, nothing is sent.
+	// ───────────────────────────────────────────────────────────
+
+	describe("build_rqo_search mints the filter paths from search_paths", function() {
+
+		const clone = (value) => JSON.parse(JSON.stringify(value))
+
+		// the picker that owns the column (the component instance shape
+		// build_rqo_search reads through create_source)
+		const picker = () => ({
+			id				: 'zz_build_rqo_search',
+			type			: 'component',
+			model			: 'component_portal',
+			tipo			: SEARCH_PATHS_OWNER,
+			section_tipo	: 'test3',
+			section_id		: 1,
+			mode			: 'edit',
+			lang			: lang
+		})
+
+		const request_config_object = (extra={}) => ({
+			api_engine	: 'dedalo',
+			type		: 'main',
+			sqo			: {section_tipo: [{tipo: 'test3'}]},
+			show		: {ddo_map: clone(show_ddo_map)},
+			search		: null,
+			choose		: null,
+			...extra
+		})
+
+		// the minted paths, on the fixture's keys
+		const minted_paths = (rqo) => rqo.sqo_options.filter_free.$or.map(
+			(clause) => clause.path.map((ddo) => ({
+				tipo			: ddo.tipo,
+				section_tipo	: ddo.section_tipo,
+				component_tipo	: ddo.component_tipo,
+				model			: ddo.model
+			}))
+		)
+
+		it("mints the deep [relation, display leaf] path in server order", async function() {
+			const rco = request_config_object({search_paths: clone(search_paths)})
+			const rqo = await common.prototype.build_rqo_search.call(picker(), rco, 'search')
+
+			assert.deepEqual(minted_paths(rqo), expected_filter_paths, 'the fixture path, exactly')
+			for (const clause of rqo.sqo_options.filter_free.$or) {
+				assert.strictEqual(clause.q, '', 'the caller fills q')
+				assert.isTrue(clause.path.every((ddo) => ddo.mode==='list'), 'every hop in list mode (lang fallback)')
+			}
+			// the result columns still come from choose → search → show
+			assert.deepEqual(rqo.show.ddo_map, show_ddo_map, 'show.ddo_map is the column source, not search_paths')
+			assert.deepEqual(
+				rqo.show.columns.map((column) => column.map((ddo) => ddo.tipo)),
+				[['test54']],
+				'one result column: the relation column itself'
+			)
+			// the caller's config is not touched
+			assert.deepEqual(rco.search_paths, search_paths, 'search_paths left as received')
+		})
+
+		it("without search_paths: the relation column alone is the leaf (positive control)", async function() {
+			const rqo = await common.prototype.build_rqo_search.call(picker(), request_config_object(), 'search')
+			assert.deepEqual(minted_paths(rqo), [relation_leaf_path], 'the show map, walked as before')
+		})
+
+		it("an empty search_paths falls back to the declared search map", async function() {
+			const declared = [{tipo: 'test52', parent: SEARCH_PATHS_OWNER, section_tipo: ['test3'], model: 'component_input_text', mode: 'list'}]
+			const rqo = await common.prototype.build_rqo_search.call(
+				picker(),
+				request_config_object({search: {ddo_map: declared}, search_paths: []}),
+				'search'
+			)
+			assert.deepEqual(
+				minted_paths(rqo),
+				[[{tipo: 'test52', section_tipo: 'test3', component_tipo: 'test52', model: 'component_input_text'}]]
+			)
+		})
+	})//end describe build_rqo_search
 
 })//end describe SERVICE_AUTOCOMPLETE
 

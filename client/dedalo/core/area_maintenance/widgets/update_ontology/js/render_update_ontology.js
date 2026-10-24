@@ -260,6 +260,56 @@ export const build_failure = function (api_error) {
 
 
 /**
+* BUILD_IMPORT_FILES
+* Phase 2's file list from the master's manifest: `matrix_dd` first and once
+* (when the manifest names it), then the manifest files of the selected TLDs, in manifest
+* order, each enriched from `info.active_ontologies` with its typology_id,
+* name_data and — ONLY when the master declares them — its `dependencies`
+* ({tld, main, mandatory} objects). Absent stays absent (≠ []: an empty list
+* is a declaration of "none"); the import records them on the registry row
+* (hierarchy60) so this server re-serves them
+* (WC-2026-10-10-ontology-dependencies-hierarchy60).
+* Pure: the manifest is not mutated. Exported for its gate:
+* client/dedalo/test/client/js/test_update_code.js (build_import_files).
+*
+* @param {Object} manifest - the get_update_info result: {files, info}
+* @param {Array<string>} ar_active_ontology_tlds - the operator's TLD selection
+* @returns {Array<Object>} files for the update_ontology request
+*/
+export const build_import_files = function (manifest, ar_active_ontology_tlds) {
+
+	const files				= Array.isArray(manifest?.files) ? manifest.files : []
+	const active_ontologies	= Array.isArray(manifest?.info?.active_ontologies) ? manifest.info.active_ontologies : []
+
+	const files_filtered = files
+		// matrix_dd is placed first below, once, whatever the selection says
+		.filter(el => el.tld!=='matrix_dd' && ar_active_ontology_tlds.includes(el.tld))
+		.map(el => {
+			const file_item	= {...el}
+			const found		= active_ontologies.find(item => item.tld===file_item.tld)
+			if (found) {
+				file_item.typology_id	= found.typology_id
+				file_item.name_data		= found.name_data
+				if (found.dependencies !== undefined) {
+					file_item.dependencies = found.dependencies
+				}
+			}
+			return file_item
+		})
+
+	const selected_files	= []
+	const matrix_dd			= files.find(el => el.tld==='matrix_dd')
+	if (matrix_dd) {
+		selected_files.push({...matrix_dd})
+	}
+	selected_files.push(...files_filtered)
+
+	return selected_files
+}//end build_import_files
+
+
+
+/**
 * GET_UPDATE_INFO
 * Phase 1 of the update: ask a master for its manifest (available files + the
 * version info). Called from TWO places — the reference block's "Fetch list"
@@ -885,27 +935,7 @@ const get_content_data_edit = async function(self) {
 						ui.reveal(body_response.appendChild(build_version_change(current_ontology, result.info)))
 
 					// build the file list: user-selected TLDs, enriched, with matrix_dd always first
-						const files_filtered = result.files.filter( el => ar_active_ontology_tlds.find(item => item === el.tld) )
-						files_filtered.forEach(file_item => {
-							const found = result.info.active_ontologies.find(el => el.tld===file_item.tld)
-							if (found) {
-								file_item.typology_id	= found.typology_id
-								file_item.name_data		= found.name_data
-								// declared dependencies ({tld, main, mandatory} objects): forwarded ONLY
-								// when the master declares them (absent = not declared) — the import
-								// records them on the registry row (hierarchy60) so this server re-serves
-								// them (WC-2026-10-10-ontology-dependencies-hierarchy60)
-								if (found.dependencies !== undefined) {
-									file_item.dependencies = found.dependencies
-								}
-							}
-						})
-						const selected_files = []
-						const matrix_dd = result.files.find( el => el.tld==='matrix_dd' )
-						if(matrix_dd){
-							selected_files.push(matrix_dd)
-						}
-						selected_files.push(...files_filtered)
+						const selected_files = build_import_files(result, ar_active_ontology_tlds)
 
 					// Phase 2: import
 						const api_response = await self.update_ontology({

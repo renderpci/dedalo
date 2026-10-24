@@ -492,15 +492,24 @@ export function apiReportToReconcile(report: ApiReconcileReport): ReconcileRepor
 	};
 }
 
-/** The registry's run: DRY only — code reaches a public host from root or a confirmed boot. */
+/** Why the registry never applies publication_apis (its `applyRefused` facet). */
+const PUBLICATION_APIS_APPLY_REFUSED =
+	'pushing Publication API code to a public machine is root-only — the publication_hosts widget (Push API releases) — or done by a confirmed update/restore boot';
+
+/**
+ * The registry's run: DRY only — code reaches a public host from root or a confirmed boot.
+ * The registry refuses an apply before calling this (`applyRefused`); the check here is the
+ * same refusal for a caller that reaches the function directly — never a permission code: no
+ * principal may apply through this door, so it is the request, not the user, that is refused.
+ */
 export async function runPublicationApisDefinition(
 	{ apply, scope }: ReconcileRunOptions,
 	deps: ApiReconcileDeps = defaultApiReconcileDeps(),
 ): Promise<ReconcileReport> {
 	if (apply) {
-		throw new DedaloError('perm.denied', {
-			message:
-				'publication_apis apply is refused through the reconcile registry: pushing Publication API code is root-only (publication_hosts.push_apis)',
+		throw new DedaloError('request.invalid', {
+			message: `publication_apis apply is refused through the reconcile registry: ${PUBLICATION_APIS_APPLY_REFUSED}`,
+			publicMessage: `The 'publication_apis' reconcile cannot be applied here: ${PUBLICATION_APIS_APPLY_REFUSED}`,
 		});
 	}
 	const hosts = scope === undefined ? {} : { hosts: [...scope] };
@@ -519,6 +528,7 @@ export const PUBLICATION_APIS_RECONCILE: ReconcileDefinition = {
 		'Report every publication host whose current Publication API release (v1, v2) is not the verified release of the installed engine tree; a tree with no verified release or drifted from its extract-time manifest counts every host×API as drift. With no publication host the tree is not hashed. Apply is refused here: pushing code is root-only (publication_hosts widget, Push API releases) or done by a confirmed update/restore boot.',
 	scopeLabel: 'publication host name',
 	schedule: { everyMs: PUBLICATION_APIS_CHECK_EVERY_MS },
+	applyRefused: { reason: PUBLICATION_APIS_APPLY_REFUSED },
 	sources: ['src/core/publication_host/api_reconcile.ts'],
 	run: (options) => runPublicationApisDefinition(options),
 };

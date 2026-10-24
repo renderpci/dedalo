@@ -4,9 +4,9 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 778,
-		"functions": 12603,
-		"functionsOverCap": 672,
+		"files": 781,
+		"functions": 12869,
+		"functionsOverCap": 669,
 		"filesOverCap": 258
 	},
 	"ledger": [
@@ -150,6 +150,16 @@
 			"generated": "2026-10-14",
 			"functionsOverCap": 672,
 			"filesOverCap": 258
+		},
+		{
+			"generated": "2026-10-22",
+			"functionsOverCap": 670,
+			"filesOverCap": 258
+		},
+		{
+			"generated": "2026-10-23",
+			"functionsOverCap": 669,
+			"filesOverCap": 258
 		}
 	],
 	"files": {
@@ -187,7 +197,7 @@
 		"src/core/area_maintenance/widgets/diffusion_server_control.ts": 8,
 		"src/core/area_maintenance/widgets/lock_components.ts": 9,
 		"src/core/area_maintenance/widgets/media_control.ts": 10,
-		"src/core/area_maintenance/widgets/reconcile_status.ts": 12,
+		"src/core/area_maintenance/widgets/reconcile_status.ts": 10,
 		"src/core/area_maintenance/widgets/register_tools.ts": 15,
 		"src/core/area_maintenance/widgets/registry.ts": 12,
 		"src/core/area_maintenance/widgets/sequences_status.ts": 10,
@@ -245,7 +255,7 @@
 		"src/core/identify/profile_source.ts": 10,
 		"src/core/install/config_persist.ts": 10,
 		"src/core/install/db_probe_plan.ts": 8,
-		"src/core/install/db_restore.ts": 8,
+		"src/core/install/db_restore.ts": 7,
 		"src/core/install/directories.ts": 12,
 		"src/core/install/media_tree.ts": 20,
 		"src/core/install/root_pw.ts": 8,
@@ -295,11 +305,11 @@
 		"src/core/ontology/ontology_state.ts": 15,
 		"src/core/ontology/ontology_update.ts": 15,
 		"src/core/ontology/ontology_update_target.ts": 12,
-		"src/core/ontology/ontology_write.ts": 17,
+		"src/core/ontology/ontology_write.ts": 13,
 		"src/core/ontology/parser.ts": 17,
 		"src/core/ontology/resolver.ts": 13,
 		"src/core/ontology/section_map.ts": 9,
-		"src/core/reconcile/registry.ts": 13,
+		"src/core/reconcile/registry.ts": 9,
 		"src/core/relations/children.ts": 12,
 		"src/core/relations/config_ddo_map.ts": 12,
 		"src/core/relations/dataframe.ts": 9,
@@ -352,7 +362,7 @@
 		"src/core/section/indexation_grid.ts": 42,
 		"src/core/section/list_definitions/section_list.ts": 8,
 		"src/core/section/locks.ts": 15,
-		"src/core/section/read.ts": 81,
+		"src/core/section/read.ts": 74,
 		"src/core/section/read_facade.ts": 24,
 		"src/core/section/read_source.ts": 11,
 		"src/core/section/record/delete_record.ts": 25,

@@ -28,7 +28,7 @@
 *     response container into the widget body.
 *   - The server operation (class.move_lang.php::move_lang) runs as a long-lived CLI
 *     background process (background_running: true) and returns {pid, pfile} for SSE
-*     polling. The UI re-attaches to any in-progress run on mount via check_process_data.
+*     polling. The shared flow (move_transform.js) re-attaches an in-progress run on mount.
 *
 * Exports: render_move_lang
 *
@@ -37,9 +37,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {update_process_status} from '../../../../common/js/common.js'
 	import {init_move_transform_form} from '../../../js/move_transform.js'
-	import {data_manager} from '../../../../common/js/data_manager.js'
 
 	// hljs
 	import hljs from '../../../../../lib/highlightjs/es/core.min.js';
@@ -136,10 +134,9 @@ render_move_lang.prototype.list = async function(options) {
 * exactly the previewed files (dry_run:false) after a confirm. Each job's
 * {pid, pfile} is handed to update_process_status.
 *
-* On every render, check_process_data queries IndexedDB for any previously
-* stored process record under 'process_move_lang' and re-attaches SSE polling
-* if the process is still running — ensuring a page reload does not lose the
-* live status stream.
+* On every render, the shared flow re-attaches a job stored in IndexedDB
+* ('process_move_lang_execute' first — it holds the form until it ends — else
+* 'process_move_lang'), so a page reload does not lose the live status stream.
 *
 * (!) The `info` variable created for the info_text div is not used after
 * creation; its parent assignment in ui.create_dom_element handles attachment.
@@ -289,27 +286,10 @@ const get_content_data_edit = async function(self) {
 			local_db_id		: local_db_id
 		})
 
-		// check process status always — on every render, probe IndexedDB for any
-		// previously stored process state so a page reload re-attaches SSE polling
-		// to an already-running background job without requiring the user to
-		// re-submit.  If no stored state exists, local_data is falsy and nothing happens.
-		const check_process_data = () => {
-			data_manager.get_local_db_data(
-				local_db_id,
-				'status'
-			)
-			.then(function(local_data){
-				if (local_data && local_data.value) {
-					update_process_status(
-						local_db_id,
-						local_data.value.pid,
-						local_data.value.pfile,
-						body_response
-					)
-				}
-			})
-		}
-		check_process_data()
+		// check process status always
+		// re-attach after a reload: init_move_transform_form above re-attaches a
+		// stored EXECUTE first (it holds the form until its job ends), else a
+		// stored preview — one place for the five move_* widgets (move_transform.js).
 
 	// add at end body_response — placed after form init so the status area
 	// appears below the submit button in the rendered widget body.

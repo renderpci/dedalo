@@ -16,8 +16,9 @@
  *     refused lines; a tipo must be the hierarchy53/hierarchy58 section of an
  *     ACTIVE registry row; the CORE `lg` (matrix_langs, seed-shipped) is
  *     refused whatever the registry says.
- *   - the file probe. `\copy … TO PROGRAM` reports psql's exit, not gzip's, so
- *     "the file exists" is the only honest verdict.
+ *   - the dump's proof: a temp sibling promoted only on exit 0 + a complete
+ *     gzip stream + psql's own row count (the failure cases live in
+ *     export_hierarchy_partial_dump_native.test.ts).
  *   - per-entry isolation: one bad tipo must produce an error LINE, never
  *     discard the files the other entries produced.
  *   - hierarchy.json: written atomically, re-read by the FORMAT's own reader,
@@ -59,6 +60,7 @@ import {
 	insertMatrixRecordWithCounter,
 } from '../../src/core/db/matrix_write.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { isTempSibling } from '../../src/core/files/temp_path.ts';
 import { HIERARCHY_IMPORT_DIR } from '../../src/core/install/paths.ts';
 import {
 	HIERARCHY_MANIFEST_FILE,
@@ -416,8 +418,8 @@ describe('hierarchy.json — the manifest action', () => {
 		expect(extend.empty_hierarchies).not.toContain(SCRATCH_TLD);
 		expect(extend.empty_hierarchies).not.toContain('lg');
 		expect(manifest.date).toBeString();
-		// Atomic write: no temp sibling is left behind.
-		expect(readdirSync(outDir).filter((name) => name.endsWith('.tmp'))).toEqual([]);
+		// Atomic write: no temp sibling (the manifest's or a dump's) is left behind.
+		expect(readdirSync(outDir).filter(isTempSibling)).toEqual([]);
 	}, 30000);
 
 	test('an unusable destination writes nothing and says so', async () => {

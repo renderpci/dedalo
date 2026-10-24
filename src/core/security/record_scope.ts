@@ -32,7 +32,7 @@
 import { CLIENT_MAX_LIMIT, CLIENT_MAX_LOCATOR_PINS, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
-import { buildAnyRowInScopeSql, buildSearchSql } from '../search/sql_assembler.ts';
+import { buildRowsInScopeSql, buildSearchSql } from '../search/sql_assembler.ts';
 import { getPermissions, type Principal } from './permissions.ts';
 
 /**
@@ -311,52 +311,67 @@ export interface BoundRows {
 }
 
 /**
- * THE SET-SHAPED TWIN of {@link scopeInverseReferenceHits}: does ANY row of
- * `rows` survive this principal's scope? The same two legs, asked of the
- * database instead of a hit list the caller fetched — for a question whose
- * candidate set has no bound (READ-4: "is anything past this page yours", over
- * a tail of any length).
+ * THE SET-SHAPED TWIN of {@link scopeInverseReferenceHits}: the rows of `rows`
+ * that survive this principal's scope, as a bound SELECT of the same columns —
+ * the same two legs, asked of the database instead of a hit list the caller
+ * fetched, for a question whose candidate set has no bound (the related
+ * search's count, page and past-the-page probe — D1 2026-10-21 — and READ-4's
+ * indexation-grid probe).
  *
- * - global admin: unscoped, as in the hit-list door — any row at all;
+ * - global admin: unscoped, as in the hit-list door — `rows` unchanged;
  * - LEG 1, the section read grant: the DISTINCT sections the rows land in (one
  *   row per section, never per record), judged by the same grant check
  *   ({@link hitsWithSectionGrant});
- * - LEG 2, the per-record scope: one EXISTS over the rows, joined to each
- *   granted section's records under the assembler's own predicate
- *   (search/sql_assembler.ts buildAnyRowInScopeSql) — one row back, stopping
- *   at the first visible record.
+ * - LEG 2, the per-record scope: each granted section's records joined under
+ *   the assembler's own predicate (search/sql_assembler.ts buildRowsInScopeSql).
  *
- * Bounded whatever the candidate count: at most three statements (the
- * section list, the exists, plus what the predicate builders read through
- * their caches), each returning at most one row per SECTION. Discloses a
- * boolean about records the caller may see, nothing about the others.
+ * Bounded whatever the candidate count: one statement here (the section list,
+ * at most one row per SECTION) plus what the predicate builders read through
+ * their caches; the caller's own statement then counts / windows / EXISTS-tests
+ * the scoped set. No granted section ⇒ the empty set. A row naming no section
+ * (NULL) names no record: it reaches the grant leg as no readable section and
+ * is dropped there.
  */
-export async function anyRowInScope(rows: BoundRows, principal: Principal): Promise<boolean> {
-	const bound = rows.params as (string | number | null)[];
-	if (principal.isGlobalAdmin) {
-		const found = (await sql.unsafe(
-			`SELECT EXISTS (SELECT 1 FROM (${rows.sql}) AS scoped_rows) AS found`,
-			bound,
-		)) as { found: boolean }[];
-		return found[0]?.found === true;
-	}
+export async function scopedRows(rows: BoundRows, principal: Principal): Promise<BoundRows> {
+	if (principal.isGlobalAdmin) return rows;
 	const sections = (await sql.unsafe(
-		`SELECT DISTINCT scoped_rows.section_tipo FROM (${rows.sql}) AS scoped_rows WHERE scoped_rows.section_tipo IS NOT NULL`,
-		bound,
-	)) as { section_tipo: string }[];
+		`SELECT DISTINCT scoped_rows.section_tipo FROM (${rows.sql}) AS scoped_rows`,
+		rows.params as (string | number | null)[],
+	)) as { section_tipo: string | null }[];
 	const { granted } = await hitsWithSectionGrant(
 		sections.map((row) => ({ section_tipo: String(row.section_tipo), section_id: 0 })),
 		principal,
 	);
-	if (granted.length === 0) return false;
-	const query = await buildAnyRowInScopeSql(
+	return buildRowsInScopeSql(
 		rows,
 		granted.map((hit) => hit.section_tipo),
 		principal,
 	);
-	const found = (await sql.unsafe(query.sql, query.params as (string | number | null)[])) as {
-		found: boolean;
-	}[];
+}
+
+/**
+ * {@link scopedRows} bound to one principal — the `scope` a principal-free
+ * sink (search/search_related.ts) takes, so the sink stays free of the
+ * security layer and every asker of one related question (count, page, probe)
+ * scopes it through THIS one predicate. A user-facing door passes it; a system
+ * walk passes none (AUTHZ-05 door registry,
+ * security_audit_2026_07_23_tripwire).
+ */
+export function rowScopeFor(principal: Principal): (rows: BoundRows) => Promise<BoundRows> {
+	return (rows) => scopedRows(rows, principal);
+}
+
+/**
+ * Does ANY row of `rows` survive this principal's scope? One EXISTS over
+ * {@link scopedRows} — stopping at the first visible record. Discloses a
+ * boolean about records the caller may see, nothing about the others.
+ */
+export async function anyRowInScope(rows: BoundRows, principal: Principal): Promise<boolean> {
+	const scoped = await scopedRows(rows, principal);
+	const found = (await sql.unsafe(
+		`SELECT EXISTS (SELECT 1 FROM (${scoped.sql}) AS any_rows) AS found`,
+		scoped.params as (string | number | null)[],
+	)) as { found: boolean }[];
 	return found[0]?.found === true;
 }
 

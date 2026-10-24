@@ -34,13 +34,15 @@ import { registerOpsGauge } from '../api/counters.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 
 /**
- * When a reconcile runs by itself.
+ * When a reconcile runs by itself (scheduler.ts runs them).
  *  - `operator`: only when an operator asks (widget/CLI). The default for
  *    anything that walks a large store or repairs destructively.
- *  - `boot`: once, after the server listens (cheap hygiene).
- *  - `{ everyMs }`: on an interval while the server lives.
+ *  - `boot`: after the server listens (cheap hygiene) — until a run completes:
+ *    a DEFERRED run (ReconcileReport.deferred) is re-armed.
+ *  - `{ everyMs }`: on an interval while the server lives, `atBoot` also once
+ *    after it listens; a deferred run is re-armed sooner than the period.
  */
-export type ReconcileSchedule = 'operator' | 'boot' | { everyMs: number };
+export type ReconcileSchedule = 'operator' | 'boot' | { everyMs: number; atBoot?: boolean };
 
 /** The scope a run may be narrowed to — per definition (see `scopeLabel`). */
 export type ReconcileScope = readonly string[];
@@ -59,6 +61,13 @@ export interface ReconcileReport {
 	applied: number;
 	/** The owner's own report — whatever its consumers already read. */
 	detail: Record<string, unknown>;
+	/**
+	 * Set when an APPLY could not happen NOW and nothing was applied (another
+	 * writer held the store past the run's bound — media_index's fence): the
+	 * repair is still owed, and the scheduler re-arms the run until one completes.
+	 * `reason` names what held it off. Absent on a run that completed.
+	 */
+	deferred?: { reason: string };
 }
 
 export interface ReconcileDefinition {
@@ -82,6 +91,14 @@ export interface ReconcileDefinition {
 	 * principal and are unaffected; the owner's own root door may still apply.
 	 */
 	applyRootOnly?: { reason: string };
+	/**
+	 * An APPLY is never offered through the registry's doors (widget, CLI, scheduler):
+	 * the repair has its own door — say which, and why. `runReconcile` refuses such an
+	 * apply BEFORE `run` (`request.invalid`, nothing recorded), and the doors publish it
+	 * as `applyPolicyOf` = `'refused'` so no client offers a button that cannot succeed.
+	 * Exclusive with `applyRootOnly` and `autoApply` (both are about an apply that runs).
+	 */
+	applyRefused?: { reason: string };
 	/** The repo-relative modules this definition wraps (owner + shells) — the census maps hits through it. */
 	sources: readonly string[];
 	run(options: ReconcileRunOptions): Promise<ReconcileReport>;
@@ -96,6 +113,8 @@ export interface ReconcileRunRecord {
 	durationMs: number;
 	drift: number;
 	applied: number;
+	/** The report's `deferred.reason` — the apply did not happen and is owed — else null. */
+	deferred: string | null;
 	/**
 	 * Set when the run threw: the DedaloError CODE (or `internal.unexpected`
 	 * for an untyped throw) — never the exception text, which goes to the log.
@@ -142,11 +161,57 @@ export function registerReconcile(definition: ReconcileDefinition): void {
 	ensureGauge();
 }
 
-/** The reason-required facets: each one declared must say why. */
+/** The reason-required facets: each one declared must say why; a refused apply excludes the others. */
 function facetProblems(definition: ReconcileDefinition): string[] {
-	const facets = { autoApply: definition.autoApply, applyRootOnly: definition.applyRootOnly };
-	return Object.entries(facets).flatMap(([facet, value]) =>
+	const facets = {
+		autoApply: definition.autoApply,
+		applyRootOnly: definition.applyRootOnly,
+		applyRefused: definition.applyRefused,
+	};
+	const problems = Object.entries(facets).flatMap(([facet, value]) =>
 		value !== undefined && value.reason.trim() === '' ? [`${facet} needs a reason`] : [],
+	);
+	if (
+		definition.applyRefused !== undefined &&
+		(definition.applyRootOnly !== undefined || definition.autoApply !== undefined)
+	) {
+		problems.push('applyRefused excludes applyRootOnly and autoApply (an apply that never runs)');
+	}
+	return problems;
+}
+
+/**
+ * Who may APPLY a definition through the registry's operator doors — the ONE derivation
+ * every door publishes (the reconcile_status row, the CLI listing):
+ *  - `'refused'` — nobody: `applyRefused` (the repair has its own door);
+ *  - `'root'`    — the root user only: `applyRootOnly`;
+ *  - `'admin'`   — whoever may open the door (a global admin).
+ */
+export type ReconcileApplyPolicy = 'admin' | 'root' | 'refused';
+
+export function applyPolicyOf(definition: ReconcileDefinition): ReconcileApplyPolicy {
+	if (definition.applyRefused !== undefined) return 'refused';
+	if (definition.applyRootOnly !== undefined) return 'root';
+	return 'admin';
+}
+
+/** The declared reason behind a non-`'admin'` apply policy (null for `'admin'`). */
+export function applyPolicyReason(definition: ReconcileDefinition): string | null {
+	return definition.applyRefused?.reason ?? definition.applyRootOnly?.reason ?? null;
+}
+
+/** operator | boot | {everyMs > 0, atBoot?: boolean} — nothing else schedules a run. */
+function isValidSchedule(schedule: ReconcileSchedule): boolean {
+	if (schedule === 'operator' || schedule === 'boot') return true;
+	return typeof schedule === 'object' && isValidInterval(schedule);
+}
+
+function isValidInterval(schedule: { everyMs: number; atBoot?: boolean }): boolean {
+	const atBoot = schedule.atBoot;
+	return (
+		Number.isFinite(schedule.everyMs) &&
+		schedule.everyMs > 0 &&
+		(atBoot === undefined || typeof atBoot === 'boolean')
 	);
 }
 
@@ -162,13 +227,8 @@ export function validateDefinition(definition: ReconcileDefinition): void {
 	if (definition.description.trim() === '') problems.push('description is empty');
 	if (definition.sources.length === 0) problems.push('sources is empty');
 	if (typeof definition.run !== 'function') problems.push('run is not a function');
-	const schedule = definition.schedule;
-	if (
-		schedule !== 'operator' &&
-		schedule !== 'boot' &&
-		!(typeof schedule === 'object' && Number.isFinite(schedule.everyMs) && schedule.everyMs > 0)
-	) {
-		problems.push('schedule must be operator | boot | {everyMs > 0}');
+	if (!isValidSchedule(definition.schedule)) {
+		problems.push('schedule must be operator | boot | {everyMs > 0, atBoot?: boolean}');
 	}
 	problems.push(...facetProblems(definition));
 	if (problems.length > 0) {
@@ -196,6 +256,30 @@ export function lastReconcileRun(name: string): ReconcileRunRecord | null {
 }
 
 /**
+ * The registered definition `name` names, when this request may run it: unknown
+ * names are `resource.not_found`; an APPLY of an `applyRefused` definition is
+ * `request.invalid`. Neither is a run, so the caller records nothing.
+ */
+function runnableDefinition(name: string, apply: boolean): ReconcileDefinition {
+	const definition = definitions.get(name);
+	if (definition === undefined) {
+		throw new DedaloError('resource.not_found', {
+			message: `reconcile '${name}' is not registered`,
+			coordinates: { reconcile: name },
+		});
+	}
+	if (apply && definition.applyRefused !== undefined) {
+		// Not a run: nothing ran, so nothing is recorded (the gauge keeps the last real run).
+		throw new DedaloError('request.invalid', {
+			message: `reconcile '${name}': apply is refused through the registry — ${definition.applyRefused.reason}`,
+			publicMessage: `The '${name}' reconcile cannot be applied here: ${definition.applyRefused.reason}`,
+			coordinates: { reconcile: name },
+		});
+	}
+	return definition;
+}
+
+/**
  * Run one reconcile through the registry, so the outcome (or the failure) is
  * remembered and published. Rethrows after recording — a caller must still
  * see its error.
@@ -204,13 +288,7 @@ export async function runReconcile(
 	name: string,
 	options: ReconcileRunOptions,
 ): Promise<{ report: ReconcileReport; record: ReconcileRunRecord }> {
-	const definition = definitions.get(name);
-	if (definition === undefined) {
-		throw new DedaloError('resource.not_found', {
-			message: `reconcile '${name}' is not registered`,
-			coordinates: { reconcile: name },
-		});
-	}
+	const definition = runnableDefinition(name, options.apply);
 	const startedAt = Date.now();
 	const base = {
 		name,
@@ -225,6 +303,7 @@ export async function runReconcile(
 			durationMs: Date.now() - startedAt,
 			drift: report.drift,
 			applied: report.applied,
+			deferred: report.deferred?.reason ?? null,
 			error: null,
 		};
 		lastRuns.set(name, record);
@@ -237,6 +316,7 @@ export async function runReconcile(
 			durationMs: Date.now() - startedAt,
 			drift: 0,
 			applied: 0,
+			deferred: null,
 			error: error instanceof DedaloError ? error.code : 'internal.unexpected',
 		});
 		throw error;
@@ -255,6 +335,7 @@ export function reconcileGauge(): Record<string, unknown> {
 			last_apply: last?.apply ?? null,
 			last_drift: last?.drift ?? null,
 			last_applied: last?.applied ?? null,
+			last_deferred: last?.deferred ?? null,
 			last_error: last?.error ?? null,
 		};
 	}

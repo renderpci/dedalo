@@ -64,6 +64,7 @@
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {check_unsaved_data} from '../../component_common/js/component_common.js'
+	import {is_time_machine_view} from '../../component_common/js/events_subscription.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {create_row_window} from '../../common/js/row_window.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
@@ -1809,6 +1810,31 @@ section.prototype.delete_section = async function (options) {
 
 
 /**
+* HOLDS_COMPONENT_LOCKS
+* False for a read-only Time Machine list: its rows come from matrix_time_machine
+* (sqo.mode 'tm' — the ROW SOURCE), or it sits on a TM surface (the dd15 history
+* list, a tool_time_machine preview — is_time_machine_view walks the caller chain).
+* Such a list never edits, so it never acquires a component lock and has none to
+* clean up. Every TM list today is a dd15 section (inspector Latest changes /
+* Component history, tool_time_machine), and a bare dd15 is a section a non-admin
+* may not name (WC-2026-10-23-own-lock-cleanup-ungated: the inspector "Latest
+* changes" pagination got a 403). The sqo.mode test also covers a TM list scoped
+* to a real section, where the cleanup would release the user's LIVE edit locks.
+* @param {Object} instance - section instance
+* @returns {boolean} true when the section's navigation must clean the user's locks
+*/
+export const holds_component_locks = function(instance) {
+
+	if (instance?.rqo?.sqo?.mode==='tm' || instance?.request_config_object?.sqo?.mode==='tm') {
+		return false
+	}
+
+	return !is_time_machine_view(instance)
+}//end holds_component_locks
+
+
+
+/**
 * NAVIGATE
 * Refreshes the section with a new SQO (typically a changed offset/limit after
 * pagination or a sort-column change) and optionally records the navigation in
@@ -1824,7 +1850,8 @@ section.prototype.delete_section = async function (options) {
 *   6. Remove 'loading' classes.
 *   7. Optionally push a browser history entry via `push_browser_history`.
 *   8. Fire a background worker call to clear server-side section locks for the
-*      current user so other sessions can acquire the lock on the record.
+*      current user so other sessions can acquire the lock on the record — never
+*      from a read-only Time Machine list (holds_component_locks), which holds none.
 *
 * The 'loading' class is applied to `self.node_body` (the section content area)
 * and to the inspector node rather than the entire section wrapper so that the
@@ -1922,7 +1949,11 @@ section.prototype.navigate = async function(options) {
 				})
 		}
 
-	// clean previous locks of current user in current section
+	// clean previous locks of current user in current section.
+	// A read-only Time Machine list holds no lock: it sends nothing (holds_component_locks)
+		if (!holds_component_locks(self)) {
+			return true
+		}
 		dd_request_idle_callback(
 			() => {
 				data_manager.request({

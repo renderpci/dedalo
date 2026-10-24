@@ -36,3 +36,17 @@ whether one is set (component_password's idle status line reads exactly that).
 
 No frozen fixture carries a component_password value (dd128 was never
 harvested). No parity gate changes, no re-harvest.
+
+## Addendum 2026-10-22 — the Time Machine RAW cell
+
+The history door had a second copy the resolver never saw: the raw `dd1574`
+cell (`component_json`, the byte-verbatim snapshot `tm_record.ts` injects) of a
+credential's per-component TM row served the stored hash to every reader of the
+row — admin, or a §7.4 grant holder who reads the (section, password) pair —
+and the inspector record block requests `dd1574` by default. The mask now
+applies where that virtual record is built (`injectComponentSnapshot`, keyed on
+the row component's `secretValue`): both the raw and the split copy are masked
+before they land, for every principal. Restore reads `matrix_time_machine`
+itself, never the display record, so restoring a past password is unchanged.
+Gate: `test/unit/tm_inspector_access_native.test.ts` ("a credential
+(secretValue) history never serves the stored value") — red without the mask.

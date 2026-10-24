@@ -22,7 +22,7 @@
 
 import {ui} from '../../../core/common/js/ui.js'
 import {event_manager} from '../../../core/common/js/event_manager.js'
-import {render_servers_list} from '../../../core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js'
+import {render_servers_list, build_import_files} from '../../../core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js'
 import {update_code} from '../../../core/area_maintenance/widgets/update_code/js/update_code.js'
 import {render_info_modal, render_restore_modal} from '../../../core/area_maintenance/widgets/update_code/js/render_update_code.js'
 import {
@@ -895,6 +895,66 @@ describe('UPDATE_CODE WIDGET', function() {
 
 	// keep the ui import honest (build_wrapper_edit path is exercised elsewhere)
 	void ui
+})
+
+
+
+// THE UPDATE_ONTOLOGY IMPORT FILE LIST (Phase 2 of the update panel). The
+// master's manifest declares each ontology's `dependencies` ({tld, main,
+// mandatory}); the import records them on the registry row (hierarchy60) so
+// this server re-serves them (WC-2026-10-10-ontology-dependencies-hierarchy60).
+// The panel is the only thing between the manifest and the import, so the
+// forward is pinned here on the SHIPPED builder: declared → forwarded
+// unchanged (an empty list is a declaration too); absent → no key at all
+// (absent ≠ []: [] would record "declares none"). Backend-free.
+describe('UPDATE_ONTOLOGY import file list (build_import_files)', function() {
+
+	const manifest = () => ({
+		files : [
+			{tld: 'zzb', url: 'zzb.copy.gz'},
+			{tld: 'matrix_dd', url: 'matrix_dd.copy.gz'},
+			{tld: 'zza', url: 'zza.copy.gz'},
+			{tld: 'zzc', url: 'zzc.copy.gz'},
+			{tld: 'zzskip', url: 'zzskip.copy.gz'}
+		],
+		info : {
+			active_ontologies : [
+				{tld: 'zza', typology_id: 1, name_data: {'lg-eng': 'A'}, dependencies: [{tld: 'zzb', main: 'zzb1', mandatory: true}]},
+				{tld: 'zzb', typology_id: 2, name_data: {'lg-eng': 'B'}},
+				{tld: 'zzc', typology_id: 3, name_data: {'lg-eng': 'C'}, dependencies: []},
+				{tld: 'zzskip', typology_id: 4, name_data: {'lg-eng': 'S'}, dependencies: [{tld: 'zza', main: 'zza1', mandatory: false}]}
+			]
+		}
+	})
+
+	it('matrix_dd first, then exactly the selected TLDs, enriched from the manifest info', function() {
+		const files = build_import_files(manifest(), ['zza', 'zzb', 'zzc'])
+		assert.deepEqual(files.map((file) => file.tld), ['matrix_dd', 'zzb', 'zza', 'zzc'])
+		const zza = files.find((file) => file.tld==='zza')
+		assert.strictEqual(zza.typology_id, 1)
+		assert.deepEqual(zza.name_data, {'lg-eng': 'A'})
+		assert.strictEqual(zza.url, 'zza.copy.gz')
+		// matrix_dd is imported once, first, even when the operator also typed it
+		assert.deepEqual(build_import_files(manifest(), ['matrix_dd', 'zza']).map((file) => file.tld), ['matrix_dd', 'zza'])
+	})
+
+	it('declared dependencies reach the import UNCHANGED; an empty declaration stays []', function() {
+		const files = build_import_files(manifest(), ['zza', 'zzb', 'zzc'])
+		assert.deepEqual(files.find((file) => file.tld==='zza').dependencies, [{tld: 'zzb', main: 'zzb1', mandatory: true}])
+		assert.deepEqual(files.find((file) => file.tld==='zzc').dependencies, [])
+	})
+
+	it('an ontology that declares none sends NO dependencies key (absent ≠ [])', function() {
+		const files = build_import_files(manifest(), ['zza', 'zzb', 'zzc'])
+		assert.isFalse(Object.hasOwn(files.find((file) => file.tld==='zzb'), 'dependencies'))
+		assert.isFalse(Object.hasOwn(files.find((file) => file.tld==='matrix_dd'), 'dependencies'))
+	})
+
+	it('the manifest it was given is not mutated', function() {
+		const given = manifest()
+		build_import_files(given, ['zza', 'zzb', 'zzc'])
+		assert.deepEqual(given, manifest())
+	})
 })
 
 

@@ -515,8 +515,15 @@ page.prototype.init = async function(options) {
 			// toast on the rest. The page no longer inspects tokens itself.
 			// (error_dispatch owns the "never a SECOND login" rule and the single
 			// overlay shared by every request that failed at once.)
+			// (!) EVERY failed request of the page passes here — an embedded panel's
+			// as much as the page's own — so this listener is never PAGE scope: it
+			// must not set page_globals.page_error (page_scope:false). The page's
+			// own failures set it where they happen (build, the page-root
+			// element's build_autoload).
+			// Answers the dispatch promise, so a publisher (a gate) can await the
+			// decision instead of a timer.
 			const api_error_handler = (api_error) => {
-				handle_api_error(api_error, {scope:'page'})
+				return handle_api_error(api_error, {scope:'page', page_scope:false})
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('api_error', api_error_handler)
@@ -678,7 +685,7 @@ page.prototype.build = async function(autoload=false) {
 						// policy `perm.denied` → no_access_page: sets page_globals.page_error
 						// with the label in the user's language, so
 						// common.prototype.render draws the no-access panel.
-						await handle_api_error(api_response.error, {scope:'page build'})
+						await handle_api_error(api_response.error, {scope:'page build', page_scope:true})
 
 						return false
 					}
@@ -865,6 +872,12 @@ const navigate = async function(user_navigation_options) {
 			return false
 		}
 		self.navigation_in_progress = true
+
+	// page error. A NEW page element is being loaded: the previous element's
+	// page-level failure is no longer the page's state. Left set, every render
+	// of the next element would be swapped for the old error panel — the page
+	// stuck on a refusal it has navigated away from.
+		page_globals.page_error = null
 
 	// reset status to prevent errors lock
 		self.status = 'rendered'

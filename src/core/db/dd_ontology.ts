@@ -72,7 +72,7 @@ import {
 } from '../ontology/cache_invalidation.ts';
 import { safeTld } from '../ontology/tld.ts';
 import { encodeForJsonb } from './json_codec.ts';
-import { sql, sqlStateOf, withTransaction } from './postgres.ts';
+import { isInTransaction, sql, sqlStateOf, withTransaction } from './postgres.ts';
 
 /**
  * One dd_ontology node — the shape the parser produces and the writer persists.
@@ -563,10 +563,93 @@ export async function updateDdOntologyColumns(
 	return true;
 }
 
-/** Delete one node by tipo (PHP delete()). Fans out cache invalidation. */
-export async function deleteDdOntologyNode(tipo: string): Promise<void> {
-	await sql`DELETE FROM dd_ontology WHERE tipo = ${tipo}`;
+/**
+ * Delete one node by tipo (PHP delete()). Returns the rows removed (0 or 1).
+ * Fans out cache invalidation.
+ */
+export async function deleteDdOntologyNode(tipo: string): Promise<number> {
+	const removed = (await sql`DELETE FROM dd_ontology WHERE tipo = ${tipo} RETURNING tipo`) as {
+		tipo: string;
+	}[];
 	await clearOntologyDerivedCaches();
+	return removed.length;
+}
+
+/**
+ * The advisory-lock class (int4) of the per-tld PROJECTION lock: the key is
+ * (class, hashtext(tld)). The two-int key space cannot collide with the
+ * single-bigint advisory locks (node locks, the pending-retry / RAG drains);
+ * 17580002 is the diffusion target fence (diffusion_bridge/target_lock.ts).
+ */
+export const ONTOLOGY_PROJECTION_LOCK_CLASS = 17580003;
+
+/**
+ * The advisory-lock class (int4) of the per-tld REGISTRY-ROW MINT lock: the key
+ * is (class, hashtext(tld)). Taken ONLY by ontology_write.ts createMainSection,
+ * inside its transaction, BEFORE its "no row names this tld" check — so the
+ * check and the mint are one step and two minters of one tld never both mint
+ * (cross-write:r2). Its own class: it never orders against the projection lock.
+ */
+export const ONTOLOGY_REGISTRY_MINT_LOCK_CLASS = 17580004;
+
+/**
+ * Take the per-tld REGISTRY-ROW MINT lock (ONTOLOGY_REGISTRY_MINT_LOCK_CLASS) — the
+ * key shape's one home. `tld` must already be the NORMALIZED tld the mint checks
+ * and writes (ontology_write.ts mintMainSection): a raw spelling would lock a key
+ * no other minter of that tld takes. Refused outside a transaction (an xact lock
+ * there is a no-op).
+ */
+export async function lockOntologyRegistryMint(tld: string): Promise<void> {
+	if (!isInTransaction()) {
+		throw new DedaloError('internal.invariant', {
+			message:
+				'lockOntologyRegistryMint: called outside a transaction; the lock would be ineffective (call inside withTransaction)',
+			coordinates: { tld },
+		});
+	}
+	await sql.unsafe('SELECT pg_advisory_xact_lock($1::int, hashtext($2))', [
+		ONTOLOGY_REGISTRY_MINT_LOCK_CLASS,
+		tld,
+	]);
+}
+
+/**
+ * Serialize every writer that derives a tld's NODES from its source records
+ * (ONT-1/2/3 under concurrency, audit 2026-09-26 r0). The invariant
+ * `dd_ontology(tld) == parse(matrix_ontology(<tld>0))` is a read-modify-write
+ * over the tld: the whole-tld re-derive (ontology_state.ts rebuildOntology /
+ * retractOntology) parses the records and then deletes/upserts nodes, the
+ * per-record doors (section_record/ontology_projection.ts projectOntologyNode /
+ * unprojectOntologyNode, the record-lifecycle hook) read a record or a node and
+ * then write. Under READ COMMITTED withTransaction alone does not order them: a
+ * rebuild whose parse predates a concurrent delete re-inserts the deleted
+ * record's node from the stale parse, one whose parse predates a concurrent
+ * undelete removes the node the undelete just committed. Every such writer
+ * takes THIS lock for each tld it derives, BEFORE its first read, inside its
+ * transaction (released at COMMIT/ROLLBACK; re-entrant within the session).
+ *
+ * Several tlds are locked in sorted order, so two multi-tld holders never wait
+ * on each other in a cycle; a cross-order pair of separate calls is still
+ * possible (a bulk run undeleting records of two tlds) and Postgres aborts one
+ * side, loudly. Refused outside a transaction (an xact lock there is a no-op).
+ * Gate: test/unit/ontology_projection_race_native.test.ts.
+ */
+export async function lockOntologyProjection(tlds: Iterable<string>): Promise<void> {
+	const ordered = [...new Set(tlds)].sort();
+	if (ordered.length === 0) return;
+	if (!isInTransaction()) {
+		throw new DedaloError('internal.invariant', {
+			message:
+				'lockOntologyProjection: called outside a transaction; the lock would be ineffective (call inside withTransaction)',
+			coordinates: { tld: ordered.join(',') },
+		});
+	}
+	for (const tld of ordered) {
+		await sql.unsafe('SELECT pg_advisory_xact_lock($1::int, hashtext($2))', [
+			ONTOLOGY_PROJECTION_LOCK_CLASS,
+			tld,
+		]);
+	}
 }
 
 /** A search filter entry: scalar (→ '=') or {operator, value}. */
@@ -662,6 +745,21 @@ export async function getActiveTlds(): Promise<string[]> {
 		.map((row) => row.tld)
 		.filter((tld): tld is string => tld !== null && tld !== '');
 	return activeTldsCache;
+}
+
+/**
+ * Whether dd_ontology holds ANY row of `tld` — getActiveTlds' "active" for ONE tld, read
+ * LIVE (never the module cache: a cache filled by a reader racing an uncommitted teardown
+ * would still list it). The question a whole-tld door re-asks UNDER the tld's projection
+ * lock (ontology_state.ts syncOntologyActivation / rebuildOntology `onlyIfProjected`), so a
+ * teardown that committed first is seen.
+ */
+export async function tldHoldsNodes(tld: string): Promise<boolean> {
+	const rows = (await sql.unsafe(
+		'SELECT EXISTS (SELECT 1 FROM dd_ontology WHERE tld = $1) AS holds',
+		[tld],
+	)) as { holds: boolean }[];
+	return rows[0]?.holds === true;
 }
 
 /**
@@ -798,9 +896,12 @@ async function idSequenceLags(): Promise<boolean> {
  * setval run: a value already handed out can never be reissued (a check-then-
  * setval without it could LOWER the sequence under a concurrent writer). Inside
  * an ambient transaction the lock is held to its end; otherwise it lives in its
- * own short transaction. Call it BEFORE the caller's first dd_ontology write when
- * possible (rebuildOntology does): upgrading a held ROW EXCLUSIVE to this lock can
- * deadlock against a twin — Postgres then aborts one side, loudly.
+ * own short transaction. Call it BEFORE the caller's first dd_ontology write and
+ * OUTSIDE the caller's transaction when possible (rebuildOntology does, before it
+ * opens its own): upgrading a held ROW EXCLUSIVE to this lock can deadlock against a
+ * twin, and a table lock held while the tld's projection lock (lockOntologyProjection)
+ * is awaited deadlocks against a lifecycle unit that holds that lock and then writes
+ * dd_ontology — Postgres then aborts one side, loudly.
  * Returns true when the sequence was moved.
  */
 export async function alignDdOntologyIdSequence(): Promise<boolean> {
@@ -814,9 +915,10 @@ export async function alignDdOntologyIdSequence(): Promise<boolean> {
 }
 
 /**
- * The ONE dd_ontology tld-delete statement (T2): every row of the tld goes, the
- * removed tipos come back so a cascade (ontology_delete.ts) can count and report
- * them. `tld` MUST already be safeTld-validated by the caller; a mismatch is
+ * The whole-tld delete statement (T2): every row of the tld goes, the removed
+ * tipos come back so a caller (ontology_state.ts retractOntology — only the tld
+ * teardown, ontology_delete.ts, routes through it; the activation never retracts)
+ * can count and report them. `tld` MUST already be safeTld-validated by the caller; a mismatch is
  * refused loudly rather than turned into a wider delete. Fans out cache
  * invalidation.
  */
@@ -830,6 +932,33 @@ export async function deleteTldNodesReturningTipos(tld: string): Promise<string[
 	const removed = (await sql.unsafe('DELETE FROM dd_ontology WHERE tld = $1 RETURNING tipo', [
 		tld,
 	])) as { tipo: string }[];
+	await clearOntologyDerivedCaches();
+	return removed.map((row) => row.tipo);
+}
+
+/**
+ * The RECONCILE delete of one tld (ontology_state.ts rebuildOntology): every row of
+ * the tld EXCEPT `keepTipos` goes — the rows the re-derive is about to upsert keep
+ * their ids (no id churn), everything else (orphans) is removed. Same safe-tld
+ * refusal as deleteTldNodesReturningTipos; returns the removed tipos. Fans out
+ * cache invalidation.
+ */
+export async function deleteTldNodesExcept(
+	tld: string,
+	keepTipos: readonly string[],
+): Promise<string[]> {
+	if (safeTld(tld) !== tld) {
+		throw new DedaloError('internal.invariant', {
+			message: `deleteTldNodesExcept: '${tld}' is not a safe tld`,
+			coordinates: { tld },
+		});
+	}
+	const removed = (await sql.unsafe(
+		`DELETE FROM dd_ontology WHERE tld = $1 AND NOT (tipo = ANY(string_to_array($2::text, ',')))
+		 RETURNING tipo`,
+		// Tipos are letters+digits (the identifier grammar), so a comma join is lossless.
+		[tld, keepTipos.join(',')],
+	)) as { tipo: string }[];
 	await clearOntologyDerivedCaches();
 	return removed.map((row) => row.tipo);
 }
@@ -905,6 +1034,48 @@ export async function createRecoverySlice(tlds: readonly string[]): Promise<Reco
 		),
 	);
 	return { created: true, skipped: violators.map((row) => row.tipo) };
+}
+
+/** The recovery-slice single-flight lock's name (hashed to the advisory key, per database). */
+const RECOVERY_SLICE_LOCK_NAME = 'dedalo_ontology_recovery_file';
+
+/**
+ * Run `work` holding the RECOVERY-SLICE single-flight lock, or answer `busy()`
+ * without running it (cross-write:r2). Every build and restore of the recovery
+ * file DROP/CREATEs the one `dd_ontology_recovery` table and writes beside the
+ * one slot (ontology/recovery_file.ts), so they run one at a time, per
+ * database, across every engine process. Outside a transaction: a
+ * SESSION-level try-lock on a RESERVED connection (the unlock must reach the
+ * connection that locked). Inside one (a caller's transaction the slice must
+ * join): the XACT-level try-lock on the pinned connection, released at its
+ * COMMIT/ROLLBACK — a session lock there would outlive an aborted transaction,
+ * whose unlock statement can no longer run.
+ */
+export async function withRecoverySliceLock<T>(work: () => Promise<T>, busy: () => T): Promise<T> {
+	const won = (rows: unknown): boolean => {
+		const got = (rows as { got: boolean | string }[])[0]?.got;
+		return got === true || got === 't' || got === 'true';
+	};
+	if (isInTransaction()) {
+		const rows = await sql.unsafe('SELECT pg_try_advisory_xact_lock(hashtext($1)) AS got', [
+			RECOVERY_SLICE_LOCK_NAME,
+		]);
+		return won(rows) ? work() : busy();
+	}
+	const reserved = await sql.reserve();
+	try {
+		const rows = await reserved.unsafe('SELECT pg_try_advisory_lock(hashtext($1)) AS got', [
+			RECOVERY_SLICE_LOCK_NAME,
+		]);
+		if (!won(rows)) return busy();
+		try {
+			return await work();
+		} finally {
+			await reserved.unsafe('SELECT pg_advisory_unlock(hashtext($1))', [RECOVERY_SLICE_LOCK_NAME]);
+		}
+	} finally {
+		reserved.release();
+	}
 }
 
 /** Drop the dd_ontology_recovery slice table (always run after the dump). */

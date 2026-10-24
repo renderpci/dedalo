@@ -70,10 +70,32 @@ flowchart LR
 
 - **Compile editable records → `dd_ontology`.** Parse one section record into a
   `DdOntologyNode` (`parseSectionRecordToOntologyNode()`) and upsert it
-  (`insertDdOntologyRecord()`); do it in bulk for a section
-  (`setRecordsInDdOntology()`) or re-derive a whole TLD
-  (`rebuildOntology()`). Bulk "list mode" is a **full-section
-  scan** — every record of the section is recompiled, not a filtered subset.
+  (`insertDdOntologyRecord()`); do it for an explicit set of records
+  (`setRecordsInDdOntology()`, one id or an id list — never an implicit
+  whole section) or re-derive a whole TLD (`rebuildOntology()`).
+- **Keep every node at its own address.** A record of `<tld>0` with
+  `section_id` N projects the node `<tld>N` and nothing else: the tipo comes
+  from the record's address, never from what its TLD field (`ontology7`)
+  says. A record whose TLD field names another TLD is refused
+  (`ontology.invalid_node`) instead of overwriting that TLD's node, and a
+  section that is not a `<tld>0` section (`test3`, `ontology1`,
+  `localontology0`, the registry `ontology35`) never projects nodes.
+- **Move a node with its record.** Deleting a node record (or emptying its
+  data) removes its node; restoring a deleted record from the Time Machine
+  re-projects it (only into a TLD whose `<tld>0` root is projected). Deleting
+  or restoring a local override re-parses the node it overrides. All of it
+  runs inside the record's own transaction. Writing a record's content into
+  `dd_ontology` stays a developer action: when a user who is not a developer
+  restores a record, or deletes or restores an override, the record changes
+  but the node does not, and `inspectOntology()` reports it as drift for a
+  developer to apply. Removing the node of a deleted record happens for
+  everyone.
+- **Order every writer of a TLD's nodes.** A rebuild, a TLD teardown, a
+  per-record projection and a record delete or restore each take the TLD's
+  projection lock (`lockOntologyProjection()`, `src/core/db/dd_ontology.ts`)
+  inside their transaction before their first read, so a rebuild cannot
+  re-insert the node of a record deleted while it ran, nor remove one
+  restored while it ran.
 - **Resolve node fields from the editable side.** Read each definition
   component (tld, parent, model, order, translatable, relations, term,
   properties) off the matrix record, applying the **local-overwrite**
@@ -140,12 +162,15 @@ There is **nothing to instantiate** — every function is a plain exported
 import { setRecordsInDdOntology, insertDdOntologyRecord } from
   'src/core/ontology/ontology_write.ts';
 
-// Compile every editable ontology record of a section into dd_ontology
-const response = await setRecordsInDdOntology({ sectionTipo: 'oh0' }); // list mode: full-section scan
-// response = { result, msg, errors, total, processed_count }
+// Compile an explicit set of editable records of a section into dd_ontology
+const response = await setRecordsInDdOntology({ sectionTipo: 'oh0', sectionIds: [12, 13] });
+// response = { ok, msg, errors, total, processed_count }
+// A call with no sectionId / sectionIds is refused (no whole-section default).
 
 // Compile a single node and UPSERT it into dd_ontology; returns its tipo
-const tipo = await insertDdOntologyRecord('oh0', 12); // e.g. 'oh12' (null if TLD empty)
+const tipo = await insertDdOntologyRecord('oh0', 12); // 'oh12'; null if its TLD field is empty
+// Throws ontology.invalid_node when the record names another TLD, or for a
+// section that holds no nodes (e.g. 'test3').
 ```
 
 No cache-reset call is needed afterward — `upsertDdOntologyNode()` (the
@@ -162,21 +187,25 @@ taken from the TypeScript signatures.
 | function | module | purpose |
 | --- | --- | --- |
 | `parseSectionRecordToOntologyNode(sectionTipo, sectionId)` | `ontology/parser.ts` | Build a `DdOntologyNode` from one editable matrix record: resolve tld/parent/model/order/translatable/relations/term/properties (overwrite-favoured). Returns the node, or `null` if the mandatory TLD value is empty. |
-| `insertDdOntologyRecord(sectionTipo, sectionId)` | `ontology/ontology_write.ts` | Parse one record (above) then `upsertDdOntologyNode()` it into `dd_ontology`. Returns the resulting `tipo`, or `null` on failure. |
-| `setRecordsInDdOntology(target)` | `ontology/ontology_write.ts` | Bulk compile: edit mode (`sectionId` given) processes one record; list mode processes **every** record of the section. Main-section records take the TLD path (delete nodes when the TLD is inactive, else (re)create the `<tld>0` node via `createDdOntologyRootNode()`). Returns `{result, msg, errors, total, processed_count}`. |
+| `insertDdOntologyRecord(sectionTipo, sectionId)` | `ontology/ontology_write.ts` | Parse one record (above) then upsert it into `dd_ontology` through the guarded primitive (`projectOntologyNode()`, `section_record/ontology_projection.ts`). Returns the resulting `tipo`, or `null` when the record has no TLD. Throws `ontology.invalid_node` when the record parses outside its own address (another TLD) or the section is not a `<tld>0` section. |
+| `setRecordsInDdOntology(target)` | `ontology/ontology_write.ts` | Compile an explicit scope of one `<tld>0` section: one record (`sectionId`) or an id list (`sectionIds`). Any other section is refused before any work (the registry `ontology35` included — see `syncOntologyActivation()`). A record refused by the guard is an error line; the rest still run (partial success). Returns `{ok, msg, errors, total, processed_count}`. |
+| `projectOntologyRecordLifecycle(sectionTipo, sectionId, event, relation)` | `section_record/ontology_projection.ts` | The record-lifecycle hook, called inside the record's transaction by the delete doors (`death`) and the undelete chokepoint (`birth`): removes / re-projects the record's node, or re-parses the node an override addresses. Not called by applications directly. |
 | `syncOrderToDdOntology(...)` | `ontology/ontology_write.ts` | Write the sibling display order back into `dd_ontology` after a tree reorder. Called by the `save_order` tree action (`src/core/ts_object/ts_api.ts`). |
 
 ### Rebuild a TLD — the single authority
 
 `dd_ontology` is a projection of `matrix_ontology`; keeping the two consistent lives in **one**
-module, `src/core/ontology/ontology_state.ts`. Nothing else wipe-and-rebuilds a TLD (guarded by
-`test/unit/ontology_single_writer_tripwire.test.ts`). This replaced the retired
+module, `src/core/ontology/ontology_state.ts`. Nothing else deletes a TLD's nodes wholesale (guarded by
+`test/unit/ontology_single_writer_tripwire.test.ts`): the ontology update, the registry
+activation and the TLD teardown all go through it. This replaced the retired
 `regenerateRecordsInDdOntology`, whose only rollback was a leftover `dd_ontology_bk` table.
 
 | function | module | purpose |
 | --- | --- | --- |
-| `inspectOntology(tld)` | `ontology/ontology_state.ts` | **Pure read.** The drift of one TLD: nodes `missing` / `stale` / `orphaned` vs the parsed source, plus `mainNodeOk` and `inSync`. Compared by meaning (jsonb key order normalized, empty ≡ null, `propiedades` parsed) so formatting is not false drift. |
-| `rebuildOntology(tld, userId?, {reclaimIds?})` | `ontology/ontology_state.ts` | **Transactional wipe-and-rebuild** — the ONE writer. The delete + reinsert run in one `withTransaction`, so the new projection is published atomically: no reader ever observes the empty window, a failure rolls back, and no backup table is involved. `reclaimIds` deletes further rows by id in the same transaction (the identifier-grammar repair). |
+| `inspectOntology(tld)` | `ontology/ontology_state.ts` | **Pure read.** The drift of one TLD: nodes `missing` / `stale` / `orphaned` vs the parsed source, plus `mainNodeOk` and `inSync`. Compared by meaning (jsonb key order normalized, empty ≡ null, `propiedades` parsed) so formatting is not false drift. The `<tld>0` root is not parsed from a record but derived from the TLD's registry record, so it is compared with that: a root hung under any grouper other than `ontologytype<N>` (`N` = the registry record's typology, 15 when it states none) is `stale` drift on `parent`, which `rebuildOntology` repairs. A TLD with no registry record is not compared (nothing derives its root). |
+| `rebuildOntology(tld, userId?, {reclaimIds?, mainNode?})` | `ontology/ontology_state.ts` | **Transactional, id-stable re-derive** — the ONE writer. In one `withTransaction` every stored row the parse does not produce is deleted (orphans) and every parsed node is upserted over its row, so it keeps its id; the new projection is published atomically and a failure rolls back. A record naming another TLD is refused and named in `errors`. Because the whole TLD is parsed before anything is written, a node whose model node belongs to the same TLD takes its `model` from that model's parsed term, not from its stored row: a model added or renamed in the source reaches every instance in the same rebuild. The ontology update adds a second pass for models that live in another updated TLD. `reclaimIds` deletes further rows by id in the same transaction (the identifier-grammar repair). `mainNode`: `'ensure'` (default) creates the TLD's registry record when missing, then rebuilds `<tld>0` from it; `'existing'` (the ontology update, the activation) writes nothing outside the TLD: it never writes the registry, and re-derives `<tld>0` from the registry record (when one exists) under its typology grouper `ontologytype<N>` by name, without building that grouper. |
+| `retractOntology(tld)` | `ontology/ontology_state.ts` | Delete every node of a TLD in one transaction — the TLD teardown (`ontology_delete.ts`): an uninstalled TLD holds no nodes. |
+| `syncOntologyActivation(mainSectionIds, userId?)` | `ontology/ontology_state.ts` | For each registry (`ontology35`) record whose TLD is **active** — `dd_ontology` still holds rows of it: a projection that drifted is re-derived in full (`rebuildOntology`, `mainNode: 'existing'`); one already in sync only gets its `<tld>0` root re-planted from the registry record. A TLD with no rows is left empty: this door never re-activates nor retracts a TLD (activation by the `hierarchy4` flag is an open owner decision). |
 
 !!! note "A malformed reference is dropped and reported, never projected"
     When a source record's parent, model or related-term locator composes into something
@@ -228,7 +257,8 @@ module, `src/core/ontology/ontology_state.ts`. Nothing else wipe-and-rebuilds a 
 | `syncMainSectionFromDefinition(fileItem, userId?)` | `ontology/ontology_write.ts` | The IMPORT door (package install, ontology update, seed compile). Creates when missing; on an existing record writes only `hierarchy5` / `hierarchy9` / `hierarchy60` from the definition (each only when stated), switches `hierarchy4` on for a core TLD only, and re-applies the `hierarchy125` / `hierarchy8` rules — the project filter and every other key are the installation's. |
 | `ensureMainSection(fileItem, userId?)` | `ontology/ontology_write.ts` | Create-if-missing, otherwise no write — the rebuild and provisioning doors build `<tld>0` from what the record holds. |
 | `createDdOntologyRootNode(fileItem, userId?)` | `ontology/ontology_write.ts` | Create/UPSERT the `dd_ontology` node that *represents the ontology section itself* (`<tld>0`) so the TLD appears in the tree/menu. Returns the tipo. |
-| `createParentGrouper(parentGroup, tld, typologyId, userId?)` | `ontology/ontology_write.ts` | Ensure the grouper node that organizes a TLD under its typology in the menu exists (creating the mandatory main grouper in matrix on the fly during a partial bootstrap). Returns the grouper tipo. |
+| `createParentGrouper(parentGroup, tld, typologyId, userId?, {register?})` | `ontology/ontology_write.ts` | Ensure the grouper node that organizes a TLD under its typology in the menu exists (creating the mandatory main grouper in matrix on the fly during a partial bootstrap). Returns the grouper tipo. A grouper TLD with no registry record yet (`hierarchytype` and `hierarchymtype` on most installations: they are not core and no ontology declares them, so an update does not import them) is registered with the master's definition of it — typology and name, from the ontology release this engine ships — and only a TLD that release does not define falls back to typology 14 (Core) and generic labels; a missing root is then planted under its registry record's typology. `register: false` writes only the typology record and its node, not the grouper TLD's own registry row and root. |
+| `ensureReferencedGrouperRecords(tld, userId?)` | `ontology/ontology_write.ts` | For a grouper TLD (`ontologytype`, `hierarchytype`, `hierarchymtype`): re-make every typology record that something still hangs under (a record's parent locator, a `<tld>0` root's parent) but that no longer exists. The ontology update calls it after importing a grouper package, whose import replaces the whole grouper section and so wipes the groupers this installation created for typologies the release does not ship; without it the update's orphan sweep would delete those grouper nodes. Returns the re-made typology ids. |
 | `deleteOntologyMain(sectionTipo, sectionId, deleteRecord)` | `ontology/ontology_delete.ts` | Cascade-delete a whole TLD, but **trigger-based**: it fires when a `hierarchy1`/`ontology35` registry record is deleted. Purges every `dd_ontology` node of the TLD (parameterized, refusing on an empty/unsafe TLD), the registry record itself, then every node record of the `<tld>0` section (through the normal per-record delete pipeline, Time Machine included). |
 
 ### Import, export and version update

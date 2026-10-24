@@ -25,7 +25,13 @@
  *  D. one formula rule: csvField (diffusion) unchanged, and it and the export
  *     cells agree on what is neutralized;
  *  E. scale: N rows written for a large synthetic spool, output streamed in
- *     bounded chunks with bounded heap;
+ *     bounded chunks, and the live heap does NOT SCALE with the spool: each
+ *     writer runs in its own child (test/helpers/export_writer_heap_child.ts —
+ *     the heap holds that writer and nothing else) over a spool of N and of
+ *     4N records, and 4x the spool may add only a small fraction of the extra
+ *     file bytes to the sampled peak (a writer that keeps what it wrote adds
+ *     about all of them). Measured in-process, against the gate's own
+ *     allocations, the same leg flaked (GATE-1 run 3);
  *  F. cancel: an abort mid-write → export.cancelled, no file, no temp; and the
  *     WRITER stops within one row of the abort even over a spool that ignores
  *     the signal (Stop does not depend on the reader's own check).
@@ -58,6 +64,7 @@ import {
 } from '../../tools/tool_export/server/writers/html.ts';
 import { buildArtifactFile } from '../../tools/tool_export/server/writers/index.ts';
 import type { FileSink } from '../../tools/tool_export/server/writers/types.ts';
+import type { ExportWriterHeapReport } from '../helpers/export_writer_heap_child.ts';
 import { markExportArtifactsRoot } from '../helpers/media_scratch_root.ts';
 
 const ORIGIN = 'https://dedalo.writers.example.test';
@@ -485,80 +492,106 @@ describe('D. one formula rule', () => {
 	});
 });
 
-describe('E. scale: bounded memory', () => {
-	test('N rows written for a large spool, streamed in bounded chunks with bounded heap', async () => {
-		const store = markedStore();
-		const { job } = await store.createJob(INIT);
-		const records = 60_000;
-		const filler = 'x'.repeat(180);
-		const writer = await store.openSpoolWriter(job, { indexEvery: 100 });
-		await writer.write({ t: 'meta', v: 1, section_tipo: 'test3', total: records });
-		await writer.write({
-			t: 'col',
-			i: 0,
-			key: 'id',
-			label: 'Id',
-			cell_type: 'section_id',
-			after: null,
-		});
-		await writer.write({
-			t: 'col',
-			i: 1,
-			key: 'test52',
-			label: 'Title',
-			cell_type: 'text',
-			after: 0,
-		});
-		for (let rec = 1; rec <= records; rec++) {
-			await writer.write({ t: 'row', rec, sub: 0, c: { '0': rec, '1': `${rec} ${filler}` } });
-		}
-		await writer.write({ t: 'end', columns: [0, 1], rows: records, records });
-		await writer.close();
-		const manifest = await store.updateManifest(job, { status: 'ended' });
-		const spool = openSpoolReader(job.dir, { indexEvery: manifest.index_every });
+const WRITERS = [
+	['csv', csvWriter],
+	['tsv', tsvWriter],
+	['html', htmlWriter],
+] as const;
 
-		for (const [name, write] of [
-			['csv', csvWriter],
-			['tsv', tsvWriter],
-			['html', htmlWriter],
-		] as const) {
-			Bun.gc(true);
-			const baseline = process.memoryUsage().heapUsed;
-			let peak = 0;
-			let largestChunk = 0;
-			let bytes = 0;
-			let writes = 0;
-			const sink: FileSink = {
-				// a text writer never logs scratch bytes; nothing to meter
-				async admitScratch() {},
-				async write(chunk) {
-					const size = typeof chunk === 'string' ? Buffer.byteLength(chunk) : chunk.byteLength;
-					largestChunk = Math.max(largestChunk, size);
-					bytes += size;
-					if (++writes % 16 === 0) {
-						// LIVE heap only: collect first, so parse garbage is not counted
-						Bun.gc(true);
-						peak = Math.max(peak, process.memoryUsage().heapUsed - baseline);
-					}
-				},
-				get bytes() {
-					return bytes;
-				},
-			};
-			const result = await write(
-				{ spool, manifest, options: { origin: ORIGIN, showTipoInLabel: false } },
-				sink,
-				new AbortController().signal,
-			);
-			expect(result.rows, name).toBe(records);
-			expect(result.bytes, name).toBe(bytes);
-			expect(bytes, name).toBeGreaterThan(records * 180);
-			// streamed: many writes, none larger than one buffer + a line
-			expect(writes, name).toBeGreaterThan(100);
-			expect(largestChunk, name).toBeLessThan(256 * 1024);
-			// bounded: the heap never grew by anything near the file (a writer that
-			// held the grid would hold > the file's size in UTF-16)
-			expect(peak, `${name} peak heap growth ${peak} vs file ${bytes}`).toBeLessThan(bytes / 2);
+/** The measured process of leg E (test/helpers/export_writer_heap_child.ts). */
+const HEAP_CHILD = join(import.meta.dir, '..', 'helpers', 'export_writer_heap_child.ts');
+/** Leg E spool sizes: the large spool is SCALE × the small one. */
+const SCALE_SMALL_RECORDS = 15_000;
+const SCALE = 4;
+/** Rows between two live-heap samples in the child. */
+const SCALE_SAMPLE_EVERY = 500;
+const SCALE_FILLER = 'x'.repeat(180);
+
+/** An ended job of `records` one-row records (id + a ~190-char title). */
+async function scaleJob(store: ArtifactStore, records: number): Promise<ArtifactJobRef> {
+	const { job } = await store.createJob(INIT);
+	const writer = await store.openSpoolWriter(job, { indexEvery: 100 });
+	await writer.write({ t: 'meta', v: 1, section_tipo: 'test3', total: records });
+	await writer.write({
+		t: 'col',
+		i: 0,
+		key: 'id',
+		label: 'Id',
+		cell_type: 'section_id',
+		after: null,
+	});
+	await writer.write({
+		t: 'col',
+		i: 1,
+		key: 'test52',
+		label: 'Title',
+		cell_type: 'text',
+		after: 0,
+	});
+	for (let rec = 1; rec <= records; rec++) {
+		await writer.write({ t: 'row', rec, sub: 0, c: { '0': rec, '1': `${rec} ${SCALE_FILLER}` } });
+	}
+	await writer.write({ t: 'end', columns: [0, 1], rows: records, records });
+	await writer.close();
+	await store.updateManifest(job, { status: 'ended' });
+	return job;
+}
+
+/** Run `format`'s writer over `job` in a fresh child; its report. */
+async function measureWriterHeap(
+	format: string,
+	job: ArtifactJobRef,
+): Promise<ExportWriterHeapReport> {
+	const child = Bun.spawn(
+		[process.execPath, 'run', HEAP_CHILD, format, job.dir, String(SCALE_SAMPLE_EVERY)],
+		// the preload-repointed env: the child's module graph opens the SUITE pool, never the app DB
+		{ env: { ...process.env }, stdout: 'pipe', stderr: 'pipe' },
+	);
+	const [stdout, stderr, exitCode] = await Promise.all([
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+		child.exited,
+	]);
+	if (exitCode !== 0) {
+		throw new Error(`heap child (${format}) exited ${exitCode}: ${stderr.slice(-2000)}`);
+	}
+	return JSON.parse(stdout.trim().split('\n').at(-1) ?? '') as ExportWriterHeapReport;
+}
+
+describe('E. scale: bounded memory', () => {
+	test('N rows written for a large spool, streamed in bounded chunks; live heap does not scale with the spool', async () => {
+		const store = markedStore();
+		const small = SCALE_SMALL_RECORDS;
+		const large = SCALE * SCALE_SMALL_RECORDS;
+		const smallJob = await scaleJob(store, small);
+		const largeJob = await scaleJob(store, large);
+
+		for (const [name] of WRITERS) {
+			// each size in its own process: the heap holds the writer and nothing else
+			const atSmall = await measureWriterHeap(name, smallJob);
+			const atLarge = await measureWriterHeap(name, largeJob);
+			for (const [report, records] of [
+				[atSmall, small],
+				[atLarge, large],
+			] as const) {
+				expect(report.rows, name).toBe(records);
+				expect(report.bytes, name).toBeGreaterThan(records * 180);
+				// streamed: none larger than one buffer + a line
+				expect(report.largestChunk, name).toBeLessThan(256 * 1024);
+				// anti-vacuity: the probe sampled the whole walk, not a corner of it
+				expect(report.samples, name).toBe(Math.floor(records / SCALE_SAMPLE_EVERY));
+			}
+			// streamed: many writes over the large file
+			expect(atLarge.writes, name).toBeGreaterThan(100);
+			// bounded: SCALE× the spool adds ~(SCALE-1)× the file to a writer that
+			// keeps what it wrote (a growing buffer, every line, every chunk); a
+			// streaming writer's live heap is one buffer whatever the size
+			const fileGrowth = atLarge.bytes - atSmall.bytes;
+			const heapGrowth = atLarge.peakGrowth - atSmall.peakGrowth;
+			expect(
+				heapGrowth,
+				`${name}: ${SCALE}× the spool grew the peak live heap by ${heapGrowth} (peaks ${atSmall.peakGrowth} → ${atLarge.peakGrowth}) for ${fileGrowth} more file bytes`,
+			).toBeLessThan(fileGrowth / 8);
 		}
 	}, 120_000);
 });
@@ -586,12 +619,6 @@ function expectNoArtifact(job: ArtifactJobRef): void {
 		'request.json',
 	]);
 }
-
-const WRITERS = [
-	['csv', csvWriter],
-	['tsv', tsvWriter],
-	['html', htmlWriter],
-] as const;
 
 describe('F. cancel', () => {
 	test('an aborted signal mid-write → export.cancelled, no file, no temp (csv, tsv, html)', async () => {

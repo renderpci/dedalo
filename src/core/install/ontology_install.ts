@@ -9,15 +9,27 @@
  *     new fetch site) into the private staging dir, gunzipped under the shared
  *     caps and COPY-sanity checked; `staged.json` records each file's sha256.
  *     Any failure refuses `install.step_failed` with the database untouched.
+ *     SHAPE-CHECKED, NOT AUTHENTICATED: a downloaded file is trusted as far as
+ *     the pinned door takes it (TLS verified, the configured server's origin, the
+ *     expected file name) — the master ontology server publishes no per-file
+ *     digest or signature to check its bytes against, so a well-formed file that
+ *     server serves is staged as served. The sha256 in `staged.json` pins what
+ *     was staged against a later change on THIS disk; it says nothing of origin.
+ *     (Vendored / local files ride the release tree's own integrity.)
  *  2. install_ontologies (AFTER the seed restore + its migrations, BEFORE the
  *     root password, hierarchies and tools): the staged files are re-verified
  *     (sha256), unpacked through the update panel's own Phase-A stager
  *     (stageOntologyFiles, local mode) and imported through the SHARED LOWER
  *     LAYER of the ontology update (ontology_update.ts importStagedOntologyFiles
  *     — snapshots, per-file import + auto-restore, dd_ontology re-derive), under
- *     the same single-flight latch. ONE re-derive pass then settles nodes whose
- *     model lives in a TLD imported after them (a dependency cycle). Finally the
- *     installed TLDs' structural references are VERIFIED
+ *     the same single-flight latch. That layer's re-derive is the WHOLE of it: a
+ *     node whose model lives in a TLD imported after it (a dependency cycle) is
+ *     settled there, by its pass 2 (ontology_update.ts deriveOntologyPackages —
+ *     every tld through the ONE writer, rebuildOntology). The installer re-derives
+ *     nothing of its own: its former upsert-only pass (no orphan sweep, no
+ *     transaction, no projection lock) is retired (gate: install_ontology_door_native
+ *     (h), ontology_derive_packages_native G1f). Finally the installed TLDs'
+ *     structural references are VERIFIED
  *     (verifyInstalledOntologyReferences): a dependency-class reference to a
  *     tipo this installation does not hold is a WARNING naming the remedy. A
  *     reference into a thesaurus the SAME run installs next (install_hierarchies,
@@ -34,7 +46,7 @@
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
-import { copyFile, readdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, readdir, readFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -43,6 +55,12 @@ import {
 	readDdOntologyReferenceRows,
 } from '../db/dd_ontology.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
+import {
+	DirectoryBarrier,
+	fsyncFile,
+	syncCreatedLevels,
+	writeFileDurably,
+} from '../files/durable.ts';
 import { isCoreOntologyTld } from '../ontology/core_tlds.ts';
 import {
 	copySanityCheck,
@@ -65,7 +83,6 @@ import {
 	releaseOntologyImportLatch,
 } from '../ontology/ontology_update.ts';
 import { type StagedFile, stageOntologyFiles } from '../ontology/ontology_update_target.ts';
-import { setRecordsInDdOntology } from '../ontology/ontology_write.ts';
 import { getTldFromTipo } from '../ontology/tld.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_MAJOR_MINOR } from '../update/version.ts';
 import {
@@ -75,7 +92,7 @@ import {
 	undeclaredWarning,
 } from './ontology_choice.ts';
 import { installOntologyStagingDir } from './paths.ts';
-import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsqlScript } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
 const STAGED_MANIFEST = 'staged.json';
@@ -155,7 +172,7 @@ async function downloadStaged(
 	}
 }
 
-/** Gunzip under the caps + COPY-shape check; the decompressed copy is removed. */
+/** Gunzip under the caps + COPY-shape check (a SHAPE check — see the header); the decompressed copy is removed. */
 async function verifyStaged(gzPath: string, name: string): Promise<void> {
 	const plain = `${gzPath}.verify`;
 	let problem: string | null;
@@ -172,19 +189,35 @@ async function verifyStaged(gzPath: string, name: string): Promise<void> {
 	}
 }
 
-/** Bring one file into `versionDir` (copy or download), verify it, answer its record fields. */
+/** Where one stage brings its files: `incomingDir` (fetched, unverified), then `versionDir`. */
+interface StageDirs {
+	incomingDir: string;
+	versionDir: string;
+	barrier: DirectoryBarrier;
+}
+
+/**
+ * Bring one file into the stage (copy or download into `incomingDir`), shape-check it,
+ * fsync its bytes, and only then RENAME it into `versionDir` — a staged name always
+ * holds a whole, verified file; its directory entry becomes durable at the stage's one
+ * barrier flush (stageOntologies). Answers its record fields.
+ */
 async function stageFile(
 	tld: string,
 	origin: OntologyOrigin,
 	file: string,
 	source: OntologySourceView,
-	versionDir: string,
+	stage: StageDirs,
 ): Promise<{ file: string; sha256: string; bytes: number }> {
 	const name = `${tld}.copy.gz`;
-	const target = join(versionDir, name);
-	if (origin === 'server') await downloadStaged(name, file, source, versionDir);
-	else await copyLocal(file, target, name);
-	await verifyStaged(target, name);
+	const incoming = join(stage.incomingDir, name);
+	if (origin === 'server') await downloadStaged(name, file, source, stage.incomingDir);
+	else await copyLocal(file, incoming, name);
+	await verifyStaged(incoming, name);
+	fsyncFile(incoming);
+	const target = join(stage.versionDir, name);
+	renameSync(incoming, target);
+	stage.barrier.add(stage.versionDir);
 	return { file: join(DEDALO_VERSION_MAJOR_MINOR, name), ...(await digestOf(target)) };
 }
 
@@ -201,7 +234,7 @@ async function copyLocal(file: string, target: string, name: string): Promise<vo
 
 async function stageMatrixDd(
 	request: OntologyInstallRequest,
-	versionDir: string,
+	stage: StageDirs,
 ): Promise<StagedManifest['matrix_dd']> {
 	const matrixDd = request.matrixDd;
 	if (matrixDd === null) return null;
@@ -210,15 +243,20 @@ async function stageMatrixDd(
 		matrixDd.origin,
 		matrixDd.file,
 		request.source,
-		versionDir,
+		stage,
 	);
 	return { origin: matrixDd.origin, ...staged };
 }
 
 /**
- * STAGE every file of `request` (fetch/copy + verify) into the staging dir and
+ * STAGE every file of `request` (fetch/copy + shape check) into the staging dir and
  * write staged.json. The database is never touched; any failure refuses
- * `install.step_failed`.
+ * `install.step_failed`. DURABLE BEFORE IT RETURNS (cross-ops:r2): the executor
+ * checkpoints the step `done` when it returns, and install_ontologies re-verifies the
+ * set later — so every staged file is fsynced, staged.json written durably, and the
+ * directories created and filled are fsynced (one barrier). A power cut after the
+ * checkpoint used to leave a `done` step whose staged set was gone: refused as drift.
+ * Gate: install_ontology_staging_durability.
  */
 export async function stageOntologies(
 	request: OntologyInstallRequest,
@@ -227,10 +265,13 @@ export async function stageOntologies(
 	const stagingDir = options.stagingDir ?? installOntologyStagingDir();
 	const versionDir = join(stagingDir, DEDALO_VERSION_MAJOR_MINOR);
 	await removeStagingDir(stagingDir);
-	mkdirSync(versionDir, { recursive: true, mode: 0o700 });
+	const barrier = new DirectoryBarrier();
+	syncCreatedLevels(versionDir, mkdirSync(versionDir, { recursive: true, mode: 0o700 }), barrier);
+	const stage: StageDirs = { incomingDir: join(stagingDir, '.incoming'), versionDir, barrier };
+	mkdirSync(stage.incomingDir, { mode: 0o700 });
 	const items: StagedRecord[] = [];
 	for (const item of request.items) {
-		const staged = await stageFile(item.tld, item.origin, item.file, request.source, versionDir);
+		const staged = await stageFile(item.tld, item.origin, item.file, request.source, stage);
 		items.push({
 			tld: item.tld,
 			origin: item.origin,
@@ -246,15 +287,18 @@ export async function stageOntologies(
 		created_at: new Date().toISOString(),
 		source: request.source,
 		items,
-		matrix_dd: await stageMatrixDd(request, versionDir),
+		matrix_dd: await stageMatrixDd(request, stage),
 		warnings: stagedWarnings(request),
 	};
-	await writeFile(join(stagingDir, STAGED_MANIFEST), JSON.stringify(manifest, null, '\t'), {
+	rmSync(stage.incomingDir, { recursive: true, force: true });
+	writeFileDurably(join(stagingDir, STAGED_MANIFEST), JSON.stringify(manifest, null, '\t'), {
 		mode: 0o600,
+		barrier,
 	});
+	barrier.flush();
 	return {
 		ok: true,
-		msg: `Staged ontology files: ${items.map((item) => item.tld).join(', ')}${manifest.matrix_dd === null ? '' : ' + matrix_dd'} — verified, nothing installed yet`,
+		msg: `Staged ontology files: ${items.map((item) => item.tld).join(', ')}${manifest.matrix_dd === null ? '' : ' + matrix_dd'} — shape-checked, nothing installed yet`,
 		staged: items.map((item) => ({ tld: item.tld, origin: item.origin, bytes: item.bytes })),
 		warnings: manifest.warnings,
 	};
@@ -366,28 +410,6 @@ async function importUnderLatch(
 	}
 }
 
-/**
- * ONE re-derive pass: a node derived before the TLD holding its model was
- * imported (a declared dependency cycle) has `model` NULL while its model_tipo
- * now resolves — its TLD is derived once more.
- */
-async function rederiveUnresolvedModels(tlds: readonly string[], userId: number): Promise<void> {
-	const rows = await readDdOntologyReferenceRows(tlds);
-	const pending = rows.filter((row) => row.model === null && row.model_tipo !== null);
-	const present = await existingDdOntologyTipos(pending.map((row) => row.model_tipo as string));
-	const stale = new Set(
-		pending.filter((row) => present.has(row.model_tipo as string)).map((row) => row.tld ?? ''),
-	);
-	for (const tld of [...stale].filter((item) => item !== '')) {
-		const rebuilt = await setRecordsInDdOntology({
-			sectionTipo: `${tld}0`,
-			wholeSection: true,
-			userId,
-		});
-		if (rebuilt.ok !== true) importFailure(`re-derive of ${tld}: ${rebuilt.errors.join('; ')}`);
-	}
-}
-
 /** Records per installed TLD (the derived node count). */
 async function installedCounts(
 	tlds: readonly string[],
@@ -421,7 +443,6 @@ export async function installOntologies(
 		recoveryDir: join(stagingDir, 'recovery'),
 	});
 	const tlds = manifest.items.map((item) => item.tld);
-	await rederiveUnresolvedModels(tlds, userId);
 	const warnings = [
 		...manifest.warnings,
 		...(await verifyInstalledOntologyReferences(tlds, options.pendingThesauri)),
@@ -503,10 +524,11 @@ async function stagedManifestIfAny(stagingDir: string): Promise<StagedManifest |
 /** Does `tld` have its `<tld>0` source records AND its derived dd_ontology nodes? */
 async function tldInstalled(conn: DbConnDescriptor, tld: string): Promise<boolean> {
 	if (!/^[a-z][a-z0-9_]*$/.test(tld)) return false;
-	const probe = await runPsql(conn, [
-		'-tAc',
+	const probe = await runPsqlScript(
+		conn,
 		`SELECT EXISTS (SELECT 1 FROM matrix_ontology WHERE section_tipo = '${tld}0')`,
-	]);
+		{ flags: ['-tA'] },
+	);
 	if (probe.exitCode !== 0 || probe.stdout.trim() !== 't') return false;
 	return (await readDdOntologyReferenceRows([tld])).length > 0;
 }

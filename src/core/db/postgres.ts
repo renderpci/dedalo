@@ -1684,10 +1684,7 @@ async function runMaintenanceUnit<T>(
 ): Promise<T> {
 	await sql.unsafe(`SET LOCAL lock_timeout = '${lockTimeout}'`, []);
 	await sql.unsafe('SET LOCAL statement_timeout = 0', []);
-	const [backend] = (await sql.unsafe(
-		'SELECT pid, xact_start::text AS xact_start FROM pg_stat_activity WHERE pid = pg_backend_pid()',
-		[],
-	)) as { pid: number; xact_start: string }[];
+	const backend = await readCancelTarget(sql);
 	const readXid = async () =>
 		((await sql.unsafe('SELECT pg_current_xact_id()::text AS xid', [])) as { xid: string }[])[0]
 			?.xid;
@@ -1695,11 +1692,7 @@ async function runMaintenanceUnit<T>(
 	signal?.throwIfAborted();
 	const cancelRunningStatement = () => {
 		if (backend === undefined) return;
-		void sendCancel(
-			'SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid = $1 AND xact_start = $2::timestamptz',
-			[backend.pid, backend.xact_start],
-			'maintenance abort',
-		);
+		void cancelBackendStatement(backend, 'maintenance abort');
 	};
 	signal?.addEventListener('abort', cancelRunningStatement, { once: true });
 	try {
@@ -2001,6 +1994,53 @@ async function onDedicatedConnection<T>(
 		finished = true;
 		closeOnce();
 	}
+}
+
+/**
+ * A running statement's CANCEL TARGET: its backend pid and the start of the
+ * transaction it runs in (`pg_stat_activity.xact_start`, as text). Read INSIDE
+ * that transaction (readCancelTarget); a cancel names both
+ * (cancelBackendStatement), so it can never reach a later transaction on the
+ * same backend — a pooled connection outlives the work that read the target.
+ */
+export interface BackendCancelTarget {
+	pid: number;
+	xactStart: string;
+}
+
+/**
+ * The cancel target of the transaction `executor` is in — the ambient
+ * transaction through `sql`, or a `sql.reserve()`d connection after its BEGIN.
+ * `undefined` outside a transaction (no xact_start to guard the cancel by).
+ */
+export async function readCancelTarget(executor: {
+	unsafe(statement: string, params: never[]): Promise<unknown>;
+}): Promise<BackendCancelTarget | undefined> {
+	const [row] = (await executor.unsafe(
+		'SELECT pid, xact_start::text AS xact_start FROM pg_stat_activity WHERE pid = pg_backend_pid()',
+		[],
+	)) as { pid: number; xact_start: string | null }[];
+	if (row === undefined || row.xact_start === null) return undefined;
+	return { pid: row.pid, xactStart: row.xact_start };
+}
+
+/**
+ * Cancel the statement `target`'s transaction is running NOW —
+ * `pg_cancel_backend`, sent on a short-lived DEDICATED connection (sendCancel),
+ * so it can starve behind neither pool, and guarded by the transaction's start:
+ * once that transaction ended the cancel matches no row and reaches nothing.
+ * ONE-SHOT: it reaches only a statement RUNNING when it lands (PostgreSQL
+ * discards a cancel that finds the backend idle between two statements), so a
+ * caller makes its abort sticky at its own statement door. Never throws (a
+ * failed cancel is logged). The one cancel door of the maintenance unit's abort
+ * (OPS-6) and the export selection cursor's Stop (selection_cursor.ts).
+ */
+export function cancelBackendStatement(target: BackendCancelTarget, label: string): Promise<void> {
+	return sendCancel(
+		'SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid = $1 AND xact_start = $2::timestamptz',
+		[target.pid, target.xactStart],
+		label,
+	);
 }
 
 /**

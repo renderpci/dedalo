@@ -123,10 +123,15 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		const readFacade = read('src/core/section/read_facade.ts');
 		expect(readFacade).toMatch(/buildRelationList\([\s\S]*?principal,[\s\S]*?\)/);
 
-		// The mode='related' count scopes the total for non-admins.
+		// The mode='related' count is the related search's own SCOPED question
+		// (D1): countInverseReferences with the caller's rowScopeFor, for every
+		// principal (the predicate leaves a global admin unscoped). The outcome —
+		// count == paged walk == probe, bounded — is related_scope_equivalence_native.
 		const coreApi = read('src/core/api/handlers/dd_core_api.ts');
-		expect(coreApi).toContain('scopeInverseReferenceHits(hits, principal)');
-		expect(coreApi).toMatch(/if \(principal\.isGlobalAdmin\)[\s\S]{0,120}countInverseReferences/);
+		expect(coreApi).toMatch(
+			/countInverseReferences\(locators[\s\S]{0,160}scope: rowScopeFor\(principal\)/,
+		);
+		expect(coreApi).not.toContain('findInverseReferences(');
 	});
 
 	/**
@@ -141,7 +146,9 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 	 *
 	 * So this test ENUMERATES the callers instead: every hand-written module under
 	 * src/ and tools/ that reaches for the unscoped inverse scan
-	 * (`findInverseReferences` / `findInverseReferenceLocators`) must be classified
+	 * (`findInverseReferences` / `findInverseReferenceLocators`, and — D1,
+	 * 2026-10-21 — its count and past-the-page probe, `countInverseReferences` /
+	 * `anyInverseReferencePast`, which answer existence too) must be classified
 	 * below, and a caller that is not classified FAILS — loudly, with the path, so
 	 * the author has to answer "is this a user-facing door?" before it lands.
 	 *
@@ -149,10 +156,12 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 	 *   'door'   — reached with a REQUEST principal and emits the hits (their
 	 *              existence, labels, counts or content) back to that caller.
 	 *              ⇒ the source MUST call scopeInverseReferenceHits / scopeRecordHits,
-	 *              or anyRowInScope — the SET-SHAPED twin for a door that asks one
-	 *              question of an unbounded tail in SQL (READ-4's past-the-page
-	 *              probe); its record-by-record equality with the hit-list door is
-	 *              an outcome leg of client_page_doors_native.
+	 *              or a SET-SHAPED twin that asks the question in SQL —
+	 *              anyRowInScope, or rowScopeFor handed to the sink's `scope`
+	 *              (D1: the related count, page and probe); their record-by-record
+	 *              equality with the hit-list door is an outcome leg of
+	 *              client_page_doors_native, and count == walk == probe is
+	 *              related_scope_equivalence_native.
 	 *   'system' — no request principal in the path, or the walk must see EVERY
 	 *              reference to be correct (integrity rewrites, propagation).
 	 *              ⇒ the source MUST NOT scope; the reason is recorded.
@@ -162,7 +171,10 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 	 *              Zero is the target; the gate keeps the count visible instead of
 	 *              letting an unreviewed path pass as if it had been cleared.
 	 */
-	const SCOPE_CALL = /scope(InverseReferenceHits|RecordHits)\s*\(|anyRowInScope\s*\(/;
+	const SCOPE_CALL =
+		/scope(InverseReferenceHits|RecordHits)\s*\(|anyRowInScope\s*\(|rowScopeFor\s*\(/;
+	/** The sink's question names: the scan, its count, its past-the-page probe. */
+	const INVERSE_SCAN_NAME = /(find|count|any)InverseReference/;
 
 	type DoorKind = 'door' | 'system' | 'open';
 	interface DoorEntry {
@@ -180,7 +192,7 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		},
 		'src/core/security/record_scope.ts': {
 			kind: 'system',
-			why: 'the boundary itself (scopeInverseReferenceHits); names the scan in prose only',
+			why: 'the boundary itself (scopeInverseReferenceHits, scopedRows / rowScopeFor); names the scan in prose only',
 		},
 
 		// ── user-facing doors: must scope ───────────────────────────────────────
@@ -194,7 +206,7 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		},
 		'src/core/api/handlers/dd_core_api.ts': {
 			kind: 'door',
-			why: "mode='related' paginator: the total is an existence count",
+			why: "mode='related' paginator: the total is an existence count — countInverseReferences scoped by rowScopeFor (D1)",
 		},
 		'src/core/section/indexation_grid.ts': {
 			kind: 'door',
@@ -202,7 +214,7 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		},
 		'src/core/section/read_facade.ts': {
 			kind: 'door',
-			why: "the 'defaulted' search.page_clamped probe of get_relation_list / related_search (READ-4): whether ANY record past the page is the caller's decides a notice the caller sees, so the tail (findInverseReferencesPast) is asked through anyRowInScope — an unscoped probe is an existence/count oracle",
+			why: "the 'defaulted' search.page_clamped probe of get_relation_list / related_search (READ-4): whether ANY record past the page is the caller's decides a notice the caller sees, so the probe (anyInverseReferencePast) is asked of the caller's SCOPED set through rowScopeFor (D1) — an unscoped probe is an existence/count oracle",
 		},
 		'tools/tool_posterframe/server/index.ts': {
 			kind: 'door',
@@ -247,6 +259,11 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		},
 
 		// ── not yet reviewed as a door ──────────────────────────────────────────
+		'src/core/ts_object/ts_object.ts': {
+			kind: 'open',
+			why: 'the thesaurus node’s indexation count (getCountDataGroupBy → countInverseReferences, groupBy section_tipo): a per-section TOTAL of the records pointing at the term, emitted to whoever browses the tree, with no principal in the path. The sink now takes a scope (D1) — whether this count is a door that must pass rowScopeFor has not been reviewed.',
+			raised: 'W5 lane 1 (D1 census widening, 2026-10-22) — integrator request',
+		},
 		'src/core/relations/models/relation_index.ts': {
 			kind: 'open',
 			why: 'emits the records POINTING AT the host, across config.targetSections, plus their related_list child components — the same shape as the indexation grid, with no principal anywhere in the path. Whether the upstream component gate (read_facade ddoIsAuthorized) is sufficient here has not been established by either AUTHZ-05 pass.',
@@ -261,7 +278,7 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		expect(corpus.length).toBeGreaterThan(WRITE_PATH_CORPUS_FLOOR);
 		const found = new Set<string>();
 		for (const path of corpus) {
-			if (read(path).includes('findInverseReference')) found.add(path);
+			if (INVERSE_SCAN_NAME.test(read(path))) found.add(path);
 		}
 		// The registry is the walk's own result, floored: an emptied corpus finds
 		// no caller and would otherwise pass with every entry 'stale'.

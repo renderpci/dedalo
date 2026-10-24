@@ -25,7 +25,10 @@
  *
  * SECTION branch (recover a whole deleted/edited record): the TM snapshot's
  * data is a full matrix-columns object; it overwrites the live record via the
- * write chokepoint (PHP element->set_data + save()). LEDGERED vs PHP (no
+ * write chokepoint (PHP element->set_data + save()). Every component the
+ * restore CHANGES on a live record asks the same write door as the component
+ * branch (the dd128-aware pair — cross-write:r3); an undelete (no live row) is
+ * a record lifecycle effect, authorized at the section. LEDGERED vs PHP (no
  * fixture / no TS twin): deleted-media relink, the session-SQO reset (TS has no
  * PHP session), and the TM-row consumption (PHP deletes the restored snapshot;
  * TS keeps it — the recover writes its own whole-record audit row, which
@@ -89,11 +92,13 @@ import {
 } from '../../../src/core/relations/dataframe_slots.ts';
 import { NOLAN } from '../../../src/core/relations/main_lanes.ts';
 import {
+	type ChangedKeysDoor,
 	persistRecordBirth,
 	persistRecordColumns,
 	persistRestoredKeys,
 } from '../../../src/core/section_record/index.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
+import { authorizeRecordAccess } from '../../../src/core/security/write_door.ts';
 import { readRowLaneState, restoredLaneValue } from '../../../src/core/tm_record/lane_state.ts';
 import {
 	type ToolActionContext,
@@ -119,6 +124,11 @@ import {
  * THE UNDELETE DOOR: also the bulk revert's (bulk_revert_records.ts) for a
  * record a revert's D2 deleted, when that revert is reverted — one restore of a whole record,
  * files included, not two. `tmId` is the snapshot row's id, for the refusal.
+ *
+ * `door`: the caller's write door for every component the restore CHANGES on a
+ * live record (persistRecordColumns — asked behind the row lock; a throw rolls
+ * the restore back). apply_value passes the dd128-aware one; an engine caller
+ * that already authorized the whole record passes none.
  */
 export async function restoreSection(
 	snapshot: unknown,
@@ -126,9 +136,10 @@ export async function restoreSection(
 	sectionTipo: string,
 	sectionId: number,
 	userId: number,
+	door?: ChangedKeysDoor,
 ): Promise<void> {
 	const columns = await withTransaction(async () => {
-		const written = await restoreSectionRow(snapshot, tmId, sectionTipo, sectionId, userId);
+		const written = await restoreSectionRow(snapshot, tmId, sectionTipo, sectionId, userId, door);
 		await recordRecoverRow(sectionTipo, sectionId, userId);
 		return written;
 	});
@@ -189,6 +200,7 @@ export async function restoreSectionRow(
 	sectionTipo: string,
 	sectionId: number,
 	userId: number,
+	door?: ChangedKeysDoor,
 ): Promise<Partial<Record<MatrixJsonbColumn, unknown>>> {
 	const { table, columns } = await snapshotColumns(snapshot, tmId, sectionTipo, sectionId);
 	await persistRecordColumns(
@@ -196,6 +208,7 @@ export async function restoreSectionRow(
 		columns,
 		{ userId },
 		{ actor: userId },
+		door,
 	);
 	return columns;
 }
@@ -392,6 +405,25 @@ async function rowFrameSlice(
 	return { survivorIds: new Set(), otherLangIds: known, heldIds: heldItemIds(restoredValue) };
 }
 
+/**
+ * apply_value's write door for ONE component of the target record (the main,
+ * or a dataframe slot its restore writes): write, level 2, section floor 1,
+ * the dd128-aware pair, the write scope. THROWS the door's perm.* refusal —
+ * inside the restore's transaction, which rolls back with it.
+ */
+async function authorizeComponentWrite(
+	context: ToolActionContext,
+	sectionTipo: string,
+	sectionId: number,
+	componentTipo: string,
+): Promise<void> {
+	await authorizeRecordAccess(
+		context.principal,
+		{ section_tipo: sectionTipo, component_tipo: componentTipo, section_id: sectionId },
+		{ mode: 'write', level: 2, sectionFloor: 1, door: 'tool_time_machine.apply_value' },
+	);
+}
+
 export async function toolTimeMachineApplyValue(context: ToolActionContext): Promise<ToolResponse> {
 	const { options, userId } = context;
 	const sectionTipo = String(options.section_tipo ?? '');
@@ -471,9 +503,20 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 
 	// SECTION restore: overwrite the whole record from the snapshot columns.
 	if (model === 'section') {
+		// THE WRITE DOOR of every component the restore CHANGES (cross-write:r3):
+		// the declarative 'tipo' gate read the (section, section) pair, which names
+		// no component — so on dd128 the own-record downgrade never applied, and a
+		// user-manager wrote their own old profile / admin flag back through a
+		// whole-record row. Asked behind the row lock, before anything is written;
+		// a refusal rolls the restore back. An unchanged key is never asked.
+		const door: ChangedKeysDoor = async (componentTipos) => {
+			for (const componentTipo of componentTipos) {
+				await authorizeComponentWrite(context, sectionTipo, sectionId, componentTipo);
+			}
+		};
 		// Throws on refusal (the dispatch catch converts), so the activity row is
 		// appended only for a restore that actually landed.
-		await restoreSection(tmRow.data, tmRow.id, sectionTipo, sectionId, userId);
+		await restoreSection(tmRow.data, tmRow.id, sectionTipo, sectionId, userId, door);
 		await logRecoverActivity(
 			context,
 			'RECOVER SECTION',
@@ -502,6 +545,12 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 				'server: the shared time-machine strip would write an empty slot (ledgered)',
 		});
 	}
+
+	// THE WRITE DOOR of the MAIN (cross-write:r2): the declarative 'tipo' gate
+	// reads the raw (section, tipo) pair; the door adds the dd128 own-record
+	// rule and the write scope (the non-positive-id refusal ahead of the admin
+	// bypass). Each slot the restore writes asks the same door, below.
+	await authorizeComponentWrite(context, sectionTipo, sectionId, tipo);
 
 	// int-canonical convergence on the WHOLE snapshot (D6.2 — see restoreSection),
 	// BEFORE the strip and the frame plan below: the frames replayed into the
@@ -577,6 +626,10 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 				identity.sliced,
 			),
 			userId,
+			// THE WRITE DOOR of each slot the restore writes (cross-write:r2): the
+			// module gate authorized the MAIN pair only — a slot is its own
+			// component, never written on the main's grant.
+			(slotTipo) => authorizeComponentWrite(context, sectionTipo, sectionId, slotTipo),
 		);
 		// Chokepoint write, the COMPONENT-RESTORE entry: restored value + the
 		// record's modified stamps + the save law's relation_search in one update

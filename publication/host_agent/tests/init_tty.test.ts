@@ -177,8 +177,9 @@ describe('ttyPrompter', () => {
   });
 
   test('control keys are not part of an answer', async () => {
+    // The cursor key's sequence goes whole (it once left '[A' in the answer: init_tty_escape.test.ts).
     const t = terminal('a\x1b[Ab\tc\r');
-    expect(await t.prompter.visible('x', null)).toBe('a[Abc');
+    expect(await t.prompter.visible('x', null)).toBe('abc');
   });
 });
 

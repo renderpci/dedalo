@@ -18,7 +18,12 @@
  *      user's previous aggregates are exactly as they were: same records, same
  *      totals, no half-written day;
  *  (b) positive control: with the trigger gone the same rebuild replaces them,
- *      and the new totals carry the activity added since.
+ *      and the new totals carry the activity added since;
+ *  (c) two rebuilds of the same user, the second started while the first is
+ *      uncommitted, leave ONE aggregate per day — the second waits on the user's
+ *      stats lock, then replaces the first's rows (it used to delete only the rows
+ *      committed before it started and save every day again: every day doubled);
+ *  (d) two incremental updates racing the same way save each day ONCE.
  *
  * SURFACES. Lane SUITE database (assertTestDatabase first). Synthetic dd128 user
  * 424272 (distinct from 424242/424252/424262/424263): its matrix_activity rows,
@@ -28,11 +33,16 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import {
+	rebuildUserActivityStats,
+	updateUserActivityStats,
+} from '../../src/core/area_maintenance/user_stats.ts';
 import { databaseInfoRebuildUserStats } from '../../src/core/area_maintenance/widgets/database_info.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
+import { interleave } from '../helpers/lock_interleave.ts';
 
 const UID = 424272;
 const ADMIN: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as Principal;
@@ -182,5 +192,34 @@ describe('database_info.rebuild_user_stats: one user = one atomic unit', () => {
 		// (what items are action-keyed: WC-2026-10-12-user-activity-what-labels)
 		expect(JSON.stringify(after[0]?.totals)).toContain('"key":"edit"');
 		expect(JSON.stringify(before[0]?.totals)).not.toContain('"key":"edit"');
+	}, 60000);
+
+	test('(c) a second rebuild started while the first is uncommitted leaves ONE aggregate per day', async () => {
+		const before = await statsState();
+		expect(before.map((row) => row.day)).toEqual(['2019-4-4', '2019-4-5']);
+		const { blocked } = await interleave(
+			() => rebuildUserActivityStats(UID),
+			() => rebuildUserActivityStats(UID),
+		);
+		expect(blocked).toBe(true);
+		const after = await statsState();
+		expect(after.map((row) => row.day)).toEqual(['2019-4-4', '2019-4-5']);
+		expect(after).toHaveLength(2);
+	}, 60000);
+
+	test('(d) two incremental updates racing the same way save each day ONCE', async () => {
+		// No aggregates at all: both updates find every day to do.
+		await sql.unsafe(
+			`DELETE FROM matrix_stats WHERE section_tipo = 'dd1521'
+			   AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)`,
+			[USER_FILTER, USER_FILTER_LEGACY],
+		);
+		const { result } = await interleave(
+			() => updateUserActivityStats(UID),
+			() => updateUserActivityStats(UID),
+		);
+		expect(result.ok).toBe(true);
+		const after = await statsState();
+		expect(after.map((row) => row.day)).toEqual(['2019-4-4', '2019-4-5']);
 	}, 60000);
 });

@@ -50,6 +50,7 @@ import {
 	sweepStaleTemps,
 	WriterRunLog,
 } from './files.ts';
+import { withdrawConsolidated } from './rdf.ts';
 import type {
 	ArtifactEvent,
 	DiffusionWriter,
@@ -64,6 +65,9 @@ import type {
 
 /** Lang-null rows group under the nolan heading (oracle sentinel vocabulary). */
 const NOLAN_HEADING = 'nolan';
+
+/** The run's archive (the old engine's `diffusion_md_<date>.zip` minus the wall-clock tag). */
+const MD_ZIP_NAME = 'diffusion_md.zip';
 
 /**
  * Neutralize only what breaks Markdown structure: line-leading ATX headers
@@ -238,16 +242,20 @@ class MarkdownWriterSession implements WriterSession {
 		// ONE pass: a vanished record file is a summary line, never a crash — at
 		// the manifest's existence check or at the zip's open (the engine's
 		// files-unlink door takes this close's fence; a hand outside the engine
-		// does not); none left ⇒ no archive, not a failed run.
+		// does not); none left ⇒ no archive, not a failed run — and the PREVIOUS
+		// run's archive, which still holds the records this run withdrew, goes
+		// (rdf.ts withdrawConsolidated).
 		const missing = (path: string): void => {
 			this.log.errors.add(
 				`markdown close: published file missing, left out of the archive: ${path}`,
 			);
 		};
-		await createZip(manifestPaths(run, pathOf, missing), `${this.targetDir}/diffusion_md.zip`, {
-			onMissing: missing,
-			empty: 'none',
-		});
+		const { entries } = await createZip(
+			manifestPaths(run, pathOf, missing),
+			`${this.targetDir}/${MD_ZIP_NAME}`,
+			{ onMissing: missing, empty: 'none' },
+		);
+		if (entries === 0) withdrawConsolidated(this.targetDir, [MD_ZIP_NAME]);
 		return this.log.summary();
 	}
 

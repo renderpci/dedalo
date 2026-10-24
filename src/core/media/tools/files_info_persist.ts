@@ -111,9 +111,19 @@ export type FilesInfoReconcileAction =
 /**
  * What a locked transform decides for the items it was handed: the items to
  * WRITE, or a reason to write nothing — `noop` (already current) or `held` (the
- * transform refused a change it may not make here, e.g. a shrink). SYNCHRONOUS
- * BY TYPE: the row lock is held while it runs, so no file work, no network,
- * no await ever happens under it — do the slow half before, key it by identity.
+ * transform refused a change it may not make here, e.g. a shrink).
+ *
+ * WHAT MAY RUN UNDER THE LOCK. The row lock is held while it runs, so it is
+ * SYNCHRONOUS (by type; at run time a promise "decision" is no item array — the
+ * jsonb write refuses it `internal.invariant`, rolled back, nothing written) — no
+ * await, no network, no file WRITE.
+ * The ONE file work allowed is the bounded, read-only STAT of the locked items'
+ * own files: repair.ts rescanMediaItems, one stat per quality × extension of each
+ * item. That is deliberate — the rescan must judge the items AS THEY STAND UNDER
+ * THE LOCK (their lang and scan cues: an upload that committed meanwhile renamed
+ * the original), which a scan done before the lock, from a snapshot, cannot.
+ * Everything slower — derivative regeneration, a copy, a move — is the half that
+ * runs BEFORE the lock, keyed by identity (repair.ts regenerateMediaDerivatives).
  */
 export type MediaItemsTransform = (
 	locked: readonly StoredMediaItem[],

@@ -32,7 +32,6 @@
 import {
 	closeSync,
 	existsSync,
-	fsyncSync,
 	linkSync,
 	mkdirSync,
 	openSync,
@@ -43,7 +42,6 @@ import {
 	renameSync,
 	statSync,
 	unlinkSync,
-	writeSync,
 } from 'node:fs';
 import { dirname, join, resolve as resolvePath } from 'node:path';
 import { config } from '../../config/config.ts';
@@ -51,6 +49,7 @@ import { privateDir } from '../../config/env.ts';
 import { libpqTransportArgs, resolvePgTransport } from '../../config/pg_transport.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
+import { DirectoryBarrier, fsyncDirectory, writeFileDurably } from '../files/durable.ts';
 import { type JobRecord, jobAbortInfo, mediaJobs } from '../media/jobs.ts';
 
 /** Minimum hours between throttled backups (PHP DEDALO_BACKUP_TIME_RANGE). */
@@ -463,10 +462,31 @@ function keepAside(source: string, target: string): void {
 			console.error(`[backup] '${source}' was NOT moved aside: no free name next to '${target}'`);
 			return;
 		}
-		fsyncDirectory(dirname(keptAs));
 		console.error(`[backup] '${source}' kept as '${keptAs}' — it is NOT a restore point`);
+		makeEntryDurable(keptAs);
 	} catch (error) {
 		console.error(`[backup] could not move '${source}' aside:`, error);
+	}
+}
+
+/**
+ * fsync the directory holding `path` (the durable kernel), so the entry a rename
+ * or a link just gave it survives a power cut. A filesystem that cannot fsync a
+ * directory is warned about by the kernel; a REAL failure (EIO: the device did
+ * not take it) is logged here and answered `false` — the bytes stay where they
+ * are, but nobody may be told the name is durable.
+ */
+function makeEntryDurable(path: string, barrier?: DirectoryBarrier): boolean {
+	try {
+		if (barrier !== undefined) barrier.flush();
+		else fsyncDirectory(dirname(path));
+		return true;
+	} catch (error) {
+		console.error(
+			`[backup] '${path}' is in place but its directory could not be fsynced — the name may not survive a power cut:`,
+			error,
+		);
+		return false;
 	}
 }
 
@@ -968,19 +988,22 @@ function describeVerdict(verdict: BackupVerdict): string {
 
 /**
  * Give `source` the backup name `finalPath`, DURABLY and NEVER over an existing
- * file (`renameNoClobber`): a `verified_deep` verdict's sidecar is written (tmp +
- * fsync + rename) at the final name first — keyed on size+mtime, which a rename
- * preserves — then the name, then an fsync of the directory, so a power loss
- * after the caller reports "done" cannot revert the rename and leave only the
- * part behind. Writing the proof first is a COST choice, not a correctness one: a
+ * file (`renameNoClobber`): a `verified_deep` verdict's sidecar is written (the
+ * durable kernel: tmp + fsync + rename) at the final name first — keyed on
+ * size+mtime, which a rename preserves — then the name, then ONE fsync of the
+ * directory (a barrier covering both entries), so a power loss after the caller
+ * reports "done" cannot revert the rename and leave only the part behind. Writing the proof first is a COST choice, not a correctness one: a
  * reader that races the promotion finds the proof instead of re-reading a large
  * archive, and a final name without its sidecar is simply read again. `false`
- * (logged) when the name was taken or the rename failed; the sidecar is removed.
+ * (logged) when the name was taken or the rename failed (the sidecar is removed),
+ * or when the directory fsync failed (the bytes keep the final name, but the
+ * promotion is not reported done).
  */
 function promoteArtifact(source: string, finalPath: string, verdict: BackupVerdict): boolean {
 	const proven = verdict.reason === 'verified_deep';
 	const sidecar = verificationSidecarPath(finalPath);
-	if (proven) writeVerdictSidecar(verdict, sidecar);
+	const barrier = new DirectoryBarrier();
+	if (proven) writeVerdictSidecar(verdict, sidecar, barrier);
 	let moved = false;
 	try {
 		moved = renameNoClobber(source, finalPath);
@@ -992,44 +1015,8 @@ function promoteArtifact(source: string, finalPath: string, verdict: BackupVerdi
 		if (proven) unlinkQuietly(sidecar);
 		return false;
 	}
-	fsyncDirectory(dirname(finalPath));
-	return true;
-}
-
-/**
- * fsync a DIRECTORY, so the renames and creations inside it survive a power loss
- * (a rename is only durable once its directory entry is). Best-effort and loud:
- * a filesystem that refuses a directory fsync loses the guarantee, never the
- * backup.
- */
-function fsyncDirectory(dir: string): void {
-	let fd: number | null = null;
-	try {
-		fd = openSync(dir, 'r');
-		fsyncSync(fd);
-	} catch (error) {
-		console.warn(`[backup] could not fsync the directory '${dir}':`, error);
-	} finally {
-		if (fd !== null) closeSync(fd);
-	}
-}
-
-/** Write `text` to `target` durably: a sibling tmp file, fsynced, renamed into place. */
-function writeFileDurably(target: string, text: string): void {
-	const tmp = `${target}.tmp-${process.pid}`;
-	const fd = openSync(tmp, 'w', 0o600);
-	try {
-		writeSync(fd, text);
-		fsyncSync(fd);
-	} finally {
-		closeSync(fd);
-	}
-	try {
-		renameSync(tmp, target);
-	} catch (error) {
-		unlinkQuietly(tmp);
-		throw error;
-	}
+	barrier.add(dirname(finalPath));
+	return makeEntryDurable(finalPath, barrier);
 }
 
 function unlinkQuietly(path: string): void {
@@ -1381,6 +1368,7 @@ function artifactDisproved(verdict: BackupVerdict): boolean {
 function writeVerdictSidecar(
 	verdict: BackupVerdict,
 	target: string = verificationSidecarPath(verdict.filePath),
+	barrier?: DirectoryBarrier,
 ): void {
 	const record: SidecarRecord = {
 		size: verdict.size,
@@ -1391,9 +1379,11 @@ function writeVerdictSidecar(
 		classifier: SIDECAR_CLASSIFIER,
 	};
 	try {
-		// Durable (tmp + fsync + rename): the promotion writes the proof BEFORE the
-		// final name exists, and a half-written proof must never be what survives.
-		writeFileDurably(target, JSON.stringify(record));
+		// The durable kernel (tmp 'wx' + every byte + fsync + rename + the directory
+		// fsync, now or at the promotion's barrier): the promotion writes the proof
+		// BEFORE the final name exists, and a half-written proof must never be what
+		// survives — nor a proof whose name a power cut takes back.
+		writeFileDurably(target, JSON.stringify(record), { mode: 0o600, barrier });
 	} catch {
 		/* the sidecar is a cache; every reader can re-derive the verdict */
 	}

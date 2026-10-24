@@ -1017,17 +1017,38 @@ function factsOf(path: string): PathFacts | null {
   }
 }
 
+/**
+ * A REGULAR FILE'S BYTES, OR NULL — never a read that can block. Opened `O_NONBLOCK` (a FIFO
+ * opens at once instead of waiting for a writer) and `fstat`-proved a regular file ON THE HANDLE
+ * before a byte is read from it: a FIFO, socket or device at the path is null, i.e. "could not be
+ * read", which every caller already handles. Before: a path read (`readFileSync(path)`) — a FIFO
+ * planted where `provision remove` reads a pre-S3 turn HOME's `.gitconfig`, or where `provision
+ * adopt` reads a pre-instance workspace's `site.json` (both agent-writable), hung the root CLI
+ * forever. Links are FOLLOWED here (operator-supplied paths — a password file, `--declare` — may
+ * be links); the observer's contentful reads, which must not follow one, use
+ * `readRegularFileNoFollow`.
+ */
+export function readRegularFile(path: string): string | null {
+  let fd: number;
+  try {
+    fd = openSync(path, FS.O_RDONLY | FS.O_NONBLOCK);
+  } catch {
+    return null;
+  }
+  try {
+    return fstatSync(fd).isFile() ? readFileSync(fd, 'utf8') : null;
+  } catch {
+    return null;
+  } finally {
+    closeSync(fd);
+  }
+}
+
 /** Everything here is the boring implementation; the decisions are all in `apply`. */
 export function hostIo(): ProvisionIo {
   return {
     stat: factsOf,
-    readFile(path: string): string | null {
-      try {
-        return readFileSync(path, 'utf8');
-      } catch {
-        return null;
-      }
-    },
+    readFile: readRegularFile,
     mkdir(path: string): void {
       mkdirSync(path, { recursive: true });
     },

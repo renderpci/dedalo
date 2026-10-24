@@ -12,7 +12,9 @@
  * DEDALO_INSTALL_* secret.
  * Every message that comes back is redacted again here (defence in depth), the
  * child's stderr is redacted and dropped (shown only when the child gave no
- * answer), and a child that outlives its probe's timeout is killed.
+ * answer), and a child that outlives its probe's timeout is killed. A child that
+ * exits before reading its request (EPIPE) fails its probe: an answer to an
+ * unread request answers nothing, and the front end never crashes on the pipe.
  *
  * Async spawn only (Bun.spawn): the front end must stay responsive to Ctrl-C.
  * The spawn is injectable — a gate records the request without a process.
@@ -150,6 +152,28 @@ async function runChildIn(
 	scratch: string,
 ): Promise<Record<string, unknown>> {
 	const secrets = forms(request.secrets);
+	const child = spawnChild(options, scratch);
+	const bound = boundOf(options, request.probe);
+	let timedOut = false;
+	const timer = setTimeout(() => {
+		timedOut = true;
+		child.kill('SIGKILL');
+	}, bound);
+	try {
+		const { sent, ended } = await exchange(child, JSON.stringify(request));
+		const answer = answerObject(ended.stdout);
+		if (sent && answer !== null && !timedOut) {
+			return redactOutcome(answer, secrets);
+		}
+		const why = noAnswerReason({ timedOut, sent, ended, bound });
+		return { ok: false, detail: redactSecrets(`the ${request.probe} probe ${why}`, secrets) };
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+/** Spawn the probe child (stdio piped, state in `scratch`) and report it to `onSpawn`. */
+function spawnChild(options: ChildProbeOptions, scratch: string): ProbeProcess {
 	const spawn = options.spawn ?? defaultSpawn;
 	const child = spawn([options.execPath, 'run', CHILD_PATH], {
 		cwd: options.cwd,
@@ -159,25 +183,67 @@ async function runChildIn(
 		env: probeChildEnv(scratch),
 	});
 	options.onSpawn?.(child);
-	child.stdin.write(JSON.stringify(request));
-	child.stdin.end();
-	const bound = boundOf(options, request.probe);
-	let timedOut = false;
-	const timer = setTimeout(() => {
-		timedOut = true;
-		child.kill('SIGKILL');
-	}, bound);
-	try {
-		const ended = await collect(child);
-		const answer = answerLine(ended.stdout);
-		if (answer !== null && typeof answer === 'object' && !timedOut) {
-			return redactOutcome(answer as Record<string, unknown>, secrets);
+	return child;
+}
+
+/**
+ * Send the request and collect the whole output. The request is sent WHILE the output
+ * is collected: a child that writes before it reads cannot deadlock against a flush
+ * awaited first. `sent` is deliver()'s verdict (never a throw or a rejection).
+ */
+async function exchange(
+	child: ProbeProcess,
+	text: string,
+): Promise<{ sent: boolean; ended: Awaited<ReturnType<typeof collect>> }> {
+	const delivered = deliver(child, text);
+	const ended = await collect(child);
+	return { sent: await delivered, ended };
+}
+
+/** The child's answer line when it is a JSON object (or array) — else null. */
+function answerObject(stdout: string): Record<string, unknown> | null {
+	const answer = answerLine(stdout);
+	return answer !== null && typeof answer === 'object' ? (answer as Record<string, unknown>) : null;
+}
+
+/** Why a child produced no usable answer: its timeout, its silent exit, or an unread request. */
+function noAnswerReason(state: {
+	timedOut: boolean;
+	sent: boolean;
+	ended: { stderr: string; exitCode: number };
+	bound: number;
+}): string {
+	if (state.timedOut) return `timed out after ${Math.round(state.bound / 1000)} s`;
+	return state.sent
+		? silentExit(state.ended)
+		: `did not read its request (${silentExit(state.ended)})`;
+}
+
+/**
+ * Write the request to the child's stdin and close it; false when the pipe refused
+ * it. NEVER throws or rejects: a child that closes its stdin unread (dead at import,
+ * killed at its timeout) makes the write — synchronously, or the pending flush later
+ * — fail EPIPE. Uncaught, that crashed the front end (runChild's never-throws
+ * contract broken; a late rejection is an unhandled one); here it fails the probe.
+ * `true` is NOT proof of a read: Bun drops a write to a child it already reaped
+ * (write() → true, measured Bun 1.4.3) — then the child's own answer (none) judges.
+ * Each step is guarded on its own, so `end()` still closes the pipe after a failed
+ * `write()`; the two run back to back (no await between).
+ */
+function deliver(child: ProbeProcess, text: string): Promise<boolean> {
+	const step = (send: () => unknown): Promise<boolean> => {
+		try {
+			return Promise.resolve(send()).then(
+				() => true,
+				() => false,
+			);
+		} catch {
+			return Promise.resolve(false);
 		}
-		const why = timedOut ? `timed out after ${Math.round(bound / 1000)} s` : silentExit(ended);
-		return { ok: false, detail: redactSecrets(`the ${request.probe} probe ${why}`, secrets) };
-	} finally {
-		clearTimeout(timer);
-	}
+	};
+	const wrote = step(() => child.stdin.write(text));
+	const closed = step(() => child.stdin.end());
+	return Promise.all([wrote, closed]).then(([a, b]) => a && b);
 }
 
 /** A child's whole output and exit code. */

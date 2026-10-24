@@ -291,12 +291,6 @@
 		},
 		{
 			"file": "src/core/install/db_restore.ts",
-			"symbol": "resetDatabaseToEmpty",
-			"class": "unrunnable-mutates-machine",
-			"reason": "Drops every object of a database (--abort) — only one carrying THIS install's stamp. Never runnable against a shared surface; its outcome — zero user objects, the preexisting extensions kept, an unstamped non-empty database refused untouched — is gated on scratch databases the drill creates and drops (install_resume_drill.test.ts, scenarios E and F)."
-		},
-		{
-			"file": "src/core/install/db_restore.ts",
 			"symbol": "holdInstallLock",
 			"class": "unrunnable-mutates-machine",
 			"reason": "Holds a session advisory lock on the install's target database through a long-lived psql child for a whole install run; its contract (an install against a database whose lock another session holds is refused, writing nothing) is exercised in install_resume_drill.test.ts scenario F, which takes the lock through this function and spawns the installer against it."

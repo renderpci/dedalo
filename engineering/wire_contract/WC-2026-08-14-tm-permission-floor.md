@@ -68,3 +68,23 @@ still owned emission at that point), so the permission change is isolated from
 the emit change for bisection. Companion:
 `WC-2026-08-14-tm-scope-server-owned`, which supplies the scope this floor is
 evaluated against.
+
+## Addendum 2026-10-22 — scope opened around the whole handler; count gated; nested time_machine_list
+
+Amended by `WC-2026-10-22-tm-scope-whole-request`. The floor above was evaluated only inside
+`readSection`; the API handlers' Gate A asked it BEFORE the scope was open, so it answered 0 and
+every non-admin was refused at the handler, grant or no grant. `tm_permission_floor_native` proved
+the grant only BELOW the handler (`readSection`), never through `coreApiActions.read` — which is why
+it stayed green. The scope is now opened around the whole `read`/`count` handler body
+(`withTimeMachineReadScope`), `count` runs the same §7.4 gate, and the `time_machine_list` lookup
+follows the recursive grant walk. The admitted rows are NOT confined to the caller's projects
+(that entry's owner-decision addendum supersedes its r0 record-scope confinement): the §7.4 grant is
+the scope of a non-admin's history. Handler-level gate: `tm_inspector_access_native`.
+
+## Addendum 2026-10-22 (review r2) — the floor judges the column's pair
+
+The floor now takes the column tipo. dd15's OWN columns (dd15 nodes, the `rsc329` annotation) keep
+the §7.4-derived read above; a dd15 column that replays a caller-section component is read only on
+that component's own pair (caller section, component) — a level-0 field stays unreadable in its
+history. The raw `dd1574` cells are judged per row on the recorded component's pair.
+`WC-2026-10-22-tm-scope-whole-request` (r2 addendum); gate `tm_inspector_access_native`.

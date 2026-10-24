@@ -7,6 +7,7 @@
  *
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { join } from 'node:path';
 import { NO_LANG } from '../../../src/config/data_langs.ts';
 import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
@@ -18,7 +19,7 @@ import {
 	toDedaloError,
 	toErrorBody,
 } from '../../../src/core/errors/index.ts';
-import { harvestFetch } from '../../../src/core/harvest/harvest.ts';
+import { type HarvestDeps, harvestFetch } from '../../../src/core/harvest/harvest.ts';
 import { stagingDir } from '../../../src/core/media/ingest/add_file.ts';
 import {
 	processUploadedFile,
@@ -34,6 +35,7 @@ import {
 } from '../../../src/core/media/tools/files_info_persist.ts';
 import { labelByTipo } from '../../../src/core/ontology/labels.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../../src/core/ontology/resolver.ts';
+import { getTldFromTipo } from '../../../src/core/ontology/tld.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
@@ -54,67 +56,159 @@ import { numisbidsAdapter } from './lib/sources/numisbids/adapter.ts';
 import { sixbidAdapter } from './lib/sources/sixbid/adapter.ts';
 import type { RawSource, SourceAdapter } from './lib/sources/types.ts';
 
-const NUMISDATA_OBJECT_TIPO = 'numisdata4';
-// material/mint/ruler/denomination/condition (thesaurus-linked) are still deliberately deferred.
-const WEIGHT_TIPO = 'numisdata133'; // component_number
-const DIAMETER_TIPO = 'numisdata135'; // component_number
-const INVENTORY_NUMBER_TIPO = 'numisdata151'; // component_input_text, "Inventory number"
-const DATE_TEXT_TIPO = 'numisdata1372'; // component_input_text
-const AUCTION_RELATION_TIPO = 'numisdata147'; // component_autocomplete -> numisdata224
-const OBVERSE_DESIGN_TIPO = 'numisdata763'; // component_text_area, "Specific obverse design"
-const REVERSE_DESIGN_TIPO = 'numisdata1029'; // component_text_area, "Specific reverse design"
-// Fallback ONLY, when a description doesn't follow jesusvico's "A/...R/..."
-// split: component_text_area, "Public remark".
-const PUBLIC_REMARK_TIPO = 'numisdata150';
-// component_iri "URI" (Documentation group), non-translatable. Real numisdata4 rows store it as
-// [{id, iri, lang:'lg-nolan'}] (an external object page, e.g. a museum collection URL). Holds the
-// lot's CANONICAL URL - rebuilt by its source adapter from the lot's own identity
-// (SourceAdapter.canonicalLotUrl), only when that identity is known - and is the
-// auction-independent dedup key.
-const SOURCE_URI_TIPO = 'numisdata275';
+/**
+ * EVERY section and component tipo this tool reads or writes — ONE object, so a
+ * gate can rebind the whole set to a scratch `zz*` situation
+ * (`withAcquisitionSeamForTests`) instead of the tool's fixed install sections,
+ * which the suite database never holds (the generic-TLD law). Production reads
+ * `NUMISDATA_ACQUISITION_TARGETS`; no write path names a tipo any other way.
+ */
+export interface AcquisitionTargets {
+	readonly object: string;
+	readonly weight: string;
+	readonly diameter: string;
+	readonly inventoryNumber: string;
+	readonly dateText: string;
+	readonly auctionRelation: string;
+	readonly obverseDesign: string;
+	readonly reverseDesign: string;
+	readonly publicRemark: string;
+	readonly sourceUri: string;
+	readonly auctionSection: string;
+	readonly auctionCompany: string;
+	readonly entitySection: string;
+	readonly entityName: string;
+	readonly auctionNumberTitle: string;
+	readonly auctionCode: string;
+	readonly typeRelation: string;
+	readonly typeSection: string;
+	readonly typeCode: string;
+	readonly typeCatalogueRelation: string;
+	readonly catalogueSection: string;
+	readonly catalogueName: string;
+	readonly obversePortal: string;
+	readonly reversePortal: string;
+	readonly imageSection: string;
+	readonly imageComponent: string;
+}
 
-// numisdata224's own fields (confirmed via dd_ontology this session).
-const AUCTION_SECTION_TIPO = 'numisdata224';
-// numisdata228 IS a relation, not free text (review item 9, confirmed against
-// 14,759/14,780 real numisdata224 rows): component_autocomplete -> rsc106
-// (Entity), display name on rsc116. Writing it as {id,value} text gets
-// silently dropped by validateRelationInsert's PHP-era 'bad_form' compat path
-// (saveComponentData still returns ok:true), so findExistingAuction's text
-// match never hits and every batch created a duplicate Auction with no
-// company linked. Resolved as a real relation below (findEntityByExactName /
-// resolveCompanySelectionByName / linkCompany).
-const AUCTION_COMPANY_TIPO = 'numisdata228';
-const ENTITY_SECTION_TIPO = 'rsc106';
-const ENTITY_NAME_TIPO = 'rsc116'; // the only field every real rsc106 record carries
-// "Number & title" is a genuinely COMBINED field — formatAuctionNumberTitle
-// uses the source's own title text, not the bare number. Since that's no
-// longer a stable dedup key on its own, the bare number is ALSO written to
-// AUCTION_CODE_TIPO purely for findExistingAuction to match on.
-const AUCTION_NUMBER_TITLE_TIPO = 'numisdata230'; // component_input_text
-const AUCTION_CODE_TIPO = 'numisdata231'; // component_input_text, "Code" (otherwise unused) — dedup key
+export const NUMISDATA_ACQUISITION_TARGETS: AcquisitionTargets = Object.freeze({
+	object: 'numisdata4',
+	// material/mint/ruler/denomination/condition (thesaurus-linked) are still deliberately deferred.
+	weight: 'numisdata133', // component_number
+	diameter: 'numisdata135', // component_number
+	inventoryNumber: 'numisdata151', // component_input_text, "Inventory number"
+	dateText: 'numisdata1372', // component_input_text
+	auctionRelation: 'numisdata147', // component_autocomplete -> numisdata224
+	obverseDesign: 'numisdata763', // component_text_area, "Specific obverse design"
+	reverseDesign: 'numisdata1029', // component_text_area, "Specific reverse design"
+	// Fallback ONLY, when a description doesn't follow jesusvico's "A/...R/..."
+	// split: component_text_area, "Public remark".
+	publicRemark: 'numisdata150',
+	// component_iri "URI" (Documentation group), non-translatable. Real numisdata4 rows store it as
+	// [{id, iri, lang:'lg-nolan'}] (an external object page, e.g. a museum collection URL). Holds the
+	// lot's CANONICAL URL - rebuilt by its source adapter from the lot's own identity
+	// (SourceAdapter.canonicalLotUrl), only when that identity is known - and is the
+	// auction-independent dedup key.
+	sourceUri: 'numisdata275',
+
+	// numisdata224's own fields (confirmed via dd_ontology this session).
+	auctionSection: 'numisdata224',
+	// numisdata228 IS a relation, not free text (review item 9, confirmed against
+	// 14,759/14,780 real numisdata224 rows): component_autocomplete -> rsc106
+	// (Entity), display name on rsc116. Writing it as {id,value} text gets
+	// silently dropped by validateRelationInsert's PHP-era 'bad_form' compat path
+	// (saveComponentData still returns ok:true), so findExistingAuction's text
+	// match never hits and every batch created a duplicate Auction with no
+	// company linked. Resolved as a real relation below (findEntityByExactName /
+	// resolveCompanySelectionByName / linkCompany).
+	auctionCompany: 'numisdata228',
+	entitySection: 'rsc106',
+	entityName: 'rsc116', // the only field every real rsc106 record carries
+	// "Number & title" is a genuinely COMBINED field — formatAuctionNumberTitle
+	// uses the source's own title text, not the bare number. Since that's no
+	// longer a stable dedup key on its own, the bare number is ALSO written to
+	// `auctionCode` purely for findExistingAuction to match on.
+	auctionNumberTitle: 'numisdata230', // component_input_text
+	auctionCode: 'numisdata231', // component_input_text, "Code" (otherwise unused) — dedup key
+
+	// numisdata3 ("Type") — a shared scholarly catalog-classification record
+	// (Catalog system + Number, e.g. "ACIP" 1781). Read-only: findExistingType
+	// only ever LINKS to an existing Type, never creates one — it's a shared
+	// taxonomy entry (Mint/Denomination cross-links, weight/diameter averages
+	// computed across every linked object), and auto-fabricating one from
+	// scraped auction-house text risks polluting it in a way that's much harder
+	// to notice than an extra Auction record. No match -> left unlinked, reported.
+	typeRelation: 'numisdata161', // component_autocomplete -> numisdata3
+	typeSection: 'numisdata3',
+	typeCode: 'numisdata27', // component_input_text, "Code"/"Number"
+	typeCatalogueRelation: 'numisdata309', // component_select -> numisdata300
+	catalogueSection: 'numisdata300',
+	catalogueName: 'numisdata303', // component_input_text, e.g. "ACIP", "MIB", "RPC"
+
+	// Confirmed directly from the live numisdata256 ("Add images") ontology config.
+	obversePortal: 'numisdata164',
+	reversePortal: 'numisdata165',
+	imageSection: 'rsc170', // the shared "resource" image record type
+	imageComponent: 'rsc29', // component_image on rsc170
+});
+
 // The generic non-reciprocal link relation type used everywhere else in this
 // codebase; numisdata147 declares no config_relation.relation_type override.
 const RELATION_TYPE_LINK = 'dd151';
 
-// numisdata3 ("Type") — a shared scholarly catalog-classification record
-// (Catalog system + Number, e.g. "ACIP" 1781). Read-only: findExistingType
-// only ever LINKS to an existing Type, never creates one — it's a shared
-// taxonomy entry (Mint/Denomination cross-links, weight/diameter averages
-// computed across every linked object), and auto-fabricating one from
-// scraped auction-house text risks polluting it in a way that's much harder
-// to notice than an extra Auction record. No match -> left unlinked, reported.
-const TYPE_RELATION_TIPO = 'numisdata161'; // component_autocomplete -> numisdata3
-const TYPE_SECTION_TIPO = 'numisdata3';
-const TYPE_CODE_TIPO = 'numisdata27'; // component_input_text, "Code"/"Number"
-const TYPE_CATALOGUE_RELATION_TIPO = 'numisdata309'; // component_select -> numisdata300
-const CATALOGUE_SECTION_TIPO = 'numisdata300';
-const CATALOGUE_NAME_TIPO = 'numisdata303'; // component_input_text, e.g. "ACIP", "MIB", "RPC"
+/** What a gate rebinds: the targets, and the harvesting door's scripted site (HarvestDeps). */
+export interface AcquisitionSeam {
+	readonly targets: AcquisitionTargets;
+	readonly harvest?: HarvestDeps;
+}
 
-// Confirmed directly from the live numisdata256 ("Add images") ontology config.
-const OBVERSE_PORTAL_TIPO = 'numisdata164';
-const REVERSE_PORTAL_TIPO = 'numisdata165';
-const IMAGE_SECTION_TIPO = 'rsc170'; // the shared "resource" image record type
-const IMAGE_COMPONENT_TIPO = 'rsc29'; // component_image on rsc170
+/**
+ * THE SEAM. LIFECYCLE: request-scoped by construction — an AsyncLocalStorage
+ * scope opened ONLY by `withAcquisitionSeamForTests` around one gate's call;
+ * outside it the store is absent and the production targets + the real
+ * harvesting transport apply. Carries no identity.
+ */
+const acquisitionSeam = new AsyncLocalStorage<AcquisitionSeam>();
+
+/** The targets in force: a gate's rebinding inside its scope, else production. */
+function T(): AcquisitionTargets {
+	return acquisitionSeam.getStore()?.targets ?? NUMISDATA_ACQUISITION_TARGETS;
+}
+
+/** The harvesting door's deps in force (a gate's scripted site), else the real transport. */
+function harvestDeps(): HarvestDeps | undefined {
+	return acquisitionSeam.getStore()?.harvest;
+}
+
+/**
+ * Run `work` with this tool rebound to `seam` — TEST ISOLATION ONLY: the write
+ * gate (test/unit/tool_numisdata_acquisition_commit_native.test.ts) drives
+ * commit_lots against a scratch `zz*` situation and a scripted image site.
+ *
+ * SCRATCH-ONLY: every rebound target must be the shipped tipo or sit under a
+ * `zz` scratch TLD, else the seam REFUSES before `work` runs (internal.invariant;
+ * ai_spend's seamLedger/seamLimits twin). The dd128 write census's `not-dd128`
+ * verdict rests on the targets being module constants: a seam that could name
+ * any section would be a second, unbounded way to address a write.
+ * Gate: numisdata_acquisition_seam_scope_native.
+ */
+export async function withAcquisitionSeamForTests<R>(
+	seam: AcquisitionSeam,
+	work: () => Promise<R>,
+): Promise<R> {
+	const shipped: Readonly<Record<string, string>> = { ...NUMISDATA_ACQUISITION_TARGETS };
+	for (const [field, tipo] of Object.entries(seam.targets)) {
+		if (tipo === shipped[field]) continue;
+		if (getTldFromTipo(tipo)?.startsWith('zz') === true) continue;
+		throw new DedaloError('internal.invariant', {
+			message: `tool_numisdata_acquisition: the test seam may only name zz scratch tipos ('${field}' = '${tipo}')`,
+			coordinates: { field, tipo },
+		});
+	}
+	return await acquisitionSeam.run(seam, work);
+}
+
 const IMPORT_KEY_DIR = 'numisdata_acquisition';
 
 const ADAPTERS = [jesusvicoAdapter, biddrAdapter, aureoAdapter, numisbidsAdapter, sixbidAdapter];
@@ -341,7 +435,7 @@ function formatAuctionNumberTitle(auctionNumber: string, title: string | null): 
 
 /** Writes one field as a fresh 'set_data' (a bare {id, value} item).
  * `sectionTipo` MUST be the tipo `sectionId` actually belongs to — a prior
- * version hard-coded NUMISDATA_OBJECT_TIPO here, which silently no-opped
+ * version hard-coded the object section (numisdata4) here, which silently no-opped
  * every Auction-record write (findOrCreateAuction targets numisdata224, not
  * numisdata4) with no error surfaced at all. */
 async function writeField(
@@ -438,10 +532,10 @@ async function removeCreatedImageRecords(
 	const orphaned: number[] = [];
 	for (const imageSectionId of sectionIds) {
 		try {
-			const deleted = await deleteSectionRecord(IMAGE_SECTION_TIPO, imageSectionId, context.userId);
+			const deleted = await deleteSectionRecord(T().imageSection, imageSectionId, context.userId);
 			if (deleted.refused !== undefined) {
 				console.error('[tool_numisdata_acquisition] image record cleanup refused', {
-					section_tipo: IMAGE_SECTION_TIPO,
+					section_tipo: T().imageSection,
 					section_id: imageSectionId,
 					request_id: toolRequestId(context),
 				});
@@ -451,7 +545,7 @@ async function removeCreatedImageRecords(
 			console.error(
 				'[tool_numisdata_acquisition] image record cleanup failed',
 				{
-					section_tipo: IMAGE_SECTION_TIPO,
+					section_tipo: T().imageSection,
 					section_id: imageSectionId,
 					request_id: toolRequestId(context),
 				},
@@ -517,13 +611,16 @@ async function importImagePair(
 		});
 	}
 
-	const imageResponse = await harvestFetch({
-		url: sourceUrl,
-		hosts: HOSTS_BY_ADAPTER_ID[imageAdapter.id] ?? [],
-		requireHttps: true,
-		expectContentType: ['image/'],
-		maxBytes: 25 * 1024 * 1024,
-	});
+	const imageResponse = await harvestFetch(
+		{
+			url: sourceUrl,
+			hosts: HOSTS_BY_ADAPTER_ID[imageAdapter.id] ?? [],
+			requireHttps: true,
+			expectContentType: ['image/'],
+			maxBytes: 25 * 1024 * 1024,
+		},
+		harvestDeps(),
+	);
 	if (!imageResponse.ok) {
 		throw new DedaloError('tool.action_failed', {
 			message: `Could not download image (HTTP ${imageResponse.status}).`,
@@ -531,7 +628,7 @@ async function importImagePair(
 		});
 	}
 	const extension = extensionFromUrl(sourceUrl, imageResponse.contentType);
-	const fileName = `numisdata4_${sectionId}.${extension}`;
+	const fileName = `${T().object}_${sectionId}.${extension}`;
 
 	const staged = receiveUpload(
 		{
@@ -559,8 +656,8 @@ async function importImagePair(
 			{
 				function_name: 'crop_50',
 				custom_arguments: {
-					destination_1: OBVERSE_PORTAL_TIPO,
-					destination_2: REVERSE_PORTAL_TIPO,
+					destination_1: T().obversePortal,
+					destination_2: T().reversePortal,
 				},
 			},
 		],
@@ -582,11 +679,11 @@ async function importImagePair(
 		if (output.portalComponentTipo === undefined) continue;
 		const save = await saveComponentData({
 			componentTipo: output.portalComponentTipo,
-			sectionTipo: NUMISDATA_OBJECT_TIPO,
+			sectionTipo: T().object,
 			sectionId,
 			lang: NO_LANG,
 			userId: context.userId,
-			changedData: [{ action: 'add_new_element', id: null, value: IMAGE_SECTION_TIPO }],
+			changedData: [{ action: 'add_new_element', id: null, value: T().imageSection }],
 		});
 		const createdSectionId = (save as { ok: boolean; created_section_id?: number })
 			.created_section_id;
@@ -601,8 +698,8 @@ async function importImagePair(
 		// must delete it again (importImagesForLot's all-or-nothing cleanup).
 		createdIds.push(createdSectionId);
 		const { identity, pathOpts } = await resolveMediaToolContext({
-			component_tipo: IMAGE_COMPONENT_TIPO,
-			section_tipo: IMAGE_SECTION_TIPO,
+			component_tipo: T().imageComponent,
+			section_tipo: T().imageSection,
 			section_id: createdSectionId,
 		});
 		const result = await processUploadedFile({
@@ -650,13 +747,13 @@ async function findEntityByExactName(
 	context: ToolActionContext,
 ): Promise<number | null> {
 	const sqo = sanitizeClientSqo({
-		section_tipo: [ENTITY_SECTION_TIPO],
+		section_tipo: [T().entitySection],
 		limit: 1,
 		filter: {
 			$and: [
 				{
 					q: `==${name}`,
-					path: [{ section_tipo: ENTITY_SECTION_TIPO, component_tipo: ENTITY_NAME_TIPO }],
+					path: [{ section_tipo: T().entitySection, component_tipo: T().entityName }],
 				},
 			],
 		},
@@ -703,14 +800,8 @@ async function resolveCompanyEntityId(
 		await acquireDedupLock('rsc106:name:', selection.name);
 		const existing = await findEntityByExactName(selection.name, context);
 		if (existing !== null) return existing;
-		const sectionId = await createSectionRecord(ENTITY_SECTION_TIPO, context.userId);
-		await writeField(
-			sectionId,
-			ENTITY_SECTION_TIPO,
-			ENTITY_NAME_TIPO,
-			selection.name,
-			context.userId,
-		);
+		const sectionId = await createSectionRecord(T().entitySection, context.userId);
+		await writeField(sectionId, T().entitySection, T().entityName, selection.name, context.userId);
 		return sectionId;
 	});
 }
@@ -724,8 +815,8 @@ async function linkCompany(
 	entitySectionId: number,
 ): Promise<void> {
 	const save = await saveComponentData({
-		componentTipo: AUCTION_COMPANY_TIPO,
-		sectionTipo: AUCTION_SECTION_TIPO,
+		componentTipo: T().auctionCompany,
+		sectionTipo: T().auctionSection,
 		sectionId: auctionSectionId,
 		lang: NO_LANG,
 		userId: context.userId,
@@ -737,8 +828,8 @@ async function linkCompany(
 						id: 1,
 						type: RELATION_TYPE_LINK,
 						section_id: entitySectionId,
-						section_tipo: ENTITY_SECTION_TIPO,
-						from_component_tipo: AUCTION_COMPANY_TIPO,
+						section_tipo: T().entitySection,
+						from_component_tipo: T().auctionCompany,
 					},
 				],
 			},
@@ -746,7 +837,7 @@ async function linkCompany(
 	});
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
-			coordinates: { component_tipo: AUCTION_COMPANY_TIPO, section_id: auctionSectionId },
+			coordinates: { component_tipo: T().auctionCompany, section_id: auctionSectionId },
 			cause: save,
 		});
 	}
@@ -767,24 +858,24 @@ async function findExistingAuction(
 	context: ToolActionContext,
 ): Promise<number | null> {
 	const sqo = sanitizeClientSqo({
-		section_tipo: [AUCTION_SECTION_TIPO],
+		section_tipo: [T().auctionSection],
 		limit: 1,
 		filter: {
 			$and: [
 				{
 					q: [
 						{
-							section_tipo: ENTITY_SECTION_TIPO,
+							section_tipo: T().entitySection,
 							section_id: companyEntityId,
-							from_component_tipo: AUCTION_COMPANY_TIPO,
+							from_component_tipo: T().auctionCompany,
 						},
 					],
-					path: [{ section_tipo: AUCTION_SECTION_TIPO, component_tipo: AUCTION_COMPANY_TIPO }],
+					path: [{ section_tipo: T().auctionSection, component_tipo: T().auctionCompany }],
 					format: 'relation',
 				},
 				{
 					q: `==${auctionNumber}`,
-					path: [{ section_tipo: AUCTION_SECTION_TIPO, component_tipo: AUCTION_CODE_TIPO }],
+					path: [{ section_tipo: T().auctionSection, component_tipo: T().auctionCode }],
 				},
 			],
 		},
@@ -801,7 +892,7 @@ async function findExistingAuction(
  * against (review item G: "re-committing the same lots duplicates them"), whenever the lot HAS a
  * resolved Auction and a lot number; findExistingLotByUrl covers the lots that don't. The Auction
  * relation + the Inventory number
- * (INVENTORY_NUMBER_TIPO, already written on every lot from `l.lotNumber`) together are already a
+ * (`inventoryNumber`, already written on every lot from `l.lotNumber`) together are already a
  * real, confirmed-working stand-in for "this exact lot": two DIFFERENT lots sharing the same number
  * under the SAME auction never happens in a real catalogue. Same `format:'relation'` SQO pattern as
  * findExistingAuction/findExistingType — never a hand-written SQL WHERE.
@@ -812,24 +903,24 @@ async function findExistingLot(
 	context: ToolActionContext,
 ): Promise<number | null> {
 	const sqo = sanitizeClientSqo({
-		section_tipo: [NUMISDATA_OBJECT_TIPO],
+		section_tipo: [T().object],
 		limit: 1,
 		filter: {
 			$and: [
 				{
 					q: [
 						{
-							section_tipo: AUCTION_SECTION_TIPO,
+							section_tipo: T().auctionSection,
 							section_id: auctionSectionId,
-							from_component_tipo: AUCTION_RELATION_TIPO,
+							from_component_tipo: T().auctionRelation,
 						},
 					],
-					path: [{ section_tipo: NUMISDATA_OBJECT_TIPO, component_tipo: AUCTION_RELATION_TIPO }],
+					path: [{ section_tipo: T().object, component_tipo: T().auctionRelation }],
 					format: 'relation',
 				},
 				{
 					q: `==${lotNumber}`,
-					path: [{ section_tipo: NUMISDATA_OBJECT_TIPO, component_tipo: INVENTORY_NUMBER_TIPO }],
+					path: [{ section_tipo: T().object, component_tipo: T().inventoryNumber }],
 				},
 			],
 		},
@@ -842,7 +933,7 @@ async function findExistingLot(
 }
 
 /**
- * Exact match on the lot's canonical URL (SOURCE_URI_TIPO) - the dedup key that needs no Auction:
+ * Exact match on the lot's canonical URL (`sourceUri`) - the dedup key that needs no Auction:
  * a search-batch lot, a lot whose auction failed to resolve, or one with no lot number (review
  * item: "dedup gaps"). The stored value is written by this tool already canonical
  * (SourceAdapter.canonicalLotUrl - one spelling per lot), so the '==' leaf (builder_iri 'exact':
@@ -854,13 +945,13 @@ async function findExistingLotByUrl(
 	context: ToolActionContext,
 ): Promise<number | null> {
 	const sqo = sanitizeClientSqo({
-		section_tipo: [NUMISDATA_OBJECT_TIPO],
+		section_tipo: [T().object],
 		limit: 1,
 		filter: {
 			$and: [
 				{
 					q: `==${lotUrl}`,
-					path: [{ section_tipo: NUMISDATA_OBJECT_TIPO, component_tipo: SOURCE_URI_TIPO }],
+					path: [{ section_tipo: T().object, component_tipo: T().sourceUri }],
 				},
 			],
 		},
@@ -910,19 +1001,19 @@ async function findOrCreateAuction(
 		const found = await findExistingAuction(entityId, auctionNumber, context);
 		if (found !== null) return { sectionId: found, created: false };
 
-		const sectionId = await createSectionRecord(AUCTION_SECTION_TIPO, context.userId);
+		const sectionId = await createSectionRecord(T().auctionSection, context.userId);
 		await linkCompany(context, sectionId, entityId);
 		await writeField(
 			sectionId,
-			AUCTION_SECTION_TIPO,
-			AUCTION_NUMBER_TITLE_TIPO,
+			T().auctionSection,
+			T().auctionNumberTitle,
 			formatAuctionNumberTitle(auctionNumber, title),
 			context.userId,
 		);
 		await writeField(
 			sectionId,
-			AUCTION_SECTION_TIPO,
-			AUCTION_CODE_TIPO,
+			T().auctionSection,
+			T().auctionCode,
 			auctionNumber,
 			context.userId,
 			currentDataLang(),
@@ -940,8 +1031,8 @@ async function linkAuction(
 	auctionSectionId: number,
 ): Promise<void> {
 	const save = await saveComponentData({
-		componentTipo: AUCTION_RELATION_TIPO,
-		sectionTipo: NUMISDATA_OBJECT_TIPO,
+		componentTipo: T().auctionRelation,
+		sectionTipo: T().object,
 		sectionId: lotSectionId,
 		lang: NO_LANG,
 		userId: context.userId,
@@ -953,8 +1044,8 @@ async function linkAuction(
 						id: 1,
 						type: RELATION_TYPE_LINK,
 						section_id: auctionSectionId,
-						section_tipo: AUCTION_SECTION_TIPO,
-						from_component_tipo: AUCTION_RELATION_TIPO,
+						section_tipo: T().auctionSection,
+						from_component_tipo: T().auctionRelation,
 					},
 				],
 			},
@@ -962,7 +1053,7 @@ async function linkAuction(
 	});
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
-			coordinates: { component_tipo: AUCTION_RELATION_TIPO, section_id: lotSectionId },
+			coordinates: { component_tipo: T().auctionRelation, section_id: lotSectionId },
 			cause: save,
 		});
 	}
@@ -982,7 +1073,7 @@ type CatalogueIndex = Map<string, number>;
  * see every name the caller can read, not just the first page of them. */
 async function loadCatalogueIndex(context: ToolActionContext): Promise<CatalogueIndex> {
 	const index: CatalogueIndex = new Map();
-	const sqo = sanitizeClientSqo({ section_tipo: [CATALOGUE_SECTION_TIPO] });
+	const sqo = sanitizeClientSqo({ section_tipo: [T().catalogueSection] });
 	// Server-side override AFTER the gate (same as tool_import_files' matchFreeName):
 	// the index must see every Catalogue name the caller can read, not just a page of them.
 	sqo.limit = 'all';
@@ -993,12 +1084,12 @@ async function loadCatalogueIndex(context: ToolActionContext): Promise<Catalogue
 
 	// The rows already carry the component's data column — same extraction as
 	// matchFreeName, no per-record read needed.
-	const model = await getModelByTipo(CATALOGUE_NAME_TIPO);
+	const model = await getModelByTipo(T().catalogueName);
 	const column = model !== null ? getColumnNameByModel(model) : null;
 	if (column === null) return index;
 	for (const row of rows) {
 		const payload = row[column] as Record<string, unknown> | null | undefined;
-		const rawItems = payload?.[CATALOGUE_NAME_TIPO];
+		const rawItems = payload?.[T().catalogueName];
 		const items = (Array.isArray(rawItems) ? rawItems : rawItems == null ? [] : [rawItems]).filter(
 			(item) => item !== null && item !== '',
 		);
@@ -1053,24 +1144,24 @@ async function findExistingType(
 	context: ToolActionContext,
 ): Promise<number | null> {
 	const sqo = sanitizeClientSqo({
-		section_tipo: [TYPE_SECTION_TIPO],
+		section_tipo: [T().typeSection],
 		limit: 1,
 		filter: {
 			$and: [
 				{
 					q: [
 						{
-							section_tipo: CATALOGUE_SECTION_TIPO,
+							section_tipo: T().catalogueSection,
 							section_id: catalogueSectionId,
-							from_component_tipo: TYPE_CATALOGUE_RELATION_TIPO,
+							from_component_tipo: T().typeCatalogueRelation,
 						},
 					],
-					path: [{ section_tipo: TYPE_SECTION_TIPO, component_tipo: TYPE_CATALOGUE_RELATION_TIPO }],
+					path: [{ section_tipo: T().typeSection, component_tipo: T().typeCatalogueRelation }],
 					format: 'relation',
 				},
 				{
 					q: `==${code}`,
-					path: [{ section_tipo: TYPE_SECTION_TIPO, component_tipo: TYPE_CODE_TIPO }],
+					path: [{ section_tipo: T().typeSection, component_tipo: T().typeCode }],
 				},
 			],
 		},
@@ -1090,8 +1181,8 @@ async function linkType(
 	typeSectionId: number,
 ): Promise<void> {
 	const save = await saveComponentData({
-		componentTipo: TYPE_RELATION_TIPO,
-		sectionTipo: NUMISDATA_OBJECT_TIPO,
+		componentTipo: T().typeRelation,
+		sectionTipo: T().object,
 		sectionId: lotSectionId,
 		lang: NO_LANG,
 		userId: context.userId,
@@ -1103,8 +1194,8 @@ async function linkType(
 						id: 1,
 						type: RELATION_TYPE_LINK,
 						section_id: typeSectionId,
-						section_tipo: TYPE_SECTION_TIPO,
-						from_component_tipo: TYPE_RELATION_TIPO,
+						section_tipo: T().typeSection,
+						from_component_tipo: T().typeRelation,
 					},
 				],
 			},
@@ -1112,7 +1203,7 @@ async function linkType(
 	});
 	if (!save.ok) {
 		throw new DedaloError('record.save_failed', {
-			coordinates: { component_tipo: TYPE_RELATION_TIPO, section_id: lotSectionId },
+			coordinates: { component_tipo: T().typeRelation, section_id: lotSectionId },
 			cause: save,
 		});
 	}
@@ -1257,7 +1348,7 @@ async function commitOneLot(
 	auctionCache: Map<string, ResolvedAuction>,
 	catalogueIndex: CatalogueIndex,
 	// The lot's canonical URL (commitLots: canonicalLotUrlKey) when its source can rebuild one
-	// from the lot's own identity, else null. Stored in SOURCE_URI_TIPO and used as the
+	// from the lot's own identity, else null. Stored in `sourceUri` and used as the
 	// auction-independent dedup key.
 	lotUrlKey: string | null,
 ): Promise<CommitOneLotResult> {
@@ -1371,72 +1462,60 @@ async function commitOneLot(
 				skipped: true as const,
 			};
 		}
-		const newSectionId = await createSectionRecord(NUMISDATA_OBJECT_TIPO, context.userId);
+		const newSectionId = await createSectionRecord(T().object, context.userId);
 
 		const written: string[] = [];
 		const weight = parseLeadingNumber(l.weight);
 		if (weight !== null) {
-			await writeField(newSectionId, NUMISDATA_OBJECT_TIPO, WEIGHT_TIPO, weight, context.userId);
-			written.push(WEIGHT_TIPO);
+			await writeField(newSectionId, T().object, T().weight, weight, context.userId);
+			written.push(T().weight);
 		}
 		const diameter = parseLeadingNumber(l.diameter);
 		if (diameter !== null) {
-			await writeField(
-				newSectionId,
-				NUMISDATA_OBJECT_TIPO,
-				DIAMETER_TIPO,
-				diameter,
-				context.userId,
-			);
-			written.push(DIAMETER_TIPO);
+			await writeField(newSectionId, T().object, T().diameter, diameter, context.userId);
+			written.push(T().diameter);
 		}
 		if (lotNumber !== '') {
 			// Writes the SAME trimmed value findExistingLot's dedup lookup matches on - writing the
 			// untrimmed l.lotNumber here (while the lookup compared against the trimmed one) meant a
 			// lot number with incidental whitespace never matched its own stored value on a
 			// re-commit's exact '==' search, duplicating the lot (review item: dedup gaps).
-			await writeField(
-				newSectionId,
-				NUMISDATA_OBJECT_TIPO,
-				INVENTORY_NUMBER_TIPO,
-				lotNumber,
-				context.userId,
-			);
-			written.push(INVENTORY_NUMBER_TIPO);
+			await writeField(newSectionId, T().object, T().inventoryNumber, lotNumber, context.userId);
+			written.push(T().inventoryNumber);
 		}
 		if (typeof l.datePeriod === 'string' && l.datePeriod.trim() !== '') {
 			await writeField(
 				newSectionId,
-				NUMISDATA_OBJECT_TIPO,
-				DATE_TEXT_TIPO,
+				T().object,
+				T().dateText,
 				l.datePeriod,
 				context.userId,
 				currentDataLang(),
 			);
-			written.push(DATE_TEXT_TIPO);
+			written.push(T().dateText);
 		}
 		const { obverse: obverseDesign, reverse: reverseDesign } = splitJesusvicoDesign(description);
 		if (obverseDesign !== null) {
 			await writeField(
 				newSectionId,
-				NUMISDATA_OBJECT_TIPO,
-				OBVERSE_DESIGN_TIPO,
+				T().object,
+				T().obverseDesign,
 				obverseDesign,
 				context.userId,
 				currentDataLang(),
 			);
-			written.push(OBVERSE_DESIGN_TIPO);
+			written.push(T().obverseDesign);
 		}
 		if (reverseDesign !== null) {
 			await writeField(
 				newSectionId,
-				NUMISDATA_OBJECT_TIPO,
-				REVERSE_DESIGN_TIPO,
+				T().object,
+				T().reverseDesign,
 				reverseDesign,
 				context.userId,
 				currentDataLang(),
 			);
-			written.push(REVERSE_DESIGN_TIPO);
+			written.push(T().reverseDesign);
 		}
 		if (
 			obverseDesign === null &&
@@ -1446,35 +1525,29 @@ async function commitOneLot(
 		) {
 			await writeField(
 				newSectionId,
-				NUMISDATA_OBJECT_TIPO,
-				PUBLIC_REMARK_TIPO,
+				T().object,
+				T().publicRemark,
 				description,
 				context.userId,
 				currentDataLang(),
 			);
-			written.push(PUBLIC_REMARK_TIPO);
+			written.push(T().publicRemark);
 		}
 		if (lotUrlKey !== null) {
 			// Written in the SAME canonical form findExistingLotByUrl matches on, inside the same
 			// transaction as the record: a lot is never committed without the key that dedups it.
-			await writeIriField(
-				newSectionId,
-				NUMISDATA_OBJECT_TIPO,
-				SOURCE_URI_TIPO,
-				lotUrlKey,
-				context.userId,
-			);
-			written.push(SOURCE_URI_TIPO);
+			await writeIriField(newSectionId, T().object, T().sourceUri, lotUrlKey, context.userId);
+			written.push(T().sourceUri);
 		}
 		// The links, in the birth transaction (see above). The Auction was resolved before it
 		// (auctionSectionId is null when it failed - auction_error says why).
 		if (auctionSectionId !== null) {
 			await linkAuction(context, newSectionId, auctionSectionId);
-			written.push(AUCTION_RELATION_TIPO);
+			written.push(T().auctionRelation);
 		}
 		if (typeSectionId !== null) {
 			await linkType(context, newSectionId, typeSectionId);
-			written.push(TYPE_RELATION_TIPO);
+			written.push(T().typeRelation);
 		}
 		return { sectionId: newSectionId, fieldsWritten: written, skipped: false as const };
 	});
@@ -1482,7 +1555,7 @@ async function commitOneLot(
 	if (skipped) {
 		return {
 			lot_identifier: l.lotIdentifier,
-			section_tipo: NUMISDATA_OBJECT_TIPO,
+			section_tipo: T().object,
 			section_id: sectionId,
 			error: null,
 			skipped: true,
@@ -1515,7 +1588,7 @@ async function commitOneLot(
 
 	return {
 		lot_identifier: l.lotIdentifier,
-		section_tipo: NUMISDATA_OBJECT_TIPO,
+		section_tipo: T().object,
 		section_id: sectionId,
 		error: null,
 		skipped: false,
@@ -1660,7 +1733,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 	const candidateEntityReadable =
 		candidateEntityId !== null &&
 		(context.principal.isGlobalAdmin ||
-			(await isRecordInScope(ENTITY_SECTION_TIPO, candidateEntityId, context.principal)));
+			(await isRecordInScope(T().entitySection, candidateEntityId, context.principal)));
 	let companySelection: CompanySelection;
 	if (candidateEntityId !== null && candidateEntityReadable) {
 		companySelection = { sectionId: candidateEntityId };
@@ -1727,7 +1800,7 @@ async function commitLots(context: ToolActionContext): Promise<ToolResponse> {
 		} catch (error) {
 			results.push({
 				lot_identifier: l.lotIdentifier,
-				section_tipo: NUMISDATA_OBJECT_TIPO,
+				section_tipo: T().object,
 				section_id: null,
 				error: toErrorBody(toDedaloError(error)),
 				skipped: false,
@@ -1760,7 +1833,7 @@ export const tool: ToolServerModule = {
 		preview_url: {
 			permission: 'targets',
 			minLevel: 1,
-			targets: () => [{ section_tipo: NUMISDATA_OBJECT_TIPO }],
+			targets: () => [{ section_tipo: T().object }],
 			handler: previewUrl,
 		},
 		// Same gate - no network request (parses HTML the operator already fetched), but still
@@ -1768,7 +1841,7 @@ export const tool: ToolServerModule = {
 		preview_html: {
 			permission: 'targets',
 			minLevel: 1,
-			targets: () => [{ section_tipo: NUMISDATA_OBJECT_TIPO }],
+			targets: () => [{ section_tipo: T().object }],
 			handler: previewHtml,
 		},
 		// Write: resolves Auction/Type, creates one record per kept lot, imports images.
@@ -1784,29 +1857,29 @@ export const tool: ToolServerModule = {
 			permission: 'targets',
 			minLevel: 2,
 			targets: () => [
-				{ section_tipo: NUMISDATA_OBJECT_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: WEIGHT_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: DIAMETER_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: INVENTORY_NUMBER_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: DATE_TEXT_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: OBVERSE_DESIGN_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: REVERSE_DESIGN_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: PUBLIC_REMARK_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: SOURCE_URI_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: AUCTION_RELATION_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: TYPE_RELATION_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: OBVERSE_PORTAL_TIPO },
-				{ section_tipo: NUMISDATA_OBJECT_TIPO, tipo: REVERSE_PORTAL_TIPO },
-				{ section_tipo: AUCTION_SECTION_TIPO },
-				{ section_tipo: AUCTION_SECTION_TIPO, tipo: AUCTION_COMPANY_TIPO },
-				{ section_tipo: AUCTION_SECTION_TIPO, tipo: AUCTION_NUMBER_TITLE_TIPO },
-				{ section_tipo: AUCTION_SECTION_TIPO, tipo: AUCTION_CODE_TIPO },
+				{ section_tipo: T().object },
+				{ section_tipo: T().object, tipo: T().weight },
+				{ section_tipo: T().object, tipo: T().diameter },
+				{ section_tipo: T().object, tipo: T().inventoryNumber },
+				{ section_tipo: T().object, tipo: T().dateText },
+				{ section_tipo: T().object, tipo: T().obverseDesign },
+				{ section_tipo: T().object, tipo: T().reverseDesign },
+				{ section_tipo: T().object, tipo: T().publicRemark },
+				{ section_tipo: T().object, tipo: T().sourceUri },
+				{ section_tipo: T().object, tipo: T().auctionRelation },
+				{ section_tipo: T().object, tipo: T().typeRelation },
+				{ section_tipo: T().object, tipo: T().obversePortal },
+				{ section_tipo: T().object, tipo: T().reversePortal },
+				{ section_tipo: T().auctionSection },
+				{ section_tipo: T().auctionSection, tipo: T().auctionCompany },
+				{ section_tipo: T().auctionSection, tipo: T().auctionNumberTitle },
+				{ section_tipo: T().auctionSection, tipo: T().auctionCode },
 				// Company may now resolve to a NEW rsc106 Entity (review item 9's
 				// fix), not just an existing one linked read-only.
-				{ section_tipo: ENTITY_SECTION_TIPO },
-				{ section_tipo: ENTITY_SECTION_TIPO, tipo: ENTITY_NAME_TIPO },
-				{ section_tipo: IMAGE_SECTION_TIPO },
-				{ section_tipo: IMAGE_SECTION_TIPO, tipo: IMAGE_COMPONENT_TIPO },
+				{ section_tipo: T().entitySection },
+				{ section_tipo: T().entitySection, tipo: T().entityName },
+				{ section_tipo: T().imageSection },
+				{ section_tipo: T().imageSection, tipo: T().imageComponent },
 			],
 			handler: commitLots,
 		},
@@ -1819,5 +1892,5 @@ export const tool: ToolServerModule = {
 	backgroundLanes: { preview_url: 'maintenance', commit_lots: 'media' },
 	// Scopes the toolbar button to numisdata4 only (register.json's
 	// affected_models:["section"] has no narrower scope of its own).
-	isAvailable: (availabilityContext) => availabilityContext.sectionTipo === NUMISDATA_OBJECT_TIPO,
+	isAvailable: (availabilityContext) => availabilityContext.sectionTipo === T().object,
 };

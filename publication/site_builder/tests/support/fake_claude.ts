@@ -191,7 +191,10 @@ for (const kind of ['skills', 'commands', 'agents']) {
   if (sources.includes('project') && existsSync(join(cwd, '.claude', kind))) for (const e of readdirSync(join(cwd, '.claude', kind))) extensions.push('project:' + kind + ':' + e);
   if (sources.includes('user') && userDir && existsSync(join(userDir, kind))) for (const e of readdirSync(join(userDir, kind))) extensions.push('user:' + kind + ':' + e);
 }
-const report = { gitStatus, sources, settingsFrom: loaded.map(l => l.from), hooks, mcp, memory, extensions, prompt: positional[0] ?? null, positional, appendSystemPrompt: opts['--append-system-prompt'] ?? null, dropped, argv: args };
+// THE CLI'S OWN OFF-PLAN TRAFFIC SWITCHES, as its environment states them (documented CLI keys:
+// the auto-updater and the non-essential traffic) — null when the turn did not state one.
+const traffic = { CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC ?? null, DISABLE_AUTOUPDATER: process.env.DISABLE_AUTOUPDATER ?? null };
+const report = { gitStatus, traffic, sources, settingsFrom: loaded.map(l => l.from), hooks, mcp, memory, extensions, prompt: positional[0] ?? null, positional, appendSystemPrompt: opts['--append-system-prompt'] ?? null, dropped, argv: args };
 console.log(JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'FAKE_LOAD ' + JSON.stringify(report) }] } }));
 console.log(JSON.stringify({ type: 'result', session_id: 'fake-session', duration_ms: 1 }));
 `;

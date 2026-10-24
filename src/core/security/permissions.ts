@@ -479,9 +479,18 @@ export async function getGrantedTipos(userId: number): Promise<Set<string>> {
  * browse shows every section's history at once, so no per-section grant can
  * authorize it and it stays global-admin only.
  *
+ * THE PAIR (WC-2026-10-22-tm-scope-whole-request, review r2). The §7.4 grant
+ * admits the HISTORY of the section — dd15's own columns (who/when/what, the
+ * note): the grant is all they need. A dd15 column that REPLAYS one of the
+ * caller section's components (the component surface's value column, the
+ * snapshot list's section_list columns, a client-sent ddo) is that component's
+ * past value, so it also needs the pair the live record read needs —
+ * (caller section, component) ≥ 1. Without it the section-wide grant read
+ * every past value of a field the profile holds 0 on.
+ *
  * Never above 1: reverts go through tool_time_machine, never inline edit.
  */
-async function timeMachineReadFloor(principal: Principal): Promise<number> {
+async function timeMachineReadFloor(principal: Principal, tipo: string): Promise<number> {
 	if (principal.isGlobalAdmin) return 1;
 	const { currentTimeMachineScopeSection } = await import(
 		'../section/list_definitions/tm_scope_context.ts'
@@ -489,11 +498,11 @@ async function timeMachineReadFloor(principal: Principal): Promise<number> {
 	const scopedSection = currentTimeMachineScopeSection();
 	if (scopedSection === undefined || scopedSection === TIME_MACHINE_SECTION_TIPO) return 0;
 	// Dynamic import breaks the cycle: time_machine_list.ts imports THIS module.
-	// No recursion — that call resolves against the caller section, not dd15.
-	const { canAccessTimeMachineList } = await import(
+	// No recursion — every call resolves against the caller section, not dd15.
+	const { canReadTimeMachineColumn } = await import(
 		'../section/list_definitions/time_machine_list.ts'
 	);
-	return (await canAccessTimeMachineList(principal, scopedSection)) ? 1 : 0;
+	return (await canReadTimeMachineColumn(principal, scopedSection, tipo)) ? 1 : 0;
 }
 
 /**
@@ -557,7 +566,7 @@ async function ruleOrderGrant(
 ): Promise<PermissionGrant | null> {
 	// Time machine (dd15) has its own floor — see timeMachineReadFloor.
 	if (parentTipo === TIME_MACHINE_SECTION_TIPO) {
-		return (await timeMachineReadFloor(principal)) >= 1 ? RULE_READ : RULE_DENIED;
+		return (await timeMachineReadFloor(principal, tipo)) >= 1 ? RULE_READ : RULE_DENIED;
 	}
 	if (parentTipo === '' || tipo === '') return RULE_DENIED;
 

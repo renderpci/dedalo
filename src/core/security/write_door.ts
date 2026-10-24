@@ -63,6 +63,7 @@
  * half through the real resolver, no mocks) + authz_door_matrix_native.
  */
 
+import { INT4_MAX, INT4_MIN } from '../concepts/section_id.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { assertValidTipo } from '../search/identifier_gate.ts';
 import {
@@ -122,6 +123,11 @@ const ABSENT_IDS: ReadonlySet<unknown> = new Set([undefined, null, '']);
  *                                       step's question, not the parser's)
  *   anything else                     → invalid (1.5, NaN, 'abc', booleans,
  *                                       objects) — never coerced to absent
+ *
+ * An id is also an int4 (INT4_MIN..INT4_MAX, the matrix `section_id` columns'
+ * range, and a safe integer): '99999999999999999999' rounds silently through
+ * Number() and would reach SQL only to abort the statement — refused here as
+ * invalid instead, with the rest of the grammar.
  */
 export function parseRecordId(value: unknown): ParsedRecordId {
 	if (ABSENT_IDS.has(value)) return { kind: 'absent' };
@@ -129,11 +135,21 @@ export function parseRecordId(value: unknown): ParsedRecordId {
 	return id === null ? { kind: 'invalid' } : { kind: 'id', id };
 }
 
-/** An integer number, or a string of decimal digits (optionally signed), as a number. */
+/** An int4 integer number, or a string of decimal digits (optionally signed) naming one. */
 function toIntegerId(value: unknown): number | null {
-	if (typeof value === 'number') return Number.isInteger(value) ? value : null;
-	if (typeof value !== 'string' || !/^-?[0-9]+$/.test(value)) return null;
-	return Number(value);
+	const id = idNumber(value);
+	return id !== null && isInt4(id) ? id : null;
+}
+
+/** The number an id spells: a number as given, a decimal-digit string parsed, else null. */
+function idNumber(value: unknown): number | null {
+	if (typeof value === 'number') return value;
+	return typeof value === 'string' && /^-?[0-9]+$/.test(value) ? Number(value) : null;
+}
+
+/** A safe integer inside the matrix `section_id` columns' range (INT4_MIN..INT4_MAX). */
+function isInt4(id: number): boolean {
+	return Number.isSafeInteger(id) && id >= INT4_MIN && id <= INT4_MAX;
 }
 
 /** The identifier gate, relayed as the write door's own grammar refusal. */

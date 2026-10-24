@@ -433,6 +433,44 @@ describe('P6 — confined: the spec frame PID 1’s unit receives carries the re
   });
 });
 
+/**
+ * P13 — CLAUDE CODE'S OWN OFF-PLAN TRAFFIC IS OFF IN EVERY MODE (the auto-updater, which would
+ * replace the binary the probe proved; telemetry and error reporting, hosts no plan names).
+ * Before: the two switches lived only in the confined run's egress keys, so a declared-`none`
+ * turn — a local child of the daemon with the host's network — ran with both on. The keys are
+ * spelled here, not imported from the fix.
+ */
+describe('P13 — the turn states Claude Code’s traffic switches, confined or not', () => {
+  const STATED = { CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', DISABLE_AUTOUPDATER: '1' };
+
+  test('declared `none`: the CLI the turn starts receives both switches', async () => {
+    const { modern } = bins();
+    const { home } = await plantedWorkspace('zzplant-p13');
+    const events = await runTurn('zzplant-p13', modern, home);
+    expect(errors(events)).toEqual([]);
+    expect(loadReport(texts(events))?.traffic).toEqual(STATED);
+  });
+
+  test('confined: the spec frame PID 1’s unit receives carries both switches', async () => {
+    const { modern } = bins();
+    const slug = 'site-a';
+    const host = await lead1bPolicy({ identities: new Map([[slug, 1]]) });
+    hosts.push(host);
+    host.standIn.script = () => ({ kind: 'exit', code: 0, stdout: '' });
+    mkdirSync(join(workspacePath(slug), '.git'), { recursive: true });
+    await mkdirPrivate(roots.sitesRoot, join(slug, '.builder'));
+    expect(tryBegin(slug, 'turn')).toBe(true);
+    try {
+      const opts = { ...startOptions(slug, '/unused'), env: { PATH: '/usr/bin:/bin' } };
+      expect(errors(await drain(spawnAgentProcess(opts, claudeTurnSetup(opts, { bin: modern }), host.policy).events))).toEqual([]);
+    } finally {
+      end(slug, 'turn');
+    }
+    const env = host.standIn.specs[0]?.spec.env as Record<string, string>;
+    expect({ CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC, DISABLE_AUTOUPDATER: env.DISABLE_AUTOUPDATER }).toEqual(STATED);
+  });
+});
+
 /* ────────────────────────────────────────────────────────────────────────────────────
  * Closure round 5 — the probe's answer is a fact about the BINARY, the brief is a bounded
  * regular file, a turn's setup cannot outlive the turn, and the driver is the daemon's.
@@ -516,6 +554,25 @@ describe('P8 — the brief is a bounded regular file, read without blocking', ()
     expect(brief?.startsWith('A'.repeat(cap))).toBe(true);
     expect(brief).toContain(`(AGENTS.md, ${size} bytes) was cut at ${cap} bytes`);
   }, 15_000);
+
+  test('G8 — the bounds, exactly: an EMPTY brief is no brief; MAX_BRIEF_BYTES rides whole; one byte more is cut', async () => {
+    const { readBrief, MAX_BRIEF_BYTES: cap } = await import('../src/drivers/claude_code');
+    expect(cap).toBe(96 * 1024); // the argv bound the cut exists for (MAX_ARG_STRLEN 128 KiB, with room)
+    const { ws } = await plantedWorkspace('zzplant-p8d');
+    const file = join(ws, 'AGENTS.md');
+    writeFileSync(file, '');
+    const empty = await readBrief(ws);
+    writeFileSync(file, 'B'.repeat(cap));
+    const exact = await readBrief(ws);
+    writeFileSync(file, 'C'.repeat(cap + 1));
+    const over = await readBrief(ws);
+    expect({
+      empty: empty === undefined ? 'no brief' : JSON.stringify(empty),
+      exact: exact === 'B'.repeat(cap) ? 'whole, no cut note' : `${exact?.length} chars`,
+      overCut: over?.startsWith(`${'C'.repeat(cap)}\n\n[The site brief (AGENTS.md, ${cap + 1} bytes) was cut at ${cap} bytes.]`),
+      overNoExtraByte: over?.includes('C'.repeat(cap + 1)),
+    }).toEqual({ empty: 'no brief', exact: 'whole, no cut note', overCut: true, overNoExtraByte: false });
+  });
 });
 
 describe('P9 — a turn’s SETUP is inside the turn’s deadline, and an interrupt reaches it', () => {

@@ -77,6 +77,7 @@ import { validateDdOntologyIdentifierConstraints } from '../../src/core/db/dd_on
 import { MATRIX_COPY_COLUMNS } from '../../src/core/db/matrix_write.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
+import { inspectOntology } from '../../src/core/ontology/ontology_state.ts';
 import { updateOntology } from '../../src/core/ontology/ontology_update.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
@@ -778,4 +779,67 @@ describe('declared dependencies of an updated ontology', () => {
 		});
 		await sweepScratch(true);
 	}, 120_000);
+});
+
+// ---------------------------------------------------------------------------
+// 8. ONT-1 — the update re-derives each TLD through the ONE writer
+//    (ontology_state.rebuildOntology, id-stable reconcile; WC-2026-10-21-ontology-update-rebuild)
+// ---------------------------------------------------------------------------
+
+describe('ONT-1: the re-derive is the one writer’s reconcile', () => {
+	/** The dd_ontology row id of a scratch node (null when absent). */
+	async function ddId(tipo: string): Promise<number | null> {
+		const rows = (await sql`SELECT id FROM dd_ontology WHERE tipo = ${tipo}`) as unknown as {
+			id: number;
+		}[];
+		return rows[0] === undefined ? null : Number(rows[0].id);
+	}
+
+	/** One full update of TLD `zzd` serving a package of exactly `ids`. */
+	async function updateWith(
+		ids: readonly number[],
+	): Promise<Awaited<ReturnType<typeof updateOntology>>> {
+		const { ioBaseDir, changesDir } = makeDirs();
+		const fixture = serveFiles({ 'zzd.copy.gz': validPayload('zzd0', ids) });
+		try {
+			return await updateOntology(optionsFor(fixture.origin, [TLD]), -1, {
+				catalog: remoteCatalog(fixture.origin),
+				ioBaseDir,
+				changesDir,
+			});
+		} finally {
+			fixture.stop();
+		}
+	}
+
+	test('G1a a node the next package no longer carries is GONE (no orphan), and the tld is in sync', async () => {
+		await assertScratchOnly(async () => {
+			const first = await updateWith(IMPORT_IDS);
+			expect(first.ok).toBe(true);
+			expect(await scratchOntologyTipos()).toEqual(['zzd0', 'zzd942500', 'zzd942501']);
+
+			const second = await updateWith([942500]);
+			expect(second.ok).toBe(true);
+			expect(await scratchOntologyTipos()).toEqual(['zzd0', 'zzd942500']);
+			const state = await inspectOntology(TLD);
+			expect(state.drift.filter((item) => item.kind === 'orphaned')).toEqual([]);
+			expect(state.inSync).toBe(true);
+		});
+		await sweepScratch(true);
+	}, 240_000);
+
+	// Green at the pre-fix sha BY CONSTRUCTION (its re-derive was upsert-only, so ids never
+	// moved): this pins the reconcile's id stability against the wipe-and-reinsert shape.
+	// Proof is mutation — deleteTldNodesExcept → deleteTldNodes in rebuildOntology → red.
+	test('G1b a surviving node keeps its dd_ontology id across updates', async () => {
+		await assertScratchOnly(async () => {
+			await updateWith(IMPORT_IDS);
+			const before = await ddId('zzd942500');
+			expect(before).not.toBeNull();
+
+			await updateWith([942500]);
+			expect(await ddId('zzd942500')).toBe(before);
+		});
+		await sweepScratch(true);
+	}, 240_000);
 });

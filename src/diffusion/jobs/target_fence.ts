@@ -26,25 +26,31 @@
  * writes a target names it the same way, `sql:<database>`,
  * `files:<format>/<dir label>` (logical names, never absolute paths): the
  * runner, the MariaDB delete executor, the ghost unpublish, the lang sweep, the
- * media-index apply, and core's files-unlink door. The DELETE-ONLY doors
+ * media-index apply and rebuild, and core's files-unlink door. That this list
+ * is the WHOLE set is not this header's word: test/unit/
+ * target_lock_census_tripwire.test.ts derives every path from a target sink
+ * and fails on one that reaches no door. The DELETE-ONLY doors
  * (record delete — sql and files — and the ghost unpublish) take it SHARED:
  * they never exclude each other, only the exclusive writers (gate:
  * diffusion_target_fence_native D3/D4). This module adds the JOB to it: the
  * lease read under the lock, and the runner's pool precondition.
  *
- * THE ONE PLACE A TRANSACTION SPANS TARGET I/O: only a unit of this module may
- * hold a Postgres transaction across target writes. It holds no matrix row
- * lock (an advisory lock + one job row's KEY SHARE + a short tail) and is
- * bounded by FENCE_IDLE_BOUND_MS (`idle_in_transaction_session_timeout`): a
- * FROZEN holder's session is killed by Postgres, its lock released.
+ * THE RUNNER'S UNIT: withFencedBatch is the bridge's unit (withTargetLock —
+ * a transaction that spans target I/O by design) plus the job's lease. It
+ * holds no matrix row lock (an advisory lock + one job row's KEY SHARE + a
+ * short tail) and is bounded by FENCE_IDLE_BOUND_MS
+ * (`idle_in_transaction_session_timeout`): a FROZEN holder's session is killed
+ * by Postgres, its lock released.
  * (Residual R1, ledgered: a thawed zombie whose session was killed can finish
  * at most the one in-flight target batch.)
  *
  * A LIVE HOLDER NEVER LOSES ITS FENCE: the bound is for a frozen process, not a
  * slow target. A unit's target step can legitimately outlast it with no
  * Postgres statement in between — an ALTER adding an indexed column to a large
- * published table, a lang sweep's chunk loop, a MariaDB statement queued behind
- * a metadata lock. So every unit that opens its transaction runs a TIMER-DRIVEN
+ * published table, a lang sweep's chunk loop. (A MariaDB statement WAITING on a
+ * lock another session holds is not such a step: it waits at most
+ * SQL_TARGET_LOCK_WAIT_S, then fails and the unit releases the target —
+ * target_lock.ts "WAITING IS NOT WORKING".) So every unit that opens its transaction runs a TIMER-DRIVEN
  * keepalive (`SELECT 1` on the unit's own connection every tenth of the bound)
  * for the whole time its work is in flight: the idle clock never reaches the
  * bound while the event loop runs, and a frozen process sends nothing. No door

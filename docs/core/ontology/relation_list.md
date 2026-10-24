@@ -51,6 +51,19 @@ is no instance identity, no chainable setters, and no cache to purge.
   action (`countInverseReferences()` under `mode:'related'` SQO counts) serves
   the count path.
 
+!!! note "Who sees which referrers"
+    The host gate is the **host** section: the caller needs read access (≥1)
+    to the record's section, whatever owning sections the request names — the
+    panel and its graph send `section_tipo: ["all"]`, which is not a section
+    and is not checked as one. The referencing records are then restricted to
+    the ones the caller may see (read access to their section, and the record
+    inside the caller's projects) **in the search itself**, before the page is
+    cut: the page, its `count` and the "more past this page" check all answer
+    about that same set, through one shared scope (`rowScopeFor`,
+    `src/core/security/record_scope.ts`). So a page is full while more of the
+    caller's records exist, and walking `ceil(count / limit)` pages returns
+    exactly `count` records. A global administrator sees every referrer.
+
 !!! note "The edit panel resolves every referencing component"
     `buildRelationList()` — the panel you see in the record editor — resolves
     against **every** referencing component. Its `sectionTipos` option can
@@ -156,7 +169,7 @@ function parameter and nothing is cached across calls:
 | host record | `hostSectionTipo`, `hostSectionId` parameters to `buildRelationList()` |
 | `mode` | checked once in `read_facade.ts` before calling — a non-`edit` mode never reaches `buildRelationList()` |
 | pagination | `options.limit` / `options.offset` |
-| counts | a **separate** dispatch branch (`countInverseReferences()` under a `mode:'related'` SQO), not a flag on the same function |
+| counts | a **separate** dispatch branch (`countInverseReferences()` under a `mode:'related'` SQO), not a flag on the same function — scoped to the caller exactly like the panel's page |
 
 ## Instantiation & lifecycle
 

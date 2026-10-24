@@ -272,8 +272,8 @@ const CLOSED_SET_EXEMPTION_CAP = 5;
  * hand-corpus shape or it is stale.
  */
 const ENUMERATED_HAND_PATH_LISTS: Readonly<Record<string, string>> = {
-	'test/unit/lint_scope_tripwire.test.ts':
-		'The array is the lint SCOPE policy (which directories biome must cover, `scripts/lint_browser_budget.ts`); the corpus the gate measures is what biome itself reports over that scope, and the budget floors are on the report.',
+	// (2026-10-21) lint_scope_tripwire left this list: it now reads the daemon
+	// package census from test/helpers/daemon_package_corpus.ts, a registered lister.
 };
 
 /**
@@ -483,7 +483,8 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/tm_lang_slice_restore_native.test.ts': 'ROOTS: `tools/tool_time_machine/server`.',
 	'test/unit/tm_mode_retired_tripwire.test.ts': 'ROOTS: `client/dedalo` `src` `tools`.',
 	'test/unit/tool_header_contract_tripwire.test.ts': 'ROOTS: `tools` — `*/css/*.less`.',
-	'test/unit/tool_permission_census_tripwire.test.ts': 'ROOTS: `tools`.',
+	'test/unit/tool_permission_census_tripwire.test.ts':
+		'ROOTS: `src/core/security` `src/core/tools` `tools`; `tools` — the tool trees plus the security layer they import their primitives from (gate roots derived, review r1).',
 	'test/unit/tool_picker_wiring_tripwire.test.ts': 'ROOTS: `tools` ×2.',
 	'test/unit/tools_cache_invalidation.test.ts': 'ROOTS: `src/core/tools` ×2.',
 	'test/unit/update_ownership_tripwire.test.ts':
@@ -575,6 +576,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		],
 		scope:
 			'the site-builder committed rendered host configurations (nginx + apache sites-available)',
+	},
+	'test/helpers/daemon_package_corpus.ts': {
+		roots: [['.'], ['publication'], ['publication']],
+		scope:
+			'the DAEMON PACKAGES under publication/ (every directory, depth 1-2, with its own package.json + tsconfig.json) and the TypeScript each ships (git ls-files over publication/, partitioned by package; the `.` group is the cwd of that git call, the repo root, which narrows nothing) — read by daemon_typecheck_scope_tripwire (every shipped file in its tsc program) and lint_scope_tripwire (every package linted or budgeted)',
 	},
 	'test/helpers/publication_corpus.ts': {
 		roots: [
@@ -677,9 +683,9 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 			'every git-tracked js/mjs/cjs/css/less file under the trees that ship to a browser or an installation — the committed third-party byte census behind dependency_integrity_tripwire (SCAN_ROOTS)',
 	},
 	'scripts/lib/production_corpus.ts': {
-		roots: [['.'], ['tools']],
+		roots: [['.'], ['.'], ['tools']],
 		scope:
-			"the production source corpus behind production_import_tripwire: every package root derived from the tree (a git-tracked bun.lock beside a package.json, listed by `git ls-files` run at the repo root — the `.` site: the whole repo, no subtree chosen, and no gitignored local tree such as rewrite/), then per package the trees sourceRootsOf returns — the engine's src/ plus every tools/<tool>/server/ (the one site this rule reads: the readdirSync over `tools`), and each other package's src/ — handed to walkFiles through a return value the evaluator does not read as a root",
+			"the production and non-production source corpora behind production_import_tripwire: every package root derived from the tree (a git-tracked bun.lock beside a package.json, listed by `git ls-files` run at the repo root — the first `.` site: the whole repo, no subtree chosen, and no gitignored local tree such as rewrite/); every SHIPPED file (shippableFiles: `git ls-files -co --exclude-standard` at the repo root — the second `.` site, again no subtree chosen), from which nonProductionFilesOf derives LEG 4's corpus per package root minus production, nested roots and the reasoned NON_BUN_TREES; then per package the trees sourceRootsOf returns — the engine's src/ plus every tools/<tool>/server/ (the readdirSync over `tools`), and each other package's src/ — handed to walkFiles through a return value the evaluator does not read as a root",
 	},
 	'scripts/lib/client_compat_census.ts': {
 		roots: [

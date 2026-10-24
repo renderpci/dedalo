@@ -111,7 +111,11 @@ import {
 	type UpdateScriptStep,
 	validateUpdateDescriptor,
 } from './catalog.ts';
-import { SCRIPT_REGISTRY, type UpdateScriptFn } from './scripts.ts';
+import {
+	COMMIT_ONLY_ACTIONS_DROPPED_LINE,
+	SCRIPT_REGISTRY,
+	type UpdateScriptFn,
+} from './scripts.ts';
 
 export { SCRIPT_REGISTRY, type UpdateScriptFn } from './scripts.ts';
 
@@ -741,6 +745,9 @@ async function afterFailedRun(
 			true,
 		);
 		lines.msg.push(COMMITTED_DESPITE_FAILURE_LINE);
+		// The commit-only lane never ran (scripts.ts contract): say so, in the log and the msg.
+		logLine(run.logPath, `COMMITTED${tag}: ${COMMIT_ONLY_ACTIONS_DROPPED_LINE}`, true);
+		lines.msg.push(`The update: ${COMMIT_ONLY_ACTIONS_DROPPED_LINE}`);
 		return { lines };
 	}
 	if (outcome === 'unknown') {

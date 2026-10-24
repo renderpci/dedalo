@@ -24,6 +24,13 @@
  *   4. THE REPORTER RUNS (LIFE-02). The `public_tier` reconcile, through the
  *      registry door, reports the pending debt of the deleted record and a
  *      seeded GHOST marker; apply removes the ghost and nothing else.
+ *   5. A HOLD THAT LEAVES DEBT PAYS IT (closure review 2026-10-22, D5). The
+ *      `media_index` apply holds every marker database's target EXCLUSIVELY,
+ *      and it runs on a period (boot + every 10 min). A record deleted through
+ *      the REAL door while that hold is live is left pending (the request path
+ *      never waits — residual R3); the SAME run, once its fence is released,
+ *      drains the queue — so the record leaves the live table without a
+ *      publish run or an operator, which on a quiet install never come.
  *
  * THE MariaDB ROW LEG (PUB-05, audit 2026-09-26) — a live publication table
  * losing its row. It was a `test.skip` stating that the suite owned no marked
@@ -35,13 +42,29 @@
  * row — a sibling row survives — and ledger both elements unpublished.
  */
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	spyOn,
+	test,
+} from 'bun:test';
+import * as nodeFs from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
 import { insertMatrixRecordWithCounter } from '../../src/core/db/matrix_write.ts';
-import { sql, withTransaction } from '../../src/core/db/postgres.ts';
+import {
+	isInTransaction,
+	runDetachedFromTransaction,
+	sql,
+	withTransaction,
+} from '../../src/core/db/postgres.ts';
 import { registerAllReconciles } from '../../src/core/reconcile/catalog.ts';
 import { runReconcile } from '../../src/core/reconcile/registry.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
@@ -50,6 +73,7 @@ import type { PublicationPlan } from '../../src/diffusion/plan/types.ts';
 import { buildVirtualDiffusionTree } from '../../src/diffusion/plan/virtual_tree.ts';
 import { closeAllTargetPools, getTargetPool } from '../../src/diffusion/targets/mariadb/db.ts';
 import { executeSqlDeleteTargets } from '../../src/diffusion/targets/mariadb/delete_record.ts';
+import { overrideMediaIndexBaseForTests } from '../../src/diffusion/targets/mediastore/media_index.ts';
 import { mariadbSqlWriter } from '../../src/diffusion/writers/mariadb_sql.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
 import { ensureDiffusionScratchTables } from '../helpers/diffusion_scratch_tables.ts';
@@ -452,5 +476,103 @@ describe.if(DB_READY)('unpublish debt — removed from the public tier, or REPOR
 			DIFFUSION_ACTION.unpublished,
 			DIFFUSION_ACTION.unpublished,
 		]);
+	}, 60_000);
+
+	// ------------------------------------------------------------- law 5
+
+	test('LAW 5: a record deleted while the media_index apply holds its target is unpublished by THAT run — no publish run, no operator', async () => {
+		const tree = await buildVirtualDiffusionTree(readEnv('DEDALO_DIFFUSION_DOMAIN'));
+		if (tree === null) throw new Error('the zzd domain did not resolve after seed');
+		const plan: PublicationPlan = await compileElementPlan(SQL_ELEMENT_ONE, { tree });
+		if (plan.target.kind !== 'table')
+			throw new Error(`${SQL_ELEMENT_ONE} compiled to ${plan.target.kind}`);
+		const section = plan.sections.find((entry) => entry.sectionTipo === SQL_SECTION);
+		if (section === undefined)
+			throw new Error(`the ${SQL_ELEMENT_ONE} plan has no ${SQL_SECTION} section`);
+		const database = plan.target.database;
+		publishedTable = { database, table: section.tableName };
+
+		// A published record (and a sibling the delete must not touch).
+		const sectionId = await insertMatrixRecordWithCounter(TABLE, SQL_SECTION, {
+			data: { label: 'zzd unpublish-debt media_index hold leg', section_tipo: SQL_SECTION },
+		});
+		scratchRecords.push(sectionId);
+		const sibling = sectionId + 1;
+		const pool = getTargetPool(database);
+		await pool.unsafe(`DROP TABLE IF EXISTS \`${section.tableName}\``, []);
+		const session = await mariadbSqlWriter.open(plan);
+		await session.ensureSchema();
+		await session.writeRows(section, [
+			{ sectionId, lang: 'lg-eng', columns: {} },
+			{ sectionId: sibling, lang: 'lg-eng', columns: {} },
+		]);
+		await session.close();
+		const idsIn = async () =>
+			(
+				(await pool.unsafe(
+					`SELECT section_id FROM \`${section.tableName}\` ORDER BY section_id`,
+					[],
+				)) as { section_id: number }[]
+			).map((row) => Number(row.section_id));
+		expect(await idsIn()).toEqual([sectionId, sibling]);
+		registerNativeDiffusionSqlDelete(executeSqlDeleteTargets);
+
+		// A scratch marker store with real drift IN THIS DATABASE (the sibling's
+		// truth marker, no pub/ marker): the apply must fence `sql:<database>`.
+		const base = mkdtempSync(join(tmpdir(), 'dedalo_unpublish_debt_media_index_'));
+		const truth = join(base, 'dbs', database, section.tableName, `${SQL_SECTION}_${sibling}`);
+		mkdirSync(join(truth, '..'), { recursive: true });
+		writeFileSync(truth, '');
+		overrideMediaIndexBaseForTests(base);
+
+		// THE DELETE LANDS INSIDE THE HOLD: at the fenced diff's pub/ read (inside the
+		// fence unit's transaction), the REAL record-delete door runs as a request.
+		const realReaddir = nodeFs.promises.readdir;
+		let heldOff: LedgerRow[] | null = null;
+		const readdirSpy = spyOn(nodeFs.promises, 'readdir').mockImplementation((async (
+			dir: nodeFs.PathLike,
+			...rest: unknown[]
+		) => {
+			if (heldOff === null && String(dir) === join(base, 'pub') && isInTransaction()) {
+				heldOff = await runDetachedFromTransaction(async () => {
+					const deleted = await deleteSectionRecord(SQL_SECTION, sectionId, USER_ID);
+					expect(deleted.removed).toBe(true);
+					return rowsFor(SQL_SECTION, sectionId);
+				});
+			}
+			return (realReaddir as (...args: unknown[]) => Promise<unknown>)(dir, ...rest);
+		}) as typeof nodeFs.promises.readdir);
+		let report: Awaited<ReturnType<typeof runReconcile>>['report'];
+		try {
+			// The registry door — the scheduler's own path for a scheduled run.
+			({ report } = await runReconcile('media_index', { apply: true }));
+		} finally {
+			readdirSpy.mockRestore();
+			overrideMediaIndexBaseForTests(null);
+			rmSync(base, { recursive: true, force: true });
+		}
+
+		// Non-vacuous: the delete ran inside the hold, and the hold left it owed.
+		const during = heldOff as LedgerRow[] | null;
+		expect(during, 'the delete never ran inside the fence — the leg proves nothing').not.toBeNull();
+		const zzd1 = (during as LedgerRow[]).find((row) => row.element_id === '1');
+		expect(
+			zzd1?.action,
+			'the request-path delete was not held off by the fence — the leg proves nothing',
+		).toBe(DIFFUSION_ACTION.unpublishPending);
+		expect(report.deferred).toBeUndefined();
+		expect(report.applied).toBe(1);
+
+		// THE OUTCOME: the record left the live table, the debt is settled.
+		expect(
+			await idsIn(),
+			'the record deleted during the media_index hold is still on the public tier — nothing drains the debt that hold left on a quiet install',
+		).toEqual([sibling]);
+		const rows = await rowsFor(SQL_SECTION, sectionId);
+		expect(rows.map((row) => row.action)).toEqual([
+			DIFFUSION_ACTION.unpublished,
+			DIFFUSION_ACTION.unpublished,
+		]);
+		expect(JSON.stringify(report.detail.pending_unpublish)).toContain('pending unpublish queue');
 	}, 60_000);
 });

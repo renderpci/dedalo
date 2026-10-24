@@ -580,9 +580,51 @@ const relogin = async () => {
 
 
 /**
+* RENDER_SCOPED_PANEL
+* The page-panel actions ('no_access_page', 'page_panel') are PAGE-level only
+* when the failed request was the PAGE's own: `ctx.page_scope===true` (the page
+* build, a page-root element's build). Only then is `page_globals.page_error`
+* set — the slot common.prototype.render turns into the page panel. Any other
+* request (an embedded side panel, an inspector block, a widget, a save) is
+* panel-scoped and NEVER sets it: an embedded refusal used to set the page slot
+* and every later render of every instance on the page became the no-access
+* panel, with no way out but a reload.
+*   - a wrapper given      → the panel goes into that wrapper (panel-local);
+*   - page_scope===false   → the request's own path owns the surface: an
+*                            embedded build answers false and its caller draws
+*                            it, or common.prototype.render of the failed
+*                            instance does (render_build_failure); the page's
+*                            every-request listener stays quiet so a panel-local
+*                            refusal never also raises a toast. Nothing here;
+*   - neither              → a toast, so the refusal is never silent.
+* @param {ApiError} api_error
+* @param {Object} entry - the resolved policy row
+* @param {Object} ctx - handle_api_error ctx
+* @return void
+*/
+const render_scoped_panel = (api_error, entry, ctx) => {
+
+	if (ctx.page_scope===true) {
+		set_page_error(api_error)
+	}
+	if (ctx.wrapper && typeof ctx.wrapper.appendChild==='function') {
+		ctx.wrapper.appendChild(render_error_panel(api_error))
+		return
+	}
+	if (ctx.page_scope===undefined) {
+		deduped_toast(api_error, entry)
+	}
+}//end render_scoped_panel
+
+
+
+/**
 * HANDLE_API_ERROR
 * @param {ApiError|Object} api_error
-* @param {Object} [ctx] - {wrapper?:HTMLElement (inline/panel target), scope?:string, silent?:bool}
+* @param {Object} [ctx] - {wrapper?:HTMLElement (inline/panel target), scope?:string, silent?:bool,
+*   page_scope?:bool (true: the PAGE's own request — the only one that may set
+*   page_globals.page_error; false: an embedded build whose caller renders the
+*   failure; see render_scoped_panel)}
 * @return Promise<{recovered:boolean, action:string}>
 */
 export const handle_api_error = async (api_error, ctx = {}) => {
@@ -621,19 +663,9 @@ export const handle_api_error = async (api_error, ctx = {}) => {
 			return {...outcome, action}
 		}
 
-		case 'no_access_page': {
-			set_page_error(api_error)
-			if (ctx.wrapper && typeof ctx.wrapper.appendChild==='function') {
-				ctx.wrapper.appendChild(render_error_panel(api_error))
-			}
-			return {recovered:false, action}
-		}
-
+		case 'no_access_page':
 		case 'page_panel': {
-			set_page_error(api_error)
-			if (ctx.wrapper && typeof ctx.wrapper.appendChild==='function') {
-				ctx.wrapper.appendChild(render_error_panel(api_error))
-			}
+			render_scoped_panel(api_error, entry, ctx)
 			return {recovered:false, action}
 		}
 
@@ -784,6 +816,64 @@ export const handle_api_notices = async (payload = {}) => {
 
 	return outcomes
 }//end handle_api_notices
+
+
+
+/**
+* OUTCOME_UNKNOWN_CODES
+* The server's own "I do not know whether (or what) it ran" answers — the
+* idempotency gate (src/core/api/dispatch.ts GATE 4): a twin that waited past
+* its bound while the leader still runs (`in_progress`), a twin of a leader that
+* THREW and may already have committed (`outcome_unknown`), and a twin of a
+* leader that COMPLETED but whose answer was too large to keep
+* (`replay_unavailable` — it ran; what it answered is lost).
+* These are the server's SPELLINGS of those situations, so they are gated by
+* OUTCOME, not by spelling: test/unit/client_outcome_unknown_native.test.ts
+* builds each situation through the real dispatcher and requires this module
+* to read the answer as unknown (and a known refusal from the same gate as
+* known) — a renamed or retired server code turns it red.
+*/
+const OUTCOME_UNKNOWN_CODES = new Set([
+	'idempotency.in_progress',
+	'idempotency.outcome_unknown',
+	'idempotency.replay_unavailable'
+])
+
+
+
+/**
+* OUTCOME_UNKNOWN
+* Whether a FAILED request leaves the server-side outcome UNKNOWN: the
+* operation may have run, may still be running, or may never have started.
+*  - every TRANSPORT failure (`client.*`: a timeout, a dropped connection, an
+*    unreadable answer, a proxy's non-envelope page). The browser gave up, but
+*    an attempt may have landed — and the engine has no request.signal
+*    handling, so an aborted attempt runs to completion
+*    (WC-2026-08-28-idempotency-key);
+*  - the server's OUTCOME_UNKNOWN_CODES above.
+* A SERVER REFUSAL (an envelope `ok:false` with any other code) is a KNOWN
+* outcome: the server answered, and said no. Anything that is not an ApiError
+* cannot vouch for a known outcome, so it reads as unknown.
+*
+* WHY IT EXISTS. A control that starts non-idempotent work (a commit job, a
+* data transform) must not re-arm on an unknown outcome: the operator's re-click
+* mints a NEW idempotency key, and the server executes it AGAIN beside the
+* first. Such a caller keeps the control disabled and offers a way to find out
+* (the operator's own jobs, get_activity) instead.
+* @param {ApiError|*} api_error - the failed envelope's `error`
+* @return {boolean}
+*/
+export const outcome_unknown = (api_error) => {
+
+	if (!is_api_error(api_error)) {
+		return true
+	}
+	if (api_error.transport===true) {
+		return true
+	}
+
+	return OUTCOME_UNKNOWN_CODES.has(api_error.code)
+}//end outcome_unknown
 
 
 

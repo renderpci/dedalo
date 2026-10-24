@@ -275,11 +275,12 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// wait. Process-wide operational state, no request identity.
 	'diffusion/jobs/scheduler.ts:draining',
 	// Reconcile registry + scheduler (audit 2026-08-26 S-10): the gauge
-	// registration latch, the scheduler's armed latch and its interval handles —
-	// process-wide wiring like diffusion/jobs/scheduler.ts above; no request
-	// identity (a run is keyed by reconcile NAME, actor-less by design).
+	// registration latch and the scheduler's armed schedule (its pending timers,
+	// retired on SIGTERM) — process-wide wiring like diffusion/jobs/scheduler.ts
+	// above; no request identity (a run is keyed by reconcile NAME and enters the
+	// scheduler's own scope, actor-less by design).
 	'core/reconcile/registry.ts:gaugeRegistered',
-	'core/reconcile/scheduler.ts:started',
+	'core/reconcile/scheduler.ts:active',
 	// Publication API push single-flight latch (publication host phase 4): set
 	// synchronously before the first await of an APPLY round, cleared in finally.
 	// Process-wide operational state like the reconcile scheduler's latch above —
@@ -304,6 +305,9 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// set/cleared by the marker-store tests around each case — never request
 	// identity (the production base is install-static config.media.rootPath).
 	'diffusion/targets/mediastore/media_index.ts:baseOverrideForTests',
+	// Fence-budget test seam (reconcile_scheduler_native): the default bound of a
+	// reconcile that names none — a gate moves it, null restores the constant.
+	'diffusion/targets/mediastore/media_index.ts:fenceBoundOverrideForTests',
 	// The started media-copy worker (PUBLICATION_HOST_SPEC §5.2, M3/M4): set once by
 	// startMediaCopyWorker at boot, cleared by its stop (shutdown drain, gates). It
 	// holds per-HOST lanes (registry names) and marker keys, never a user, session
@@ -505,9 +509,9 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// lifecycle (process restart; resetReconcileRunsForTests for gates).
 	'core/reconcile/registry.ts:definitions',
 	'core/reconcile/registry.ts:lastRuns',
-	// Reconcile scheduler interval handles: armed by startReconcileScheduler,
-	// cleared by stopReconcileScheduler (SIGTERM drain). Timers, not data.
-	'core/reconcile/scheduler.ts:timers',
+	// Reconcile scheduler in-flight names (D5: one run per name at a time, across
+	// a stop → start). Reconcile NAMES, set and cleared around each run — not data.
+	'core/reconcile/scheduler.ts:inFlight',
 	// The retention registry's definition table (audit 2026-08-26 P2-9): one entry
 	// per append-only store, filled once at import by core/retention/prune.ts and
 	// never per request. A closed set — registerRetention refuses a name outside
@@ -969,6 +973,14 @@ describe('config.menu lang reads outside src/config/ (P0-7 census)', () => {
 				count: 1,
 				reason:
 					'Same system-principal scope as embed_source, for the image index; the data lang comes from the caller (input.dataLang).',
+			},
+		],
+		[
+			'src/core/reconcile/scheduler.ts',
+			{
+				count: 1,
+				reason:
+					'The reconcile scheduler OPENS its own scope around every scheduled run (D5): no principal, no session, request id `reconcile:<name>` — a timer must not inherit the scope it was armed in. The run is install-wide hygiene, so the install application lang is the deliberate value; the data lang it pairs with is config.lang.dataLangDefault, the read chain’s first candidate (what currentDataLang() answers outside any scope).',
 			},
 		],
 		[

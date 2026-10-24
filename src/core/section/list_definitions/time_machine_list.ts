@@ -16,8 +16,16 @@
  * time_machine_list and relation_list are INCLUDED (PHP :502).
  */
 
+import { TIME_MACHINE_SECTION_TIPO } from '../../concepts/section.ts';
+import {
+	getAncestorSectionTipo,
+	getModelByTipo,
+	getSectionRealTipo,
+} from '../../ontology/resolver.ts';
+import { getGrantChildrenTipos } from '../../resolve/security_access_datalist.ts';
 import { getPermissions, type Principal } from '../../security/permissions.ts';
 import { findSectionChildByModel } from './node_find.ts';
+import { runWithTimeMachineScope } from './tm_scope_context.ts';
 
 /**
  * The CALLER SECTION a Time Machine read is scoped to, or null when the read is
@@ -86,10 +94,46 @@ function scopeFromTipoFilter(sqo: Record<string, unknown>): string | null {
 	return typeof q === 'string' && q !== '' ? q : null;
 }
 
-/** A section's time_machine_list child tipo (virtual-aware), or null. */
+/**
+ * Run `fn` inside the Time Machine read scope the SQO proves — or plainly when
+ * the SQO is not a TM read (`sqo.mode !== 'tm'`). THE one opener: the API
+ * handlers (read, count) open it around their WHOLE body, so every permission
+ * question asked during the request — Gate A's dd15 floor, Gate B, the §7.4
+ * admission gate, the per-ddo floor — judges the SAME scope
+ * (WC-2026-10-22-tm-scope-whole-request). readSection opens it again for its
+ * direct callers; a nested open with the same SQO is the same answer.
+ * A mixed-section SQO opens the scope with NO section: admin-only downstream.
+ */
+export function withTimeMachineReadScope<T>(rawSqo: unknown, fn: () => Promise<T>): Promise<T> {
+	const sqo = rawSqo as Record<string, unknown> | undefined;
+	if (sqo?.mode !== 'tm') return fn();
+	return runWithTimeMachineScope(resolveTimeMachineScopeSection(sqo).sectionTipo, fn);
+}
+
+/**
+ * A section's time_machine_list tipo (virtual-aware), or null.
+ *
+ * Agrees with the GRANT WALK (getGrantChildrenTipos — what
+ * set_section_permissions and the access editor grant over): that walk is
+ * RECURSIVE through section_group/tab groupers, so a time_machine_list nested
+ * under a grouper is GRANTED. A direct-children-only lookup made such a grant
+ * invisible to the §7.4 gate — granted in the profile, refused at read time.
+ * The direct lookup runs first (it also sees a virtual section's OWN child);
+ * the recursive walk over the real section is the fallback.
+ */
 export async function getTimeMachineListTipo(sectionTipo: string): Promise<string | null> {
 	const node = await findSectionChildByModel(sectionTipo, 'time_machine_list');
-	return node?.tipo ?? null;
+	if (node !== null) return node.tipo;
+	return findNestedTimeMachineListTipo(sectionTipo);
+}
+
+/** The first time_machine_list the grant walk reaches under the real section. */
+async function findNestedTimeMachineListTipo(sectionTipo: string): Promise<string | null> {
+	const realSectionTipo = await getSectionRealTipo(sectionTipo);
+	for (const tipo of await getGrantChildrenTipos(realSectionTipo)) {
+		if ((await getModelByTipo(tipo)) === 'time_machine_list') return tipo;
+	}
+	return null;
 }
 
 /**
@@ -108,6 +152,56 @@ export async function canAccessTimeMachineList(
 	if (tipo === null) return false;
 	const level = await getPermissions(principal, sectionTipo, tipo);
 	return level >= 1;
+}
+
+/**
+ * Whether a NON-ADMIN `principal` may read dd15 column `tipo` of a Time Machine
+ * read scoped to `sectionTipo` — the dd15 floor's question
+ * (security/permissions.ts timeMachineReadFloor). The §7.4 grant on the section
+ * first; then an OWN column is read, and a replayed component only on its pair.
+ */
+export async function canReadTimeMachineColumn(
+	principal: Principal,
+	sectionTipo: string,
+	tipo: string,
+): Promise<boolean> {
+	if (!(await canAccessTimeMachineList(principal, sectionTipo))) return false;
+	if (await isTimeMachineOwnColumn(tipo)) return true;
+	return canReadTimeMachineValue(principal, sectionTipo, tipo);
+}
+
+/**
+ * Whether `tipo` is one of the Time Machine's OWN columns — a node of dd15
+ * itself (who/when/what/where/process/ids, and dd15) or the TM annotation
+ * (rsc329, a note keyed by the TM row, not a component of the caller section).
+ * Such a column describes the HISTORY, so the §7.4 grant alone admits it.
+ * Anything else a dd15 read names is a REPLAYED component of the caller
+ * section and is judged on its own pair ({@link canReadTimeMachineValue}).
+ *
+ * The raw snapshot dd1574 is a dd15 node, so its COLUMN is admitted here; its
+ * CELLS carry one component's value each and are judged per row on that
+ * component's pair (resolve/read_tm.ts).
+ */
+export async function isTimeMachineOwnColumn(tipo: string): Promise<boolean> {
+	if (tipo === TM_NOTES_COLUMN) return true;
+	return (await getAncestorSectionTipo(tipo)) === TIME_MACHINE_SECTION_TIPO;
+}
+
+/**
+ * Whether `principal` may read a PAST value of component `componentTipo` of
+ * `sectionTipo` — the pair the live record read asks (getPermissions ≥ 1), so a
+ * history surface never serves a field the profile holds 0 on
+ * (WC-2026-10-22-tm-scope-whole-request, review r2). A global admin reads every
+ * history (the floor's own rule). The §7.4 section grant is the CALLER's
+ * question, asked before this one; this is the per-component half.
+ */
+export async function canReadTimeMachineValue(
+	principal: Principal,
+	sectionTipo: string,
+	componentTipo: string,
+): Promise<boolean> {
+	if (principal.isGlobalAdmin) return true;
+	return (await getPermissions(principal, sectionTipo, componentTipo)) >= 1;
 }
 
 // ---------------------------------------------------------------------------

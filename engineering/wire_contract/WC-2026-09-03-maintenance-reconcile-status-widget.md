@@ -42,3 +42,36 @@
     without running; `media_index` APPLY through the registry heals) and
     `test/unit/reconcile_registry_tripwire.test.ts` (the widget is registered
     with only `run_reconcile`, dry by default).
+
+## Addendum 2026-10-21 — four more rows; who may APPLY is on the row; a refused APPLY is never `perm.*`
+
+- **Rows.** The registry grew (publication-host phases 4–6, ontology identifiers): the
+  listing now carries `ontology_identifiers`, `publication_apis`, `media_copy` and
+  `publication_probe` too — still exactly `REGISTERED_NAMES`, in its order.
+- **Shape after (TS).** Every row gains three keys, derived by the registry
+  (`src/core/reconcile/registry.ts` `applyPolicyOf` / `applyPolicyReason`) and computed
+  for the requesting principal:
+  `apply: 'admin' | 'root' | 'refused'` (`'root'` = the definition declares
+  `applyRootOnly` — `media_copy`; `'refused'` = it declares `applyRefused` —
+  `publication_apis`, whose code push has its own root-only door),
+  `apply_reason: string | null` (the declared reason; null for `'admin'`) and
+  `can_apply: boolean` (THIS viewer may apply it through the widget). The client renders
+  APPLY only when `can_apply` is true; otherwise a disabled APPLY whose title says why.
+- **`run_reconcile` outcomes** (besides `{data:true,…}` / `{data:false,msg}`):
+  an APPLY of an `applyRefused` definition fails `request.invalid` (public message:
+  `The '<name>' reconcile cannot be applied here: <reason>`), for every principal, root
+  included, before anything runs and with no run recorded; an APPLY of an `applyRootOnly`
+  definition by a non-root principal still fails `perm.denied` — a request no rendered
+  button sends any more (the row said `can_apply: false`). Before, `publication_apis`
+  answered `perm.denied` from inside its run, and both reached the client's
+  `no_access_page` policy from a button the listing offered.
+- **Reason.** A refusal at the level of one button must not take the maintenance page
+  away (CORE_POLICY: `perm.*` → no-access page), and a button that can never succeed
+  must not be offered. Where the policy is declared (the definition) is now where every
+  door reads it.
+- **Gate reconciliation.** TS-only widget (no oracle shape; no re-harvest).
+  `test/unit/reconcile_apply_policy_native.test.ts` (P1–P5: the facet contract, the
+  derivation, the registry refusal before `run`, the row keys per viewer, root's
+  refused APPLY = `request.invalid`); `reconcile_registry_tripwire` (only
+  `publication_apis` declares `applyRefused`); `publication_host_api_reconcile` (the
+  direct call refuses `request.invalid`).

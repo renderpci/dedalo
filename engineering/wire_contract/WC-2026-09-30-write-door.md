@@ -91,3 +91,16 @@
   the section's row count and its row-id SEQUENCE — refused before the create, rolled back
   after it, a served twin), `test/unit/dd128_write_census_tripwire.test.ts` (verdict
   `delegates`, measured through `DD128_PROBED`).
+
+## Addendum 2026-10-21 — the id grammar is int4-bounded (review-diff 2026-10-21)
+
+- **Shape before:** an integer (or decimal-digit string) id of any magnitude
+  passed the grammar; `'99999999999999999999'` rounded silently through
+  `Number()` and reached SQL, where the statement aborted (an internal error).
+- **Shape after:** `parseRecordId` accepts an id only when it is a safe integer
+  inside `INT4_MIN..INT4_MAX` (the matrix `section_id` columns' range); any
+  other is `invalid` → `request.invalid`, before any SQL, like the rest of the
+  grammar.
+- **Gate reconciliation:** no parity fixture covers a refused write; no
+  re-harvest. Gate: `test/unit/write_door_native.test.ts` (the out-of-range
+  leg).

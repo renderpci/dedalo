@@ -331,17 +331,18 @@ data_manager.request = async function(options) {
 * @type {Map<string, Promise<Object>>}
 */
 /**
-* DEBUG_REDACTED_OPTION_KEYS
-* Request option keys whose VALUE never reaches the SHOW_DEBUG request line: a
-* one-time passphrase and the sealed pairing package (publication_hosts
-* pair_package), a password. The request itself is unchanged.
-*/
-export const DEBUG_REDACTED_OPTION_KEYS = Object.freeze(['passphrase', 'package_base64', 'password'])
-
-/**
 * DEBUG_REDACTED
-* A shallow copy of the request options for the debug line, with
-* body.options' secret keys replaced by a marker.
+* A shallow copy of the request options for the SHOW_DEBUG request line, with
+* EVERY body.options value replaced by a marker: the line shows the option KEY
+* NAMES, never a value. The request itself is unchanged.
+*
+* Why every value and not a list of secret names: secrets ride in options under
+* whatever name their form chose — the login password is `auth`, the reset flow
+* sends `code` / `new_password` / `reset_id`, the publication-host pairing a
+* `passphrase` and a sealed `package_base64` — and a list of names rots the day
+* a new form ships (it had: `auth` was missing). A rule with no list cannot.
+* Gate: test_api_error.js "the SHOW_DEBUG request line" (an unlisted key's value
+* never appears).
 * @param {Object} merged_options
 * @return {Object}
 */
@@ -350,9 +351,9 @@ export const debug_redacted = function(merged_options) {
 	if (!options || typeof options!=='object') {
 		return merged_options
 	}
-	const redacted = { ...options }
-	for (const key of DEBUG_REDACTED_OPTION_KEYS) {
-		if (Object.hasOwn(redacted, key)) redacted[key] = '[redacted]'
+	const redacted = {}
+	for (const key of Object.keys(options)) {
+		redacted[key] = '[redacted]'
 	}
 	return { ...merged_options, body: { ...merged_options.body, options: redacted } }
 }//end debug_redacted
@@ -972,6 +973,18 @@ data_manager.request_stream = async function(options) {
 
 			// Get the readable stream from the response body
 			const stream = response.body;
+
+			// (!) A 2xx WITHOUT a body is not a stream either. Resolving `null`
+			// broke this method's own contract (a ReadableStream) and left every
+			// caller to notice — update_process_status did not, and its caller
+			// waited forever. Rejected as the coded failure it is.
+			if (!stream) {
+				const api_error = new ApiError({code: CLIENT_ERROR.BAD_RESPONSE, status: response.status, details: {status: response.status, reason: 'no_body'}, source: 'stream'})
+				console.error('request_stream failed:', api_error.code, api_error);
+				event_manager.publish('api_error', api_error)
+				reject(api_error)
+				return
+			}
 
 			resolve(stream)
 		})

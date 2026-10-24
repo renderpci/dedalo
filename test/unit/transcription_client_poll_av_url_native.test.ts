@@ -118,13 +118,20 @@ const PATH_OPTS: MediaPathOptions = {
 	mediaRoot: scratchMediaRoot('dedalo-poll-gate-'),
 };
 
-const PRINCIPAL: Principal = { userId: 16, isGlobalAdmin: false, isDeveloper: false };
+/**
+ * The superuser — what resolvePrincipal(-1) answers without a DB read. The
+ * permission gate is NOT a seam (gateRecord always runs), so the caller must be
+ * one the write door really grants READ on test3/1 (a canonical playground
+ * record).
+ */
+const PRINCIPAL: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 
 /**
- * Run the REAL handler with only its three database reads replaced (permission
- * gate, tool config row, media context). The av_url decision and the media path
- * build stay on the production code path, and the provider records the request
- * the handler built — which is the only place the invariant is observable.
+ * Run the REAL handler — its permission gate included — with only two database
+ * reads replaced (tool config row, media context). The av_url decision and the
+ * media path build stay on the production code path, and the provider records
+ * the request the handler built — which is the only place the invariant is
+ * observable.
  */
 async function pollWithEngine(
 	engine: string,
@@ -137,7 +144,7 @@ async function pollWithEngine(
 	const response = await checkServerTranscriberStatus(
 		{
 			principal: PRINCIPAL,
-			userId: 16,
+			userId: PRINCIPAL.userId,
 			background: false,
 			options: {
 				media_ddo: { component_tipo: 'test94', section_tipo: 'test3', section_id: 1 },
@@ -147,7 +154,7 @@ async function pollWithEngine(
 				pid: issuePollHandle({
 					pid: 'job-7',
 					engine,
-					userId: 16,
+					userId: PRINCIPAL.userId,
 					sectionTipo: 'test3',
 					componentTipo: 'test94',
 					sectionId: 1,
@@ -155,7 +162,6 @@ async function pollWithEngine(
 			},
 		},
 		{
-			gate: async () => ({ sectionTipo: 'test3', componentTipo: 'test94', sectionId: 1 }),
 			transcriberConfig: async () => ({ uri: 'https://asr.example.org/api', key: 'k' }),
 			mediaContext: async () => ({
 				spec: AV_SPEC,

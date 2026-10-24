@@ -35,6 +35,7 @@ import {
 	handle_api_notice,
 	handle_api_notices,
 	api_error_from_notice,
+	outcome_unknown,
 	reset_error_dispatch_state
 } from '../../../core/common/js/error_dispatch.js'
 import {ApiError, CLIENT_ERROR} from '../../../core/common/js/api_error.js'
@@ -193,12 +194,28 @@ describe('ERROR_DISPATCH — handle_api_error', function() {
 		assert.equal(seen.length, 0)
 	})
 
-	it('no_access_page: sets page_globals.page_error — THE single page-level slot', async function() {
+	it('no_access_page, PAGE scope: sets page_globals.page_error — THE single page-level slot', async function() {
 		const api_error = new ApiError({code: 'perm.denied', message: 'Insufficient permissions', request_id: 'rq-p'})
-		const outcome = await handle_api_error(api_error)
+		const outcome = await handle_api_error(api_error, {page_scope: true})
 		assert.deepEqual(outcome, {recovered: false, action: 'no_access_page'})
 		assert.strictEqual(page_globals.page_error, api_error)
 		assert.isUndefined(page_globals.api_errors, 'the legacy array is gone (P4)')
+	})
+
+	it('no_access_page, EMBEDDED scope: never sets page_globals.page_error', async function() {
+		// an embedded build (page_scope:false): its caller renders the failure — no slot, no toast
+		const seen = await with_notifications(async () => {
+			const outcome = await handle_api_error(new ApiError({code: 'perm.denied'}), {page_scope: false})
+			assert.deepEqual(outcome, {recovered: false, action: 'no_access_page'})
+		})
+		assert.isNull(page_globals.page_error, 'an embedded refusal is panel-scoped')
+		assert.equal(seen.length, 0, 'the caller owns the surface')
+		// unspecified scope, no wrapper: still not the page's — but never silent (a toast)
+		const seen_unscoped = await with_notifications(async () => {
+			await handle_api_error(new ApiError({code: 'perm.denied', message: 'Insufficient permissions'}))
+		})
+		assert.isNull(page_globals.page_error)
+		assert.equal(seen_unscoped.length, 1)
 	})
 
 	it('no_access_page / page_panel render the panel into ctx.wrapper when given (text only)', async function() {
@@ -209,7 +226,7 @@ describe('ERROR_DISPATCH — handle_api_error', function() {
 		assert.equal(panel.dataset.code, 'request.invalid_tipo')
 		assert.equal(panel.querySelector('h1').textContent, 'Invalid tipo <b>x</b>')
 		assert.isNull(panel.querySelector('b'))
-		assert.strictEqual(page_globals.page_error.code, 'request.invalid_tipo')
+		assert.isNull(page_globals.page_error, 'a wrapper-local panel is not the page slot')
 	})
 
 	it('inline: renders into ctx.wrapper via ui.show_message; falls back to a toast without a wrapper', async function() {
@@ -361,6 +378,41 @@ describe('API_NOTICES — a SUCCESS envelope\'s coded facts', function() {
 		} finally {
 			unregister_error_policy(['test_notice.*'])
 		}
+	})
+})
+
+
+
+/**
+* OUTCOME_UNKNOWN — does a failed request leave the server's outcome unknown?
+* The question an action button must answer before it re-arms (a re-click mints
+* a NEW idempotency key, so the server executes it again). Every transport
+* failure is unknown — an attempt may have landed, and the engine runs an
+* aborted request to completion — and so are the server's own "I do not know
+* whether (or what) it ran" codes. A server refusal is KNOWN: it answered, and said no.
+*/
+describe('ERROR_DISPATCH — outcome_unknown', function() {
+
+	it('every transport failure is an unknown outcome', function() {
+		for (const code of Object.values(CLIENT_ERROR)) {
+			assert.isTrue(outcome_unknown(new ApiError({code, source:'transport'})), code)
+		}
+		// a proxy's non-envelope answer (status known, body not ours)
+		assert.isTrue(outcome_unknown(new ApiError({code:CLIENT_ERROR.HTTP_STATUS, status:504, source:'transport'})))
+	})
+
+	it("the server's idempotency in_progress / outcome_unknown / replay_unavailable are unknown; a refusal is known", function() {
+		for (const code of ['idempotency.in_progress', 'idempotency.outcome_unknown', 'idempotency.replay_unavailable']) {
+			assert.isTrue(outcome_unknown(new ApiError({code, source:'envelope', transport:false})), code)
+		}
+		for (const code of ['request.invalid_options', 'auth.not_logged', 'perm.denied', 'idempotency.key_reused', 'server.unspecified']) {
+			assert.isFalse(outcome_unknown(new ApiError({code, source:'envelope', transport:false})), code)
+		}
+	})
+
+	it('a value that is not an ApiError cannot vouch for a known outcome', function() {
+		assert.isTrue(outcome_unknown(null))
+		assert.isTrue(outcome_unknown({code:'request.invalid_options'}))
 	})
 })
 

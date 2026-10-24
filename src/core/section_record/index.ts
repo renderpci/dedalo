@@ -33,6 +33,7 @@ export {
 	type AuditStamp,
 	afterRecordWrite,
 	buildModifiedAuditWrites,
+	type ChangedKeysDoor,
 	dropCoveredObserverUnits,
 	hiIndexDisagrees,
 	persistAppendedKeyItems,

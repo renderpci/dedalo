@@ -128,13 +128,13 @@ const inputs_of = (content) => {
 describe('PUBLICATION HOST SETUP (New publication host)', function () {
 	this.timeout(10000);
 
-	afterEach(function () {
+	afterEach(() => {
 		while (mounted.length) {
 			mounted.pop().remove();
 		}
 	});
 
-	it('renders for root only, and only when the server sent drafts', async function () {
+	it('renders for root only, and only when the server sent drafts', async () => {
 		const root = await mount(build_widget(value([])));
 		assert.ok(root.querySelector('.new_publication_host'), 'root sees the section');
 		const admin = await mount(build_widget(value([], { is_root: false })));
@@ -145,7 +145,7 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.isNull(none.querySelector('.new_publication_host'), 'no drafts_state, no section');
 	});
 
-	it('a corrupt drafts file is a loud note, never an empty list', async function () {
+	it('a corrupt drafts file is a loud note, never an empty list', async () => {
 		const content = await mount(build_widget(value(null, { drafts_state: 'drafts_invalid' })));
 		const note = content.querySelector('.drafts_invalid');
 		assert.ok(note, 'the note renders');
@@ -153,7 +153,7 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.strictEqual(content.querySelectorAll('.publication_host_draft').length, 0);
 	});
 
-	it('a draft card: state, listener, kit sha; download disabled until a kit exists; pairing only for an awaiting two-machine draft', async function () {
+	it('a draft card: state, listener, kit sha; download disabled until a kit exists; pairing only for an awaiting two-machine draft', async () => {
 		const content = await mount(build_widget(value([draft_row()])));
 		const card = content.querySelector('.publication_host_draft');
 		assert.ok(card);
@@ -207,7 +207,7 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.isTrue(paired.querySelector('.button_build_kit').disabled);
 	});
 
-	it('Propose fills the form; Save sends exactly the draft keys', async function () {
+	it('Propose fills the form; Save sends exactly the draft keys', async () => {
 		const self = build_widget(value([]));
 		const content = await mount(self);
 		const inputs = inputs_of(content);
@@ -239,7 +239,7 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.strictEqual(self.reloads, 1);
 	});
 
-	it('read_draft_form: one machine sends the group and no address; v1 + v2 sends the v1 user; none sends no root', function () {
+	it('read_draft_form: one machine sends the group and no address; v1 + v2 sends the v1 user; none sends no root', () => {
 		const field = (v) => ({ value: v });
 		const inputs = {
 			name: field('a_b'),
@@ -268,7 +268,7 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.strictEqual(draft.v2.port, 3101);
 	});
 
-	it('a refused save marks the named fields and shows the label and the sentence', async function () {
+	it('a refused save marks the named fields and shows the label and the sentence', async () => {
 		const self = build_widget(value([]));
 		const content = await mount(self);
 		const inputs = inputs_of(content);
@@ -296,7 +296,7 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.strictEqual(self.reloads, 0, 'no reload on a refusal');
 	});
 
-	it('the upload sends base64 + passphrase in one request and clears the passphrase whatever the answer', async function () {
+	it('the upload sends base64 + passphrase in one request and clears the passphrase whatever the answer', async () => {
 		const self = build_widget(value([draft_row()]));
 		const content = await mount(self);
 		const card = content.querySelector('.publication_host_draft');
@@ -344,7 +344,7 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.strictEqual(pass.value, '');
 	});
 
-	it('the debug request line never carries the passphrase or the package (data_manager debug_redacted)', function () {
+	it('the debug request line never carries the passphrase or the package — nor any options value (data_manager debug_redacted)', () => {
 		const merged = {
 			body: {
 				action: 'widget_request',
@@ -354,11 +354,20 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		const shown = debug_redacted(merged);
 		assert.strictEqual(shown.body.options.passphrase, '[redacted]');
 		assert.strictEqual(shown.body.options.package_base64, '[redacted]');
-		assert.strictEqual(shown.body.options.name, 'a');
+		assert.strictEqual(
+			shown.body.options.name,
+			'[redacted]',
+			'every value: no list of secret names to rot',
+		);
+		assert.deepEqual(
+			Object.keys(shown.body.options),
+			['name', 'passphrase', 'package_base64'],
+			'the key names stay',
+		);
 		assert.strictEqual(merged.body.options.passphrase, 'P', 'the request itself is unchanged');
 	});
 
-	it('Download hands the decoded kit to save_file under its name and shows the sha256', async function () {
+	it('Download hands the decoded kit to save_file under its name and shows the sha256', async () => {
 		const sha = 'd'.repeat(64);
 		const self = build_widget(
 			value([draft_row({ kit: { sha256: sha, release: 'r', file_name: 'kit.tar.gz', size: 3 } })]),

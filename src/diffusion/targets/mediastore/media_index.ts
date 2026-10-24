@@ -22,10 +22,23 @@
  * Semantics: a pub/ marker exists ⇔ the key exists in at least one
  * dbs/{db}/{table}/ dir. Appliers recompute that union from the full dir
  * state (never counters), so concurrent publish/unpublish stay idempotent.
- * All failure modes are fail-closed: a missing marker only means a published
- * record is not publicly visible until the next publish/reconcile/rebuild.
- * Marker failures must NEVER fail the publication/delete that triggered them
- * (callers wrap and log — oracle delete_handler.ts:138 / index.ts:212-224).
+ * A publish whose marker failed is fail-closed: the record is not publicly
+ * visible until the next publish/reconcile/rebuild, and the publication itself
+ * never fails for it (the writer logs — oracle index.ts:212-224). A WITHDRAWAL
+ * whose marker failed is not: the media stays public, so the record-delete door
+ * keeps that unpublish PENDING for the retry queue (delete_record.ts).
+ *
+ * DURABLE (core/files/durable.ts). A marker carries no bytes — its directory
+ * entry IS the decision — so every door that creates or unlinks one adds the
+ * directory to a DirectoryBarrier and flushes it ONCE before it answers (one
+ * fsync per touched directory, not per marker): applyTableState before it
+ * returns (the delete door flips dd1758 to 'unpublished' on that answer), the
+ * reconcile apply and the rebuild's diff-sync before their unit commits. An
+ * unlink a power cut takes back would otherwise bring `dbs/…/K` back, the boot
+ * reconcile would re-derive `pub/K` from it, and a record the archive withdrew
+ * would be publicly readable again with nothing left to retry it. The pub/
+ * transition seam hears a flip only AFTER that flush, so no sink acts on a
+ * decision a power cut can take back.
  *
  * When DEDALO_MEDIA_PATH is not configured every function is a no-op
  * (feature off). PHP glossary: get_base/make_key/apply_table_state/
@@ -33,15 +46,19 @@
  * applyTableState/reconcileMediaIndex/getMediaIndexStatus/rebuildMediaIndex.
  */
 
-import { promises as fs } from 'node:fs';
+import { existsSync, promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from '../../../config/config.ts';
 import {
+	boundSqlTargetStatement,
+	OPERATOR_FENCE_BOUND_MS,
+	remainingFenceBudget,
 	sqlTargetLockKey,
 	withTargetLock,
 	withTargetLocks,
 } from '../../../core/diffusion_bridge/target_lock.ts';
 import { DedaloError } from '../../../core/errors/index.ts';
+import { DirectoryBarrier, syncCreatedLevels } from '../../../core/files/durable.ts';
 import { assertTestMediaRoot } from '../../../core/media/test_media_root.ts';
 import { escapeSqlIdentifier } from '../../plan/identifier.ts';
 import { getTargetPool, isMissingDatabaseError, isMissingTableError } from '../mariadb/db.ts';
@@ -125,19 +142,46 @@ async function withKeyLock(key: string, fn: () => Promise<void>): Promise<void> 
 	}
 }
 
-/** Creates a zero-byte marker file (parent dirs included). */
-async function touch(filePath: string): Promise<void> {
-	await fs.mkdir(path.dirname(filePath), { recursive: true });
+/**
+ * Creates a zero-byte marker (parent levels included), durable at `barrier`'s
+ * flush: its directory — and the parent of every level mkdir created — joins it.
+ */
+async function touchMarker(filePath: string, barrier: DirectoryBarrier): Promise<void> {
+	const dir = path.dirname(filePath);
+	syncCreatedLevels(dir, await fs.mkdir(dir, { recursive: true }), barrier);
 	await fs.writeFile(filePath, '');
+	barrier.add(dir);
 }
 
-/** Removes a file, tolerating ENOENT. */
-async function unlinkQuiet(filePath: string): Promise<void> {
+/**
+ * Removes a marker, tolerating ENOENT, its absence durable at `barrier`'s flush.
+ * An ABSENT marker's directory joins the barrier too: another door may have
+ * unlinked it and not flushed yet, and this door's answer must not outrun that.
+ */
+async function unlinkMarker(filePath: string, barrier: DirectoryBarrier): Promise<void> {
+	const dir = path.dirname(filePath);
 	try {
 		await fs.unlink(filePath);
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') throw error;
+		if (!existsSync(dir)) return; // no directory: nothing was ever there to take back
 	}
+	barrier.add(dir);
+}
+
+/** A pub/ decision that flipped, told to the transition seam once the barrier flushed. */
+interface PubFlip {
+	key: string;
+}
+
+/**
+ * Tell the seam every flip, AFTER the flush that made it durable. The value is
+ * READ BACK now, not remembered: two doors flipping one key on different
+ * databases (each under its own `sql:<db>` lock) flush and emit in either
+ * order, and the last emitter states what `pub/` holds — never a stale flip.
+ */
+function emitFlips(base: string, flips: readonly PubFlip[]): void {
+	for (const { key } of flips) emitPubTransition(key, existsSync(path.join(base, 'pub', key)));
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
@@ -149,8 +193,15 @@ async function fileExists(filePath: string): Promise<boolean> {
 	}
 }
 
-/** Derives pub/{key} from the full dbs/<db>/<table>/{key} state. */
-async function recomputeUnion(base: string, key: string): Promise<void> {
+/**
+ * Derives pub/{key} from the full dbs/<db>/<table>/{key} state (its change joins
+ * `barrier`). Answers the flip when the gate's decision changed, else null.
+ */
+async function recomputeUnion(
+	base: string,
+	key: string,
+	barrier: DirectoryBarrier,
+): Promise<PubFlip | null> {
 	const dbsDir = path.join(base, 'dbs');
 	let published = false;
 
@@ -179,13 +230,13 @@ async function recomputeUnion(base: string, key: string): Promise<void> {
 	const pubMarker = path.join(base, 'pub', key);
 	const wasPublished = await fileExists(pubMarker);
 	if (published) {
-		await touch(pubMarker);
+		await touchMarker(pubMarker, barrier);
 	} else {
-		await unlinkQuiet(pubMarker);
+		await unlinkMarker(pubMarker, barrier);
 	}
-	// The gate's decision flipped: tell the copy worker (best-effort seam,
-	// pub_transitions.ts). A write that leaves the decision unchanged is silent.
-	if (wasPublished !== published) emitPubTransition(key, published);
+	// The gate's decision flipped: the caller tells the copy worker once it is
+	// durable (best-effort seam, pub_transitions.ts). An unchanged decision is silent.
+	return wasPublished === published ? null : { key };
 }
 
 /**
@@ -194,9 +245,13 @@ async function recomputeUnion(base: string, key: string): Promise<void> {
  * unpublishedIds lose it, and the pub/ union is recomputed per touched key.
  *
  * Never throws on per-key problems: invalid keys are skipped (returned in
- * the skipped list) so a single odd record cannot abort a diffusion.
- * Callers wrap the whole call in try/catch and log — marker failures must
- * never fail the publication itself.
+ * the skipped list) so a single odd record cannot abort a diffusion. A
+ * filesystem failure throws: the publish writer logs it (never failing the
+ * publication), the record-delete door keeps its unpublish pending.
+ *
+ * DURABLE when it returns: every marker it created or unlinked — `dbs/` and
+ * `pub/` — is flushed through ONE DirectoryBarrier before the answer, and the
+ * pub/ flips are told to the seam only after that flush.
  */
 export async function applyTableState(
 	databaseName: string,
@@ -243,16 +298,26 @@ export async function applyTableState(
 		ops.push({ key, publish: false });
 	}
 
-	for (const op of ops) {
-		await withKeyLock(op.key, async () => {
-			if (op.publish) {
-				await touch(path.join(tableDir, op.key));
-			} else {
-				await unlinkQuiet(path.join(tableDir, op.key));
-			}
-			await recomputeUnion(base, op.key);
-		});
-		applied++;
+	const barrier = new DirectoryBarrier();
+	const flips: PubFlip[] = [];
+	try {
+		for (const op of ops) {
+			await withKeyLock(op.key, async () => {
+				if (op.publish) {
+					await touchMarker(path.join(tableDir, op.key), barrier);
+				} else {
+					await unlinkMarker(path.join(tableDir, op.key), barrier);
+				}
+				const flip = await recomputeUnion(base, op.key, barrier);
+				if (flip !== null) flips.push(flip);
+			});
+			applied++;
+		}
+	} finally {
+		// What landed before a failure is made durable and told too: a retry finds
+		// pub/ already flipped and would never tell the seam again.
+		barrier.flush();
+		emitFlips(base, flips);
 	}
 
 	return { applied, skipped };
@@ -326,11 +391,23 @@ const MEDIA_INDEX_FENCE_ROUNDS = 5;
  * the reconcile is DEFERRED (nothing applied, the busy target named), the
  * rebuild reports what it could not resync.
  */
-export const MEDIA_INDEX_FENCE_BOUND_MS = 120_000;
+export const MEDIA_INDEX_FENCE_BOUND_MS = OPERATOR_FENCE_BOUND_MS;
 
-/** What is left of a fence budget, as a bounded lock mode (0 ⇒ one try). */
-function remainingFence(deadline: number): { boundMs: number } {
-	return { boundMs: Math.max(0, deadline - Date.now()) };
+/**
+ * @internal TEST SEAM (named exemption, DEC-12): the DEFAULT budget of a
+ * reconcile that names none (the registry's run, so the scheduler's) — null
+ * restores MEDIA_INDEX_FENCE_BOUND_MS. Only a gate moves it, to defer a
+ * scheduled run in milliseconds instead of two minutes
+ * (reconcile_scheduler_native). An explicit `boundMs` still wins.
+ */
+let fenceBoundOverrideForTests: number | null = null;
+export function overrideMediaIndexFenceBoundForTests(boundMs: number | null): void {
+	if (boundMs !== null && !(Number.isInteger(boundMs) && boundMs > 0)) {
+		throw new DedaloError('internal.invariant', {
+			message: 'overrideMediaIndexFenceBoundForTests takes a positive integer (ms) or null',
+		});
+	}
+	fenceBoundOverrideForTests = boundMs;
 }
 
 /**
@@ -358,9 +435,11 @@ async function listMarkerDatabases(base: string): Promise<string[]> {
 
 /**
  * reconcileMediaIndex (oracle reconcile): rebuilds pub/ from the dbs/ ground
- * truth (pure filesystem diff, diffMediaIndex above, then applied). Run at
- * server boot to heal drift from crashes between SQL commit and marker apply.
- * Cheap: two directory walks, no SQL on the target.
+ * truth (pure filesystem diff, diffMediaIndex above, then applied). Run by the
+ * `media_index` registry definition at boot and on its period, to heal drift
+ * from crashes between SQL commit and marker apply — that run probes UNFENCED
+ * first and calls this door only on drift (diffusion/api/reconcile.ts
+ * runMediaIndexReconcile). Cheap: two directory walks, no SQL on the target.
  *
  * THE ONE APPLY DOOR, FENCED (DIFF-2, WC-2026-09-30-diffusion-target-fence).
  * A batch writing `dbs/<db>/…/K` then `pub/K` holds `sql:<db>`; the diff reads
@@ -390,7 +469,8 @@ export async function reconcileMediaIndex(
 ): Promise<MediaIndexReconcileOutcome | null> {
 	const base = markerStoreBase();
 	if (base === null) return null;
-	const deadline = Date.now() + (options.boundMs ?? MEDIA_INDEX_FENCE_BOUND_MS);
+	const deadline =
+		Date.now() + (options.boundMs ?? fenceBoundOverrideForTests ?? MEDIA_INDEX_FENCE_BOUND_MS);
 	const held = new Set(await listMarkerDatabases(base));
 	for (let round = 1; ; round++) {
 		type Round =
@@ -407,17 +487,17 @@ export async function reconcileMediaIndex(
 				// pair — apply NOTHING of it.
 				if (grown.length > 0) return { grown };
 				const pubDir = path.join(base, 'pub');
-				for (const key of diff.toAdd) {
-					await touch(path.join(pubDir, key));
-					emitPubTransition(key, true);
-				}
-				for (const key of diff.toRemove) {
-					await unlinkQuiet(path.join(pubDir, key));
-					emitPubTransition(key, false);
-				}
+				const barrier = new DirectoryBarrier();
+				for (const key of diff.toAdd) await touchMarker(path.join(pubDir, key), barrier);
+				for (const key of diff.toRemove) await unlinkMarker(path.join(pubDir, key), barrier);
+				barrier.flush();
+				emitFlips(
+					base,
+					[...diff.toAdd, ...diff.toRemove].map((key) => ({ key })),
+				);
 				return { healed: { added: diff.toAdd.length, removed: diff.toRemove.length } };
 			},
-			{ mode: remainingFence(deadline) },
+			{ mode: remainingFenceBudget(deadline) },
 		);
 		if (!fenced.acquired) return { deferred: { busy_target: fenced.busyKey } };
 		const outcome = fenced.value;
@@ -517,8 +597,11 @@ async function fetchPublishedSectionIds(
 	// The PUBLISHED MariaDB target, not the matrix: its section_id column carries
 	// the published string shape (a pinned edge — publication v1 LIKE-probes the
 	// quoted form), so the union stays. WC-2026-08-10-section-id-int-canonical.
+	// Lock-wait bounded: it runs under the database's exclusive fence, and a
+	// read queued behind another session's pending schema change (an exclusive
+	// metadata lock) would keep it there.
 	const rows = (await pool.unsafe(
-		`SELECT DISTINCT section_id FROM ${escapeSqlIdentifier(tableName)}`,
+		boundSqlTargetStatement(`SELECT DISTINCT section_id FROM ${escapeSqlIdentifier(tableName)}`),
 		[],
 	)) as { section_id: string | number }[];
 	return rows.map((row) => row.section_id);
@@ -589,14 +672,16 @@ async function syncTargetMarkers(
 		}
 	}
 
-	// diff-sync
+	// diff-sync, durable before the database's fence is released
 	const currentSet = new Set(current);
+	const barrier = new DirectoryBarrier();
 	for (const key of desired) {
-		if (!currentSet.has(key)) await touch(path.join(tableDir, key));
+		if (!currentSet.has(key)) await touchMarker(path.join(tableDir, key), barrier);
 	}
 	for (const key of current) {
-		if (!desired.has(key)) await unlinkQuiet(path.join(tableDir, key));
+		if (!desired.has(key)) await unlinkMarker(path.join(tableDir, key), barrier);
 	}
+	barrier.flush();
 	return desired.size;
 }
 
@@ -613,7 +698,7 @@ async function underDatabaseFence<T>(
 	work: () => Promise<T>,
 ): Promise<T | null> {
 	const held = await withTargetLock(sqlTargetLockKey(database), work, {
-		mode: remainingFence(deadline),
+		mode: remainingFenceBudget(deadline),
 	});
 	if (held.acquired) return held.value;
 	errors.push(
@@ -683,17 +768,20 @@ export async function rebuildMediaIndexStore(
 			} catch {
 				return;
 			}
+			const barrier = new DirectoryBarrier();
 			for (const tableName of tableEntries) {
 				if (!validDirs.has(`${dbName}/${tableName}`)) {
 					await fs.rm(path.join(dbsDir, dbName, tableName), { recursive: true, force: true });
+					barrier.add(path.join(dbsDir, dbName));
 				}
 			}
+			barrier.flush();
 		});
 	}
 
 	// derive pub/ from the new ground truth (the fenced apply), on what is left
 	// of the budget
-	const derived = await reconcileMediaIndex(remainingFence(deadline));
+	const derived = await reconcileMediaIndex(remainingFenceBudget(deadline));
 	if (derived?.deferred !== undefined) {
 		errors.push(
 			`pub/: derivation deferred (${derived.deferred.busy_target} held by a writer past the rebuild's wait) — re-run the rebuild`,

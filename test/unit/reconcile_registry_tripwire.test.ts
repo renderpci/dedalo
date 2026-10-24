@@ -259,10 +259,14 @@ describe('reconcile registry completeness (S-10)', () => {
 			);
 		}
 		// Publication API lockstep (phase 4): an INTERVAL dry check — code is never
-		// pushed by a timer (its apply is refused at the registry, perm.denied).
+		// pushed by a timer (its apply is refused at the registry: the applyRefused facet).
 		const lockstep = REGISTERED.find((d) => d.name === 'publication_apis') as ReconcileDefinition;
 		expect(typeof lockstep.schedule).toBe('object');
 		expect(lockstep.autoApply).toBeUndefined();
+		expect(lockstep.applyRefused?.reason.length).toBeGreaterThan(40);
+		expect(REGISTERED.filter((d) => d.applyRefused !== undefined).map((d) => d.name)).toEqual([
+			'publication_apis',
+		]);
 		// An operator APPLY that touches a public machine is root-only at the widget door
 		// (E10): media_copy alone declares it, with a reason; reconcile_status enforces it.
 		const rootOnly = REGISTERED.filter((d) => d.applyRootOnly !== undefined);
@@ -301,6 +305,7 @@ describe('reconcile registry completeness (S-10)', () => {
 					'auto_apply',
 					'last_apply',
 					'last_applied',
+					'last_deferred',
 					'last_drift',
 					'last_error',
 					'last_run_at',
@@ -319,6 +324,16 @@ describe('the ops doc (PRODUCTION.md §6.5) names what the registry runs', () =>
 				new RegExp(`^\\| \`${name}\` \\|`, 'm'),
 			);
 		}
+	});
+
+	test('the gauge row names exactly the keys the gauge publishes', () => {
+		const row = /^\| `GET \/api\/v1\/counters` → `gauges\.reconcile` \|(.*)\|$/m.exec(doc);
+		expect(row).not.toBeNull();
+		const named = [...(row?.[1] ?? '').matchAll(/`([a-z_]+)`/g)].map((m) => m[1]).sort();
+		const gauge = reconcileGauge() as Record<string, Record<string, unknown>>;
+		const published = Object.keys(Object.values(gauge)[0] ?? {}).sort();
+		expect(published.length).toBeGreaterThan(0);
+		expect(named).toEqual(published);
 	});
 
 	test('the scheduled-apply sentence names exactly the autoApply set', () => {
@@ -365,7 +380,7 @@ describe('reconcile registry doors (S-10)', () => {
 		expect(source).toMatch(/argv\.includes\('--apply'\)/);
 	});
 
-	test('the server boot registers the catalog, starts the scheduler behind its flag, and stops it on shutdown', () => {
+	test('the server boot registers the catalog, starts the scheduler behind its flag, stops it on shutdown and drains its run in flight', () => {
 		const source = stripComments(readFileSync(join(ROOT, 'src/server.ts'), 'utf8'), {
 			blankStrings: false,
 		});
@@ -373,6 +388,11 @@ describe('reconcile registry doors (S-10)', () => {
 		expect(source).toMatch(/readString\('DEDALO_RECONCILE_SCHEDULER_ENABLED'\) !== 'false'/);
 		expect(source).toContain('startReconcileScheduler()');
 		expect(source).toContain('stopReconcileScheduler()');
+		// The shutdown WAITS for a run in flight (bounded by its deadline) BEFORE the
+		// pool that run's fence unit lives on closes (scheduler.ts doc).
+		const drainAt = source.indexOf('drainReconcileScheduler(deadline)');
+		expect(drainAt, 'the shutdown never drains the reconcile scheduler').toBeGreaterThan(-1);
+		expect(drainAt).toBeLessThan(source.indexOf('closeDatabasePool()'));
 		// The old direct boot apply is gone: media_index heals through the registry only.
 		expect(source).not.toMatch(/void reconcileMediaIndex\(\)/);
 	});

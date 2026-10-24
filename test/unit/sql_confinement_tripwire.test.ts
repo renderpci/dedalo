@@ -490,15 +490,16 @@ const T2_UNRESOLVED_OWNER_TARGETS: Readonly<Record<string, { targets: number; re
 };
 
 /**
- * THE PSQL CHANNEL. `runPsql` (src/core/install/pg_exec.ts) and the suite
- * builders' own psql spawn ship SQL TEXT to a psql child: DML in `-c`, on
- * stdin, `\copy … FROM`, `SELECT setval(…)`, or a whole `-f <file>` restore.
+ * THE PSQL CHANNEL. `runPsql` / `runPsqlScript` (src/core/install/pg_exec.ts)
+ * and the suite builders' own psql spawn ship SQL TEXT to a psql child: DML on
+ * stdin (src/ never in `-c` — psql_argv_sql_tripwire), `\copy … FROM`,
+ * `SELECT setval(…)`, or a whole `-f <file>` restore.
  * None of it passes matrix_write.ts, json_codec, a transaction the engine
  * owns, or the Time Machine — that is the hazard, and every such file is
  * enumerated with its write-shape count and the ENCODING GUARANTEE that makes
- * the channel safe: text reaches Postgres verbatim (psql performs no variable
- * interpolation with `-c`; there is no Bun type inference, so the
- * ::text::jsonb bind trap does not exist on this channel).
+ * the channel safe: values reach Postgres verbatim inside quoted literals (psql
+ * substitutes nothing inside '…' / $tag$…$tag$; there is no Bun type inference,
+ * so the ::text::jsonb bind trap does not exist on this channel).
  *
  * A psql-channel file may not ALSO import the pool (asserted): one channel per
  * file is what makes this attribution exact.
@@ -547,7 +548,7 @@ const T2_PSQL_WRITE_SHAPES: readonly RegExp[] = [
 ];
 
 function usesPsqlChannel(code: string): boolean {
-	return /\brunPsql\s*\(/.test(code) || /resolvePgBinary\(\s*'psql'\s*\)/.test(code);
+	return /\brunPsql(?:Script)?\s*\(/.test(code) || /resolvePgBinary\(\s*'psql'\s*\)/.test(code);
 }
 
 /** Count the write shapes a psql-channel file ships: DML sites + copy-FROM + setval + `-f <file>`. */

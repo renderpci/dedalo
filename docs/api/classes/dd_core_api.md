@@ -93,6 +93,8 @@ Retrieve record/component data with optional filtering.
 
 Core method for reading record data. Can fetch full section data or a single component (`source.action: "get_data"`), search filter chips (`resolve_data`), or the References panel (`get_relation_list`). Read requires permission level ≥ 1 on the section.
 
+A related search (`sqo.mode: "related"` — the References panel, its graph, the tools' `related_search`) is gated on the **host** records named in `sqo.filter_by_locators`: the caller needs level ≥ 1 on each host's section, and the literal `sqo.section_tipo: ["all"]` (every owning section) is not checked as a section of its own. The referencing records are then restricted to the ones the caller may see — read grant on their section and inside the caller's projects — before the page is cut, so a page is full while more of the caller's records exist, and `count` returns exactly the number of records the pages hold.
+
 ### Example Request
 
 ```json
@@ -421,7 +423,7 @@ Count records matching SQO criteria.
 
 ### Usage
 
-Returns the total count of records matching the SQO. The read strategy owns counting (the default matrix source runs the SQO full-count; `sqo.mode: "related"` counts inverse references; `sqo.mode: "tm"` counts `matrix_time_machine`). Requires level ≥ 1 on every SQO target section.
+Returns the total count of records matching the SQO. The read strategy owns counting (the default matrix source runs the SQO full-count; `sqo.mode: "related"` counts inverse references; `sqo.mode: "tm"` counts `matrix_time_machine`). Requires level ≥ 1 on every SQO target section — for `sqo.mode: "related"`, on the section of every host in `sqo.filter_by_locators` instead (`["all"]` is not a section). A related count counts only the referencing records the caller may see, so it equals the number of records the caller's References pages hold.
 
 ### Example Request
 

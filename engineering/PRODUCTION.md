@@ -133,8 +133,9 @@ untouched (a container that is not installed never even listens: it exits 78, §
 `test/unit/container_watchdog_native.test.ts`.
 
 **Graceful shutdown (S2-17).** On SIGTERM/SIGINT the server: stops the
-diffusion scheduler cadences → stops accepting connections → drains in-flight
-requests up to `SERVER_SHUTDOWN_GRACE_MS` (default 10000) → marks still-live
+diffusion and reconcile scheduler cadences → stops accepting connections → drains in-flight
+requests up to `SERVER_SHUTDOWN_GRACE_MS` (default 10000) → waits, within the same
+deadline, for a scheduled reconcile run in flight (§6.5) → marks still-live
 media transcode jobs `interrupted` in their pfiles → journals dying background
 tool jobs → closes the Postgres pool → unlinks the socket → exits 0.
 
@@ -558,14 +559,14 @@ Census of the legitimately long statements (who is unbounded, and how):
 
 | Lane | Handling |
 |---|---|
-| Maintenance-area ACTIONS a widget declares maintenance (`unboundedActions`: every database_info action — VACUUM/ANALYZE, REINDEX, the store rebuilds and backfill, the relation-index report, consolidate, user stats —, every `move_*` transform — the inline dry run; an execute is a stoppable, single-flight maintenance job, one atomic, lock-retried unit per definition file —, update_ontology, the dd_ontology recovery build/restore, add_hierarchy install/reset, export_hierarchy, reconcile_status run) | The widget door wraps THOSE handlers in the scope; every other action and every panel load stays bounded. `dataframe_control` is not maintenance: each batch runs under `SET LOCAL statement_timeout` = what is left of its per-table/total budgets (WC-071/072), never above the pool ceiling. |
+| Maintenance-area ACTIONS a widget declares maintenance (`unboundedActions`: every database_info action — VACUUM/ANALYZE, REINDEX, the store rebuilds and backfill, the relation-index report, consolidate, user stats —, every `move_*` transform — the inline dry run; an execute is a stoppable, single-flight maintenance job, one atomic, lock-retried unit per definition file —, update_ontology, the dd_ontology recovery build/restore, add_hierarchy install/reset — one psql unit per thesaurus that sets its own lock bound (see the psql row) —, export_hierarchy, reconcile_status run) | The widget door wraps THOSE handlers in the scope; every other action and every panel load stays bounded. `dataframe_control` is not maintenance: each batch runs under `SET LOCAL statement_timeout` = what is left of its per-table/total budgets (WC-071/072), never above the pool ceiling. |
 | `runWithoutStatementTimeout` (REINDEX/VACUUM/DROP INDEX CONCURRENTLY) | By lock class: the WEAK forms (CONCURRENTLY, plain VACUUM / ANALYZE) on the non-transactional maintenance lane (same gate, no lock bound, never cancelled by shutdown — see above); every other statement (`REINDEX TABLE`, `VACUUM FULL`) on the maintenance pool under `MAINTENANCE_LOCK_TIMEOUT`, retried, typed `db.lock_timeout` on escape. Refused inside a transaction. |
 | Data-update engine (`src/core/update/engine.ts`) | Its own atomic unit: `withMaintenanceTransaction` (one transaction, `SET LOCAL lock_timeout` + `SET LOCAL statement_timeout = 0`, whole-unit retry on 55P03 — each discarded attempt logged to update.log — abort cancels the running statement). The background job has NO deadline (`deadlineMs: 0`, overriding the maintenance lane's 6 h): a clock that fired mid-run would roll the whole unit back, every time. The verdict of record is the `matrix_updates` version row (it commits with the steps); update.log is advisory: a `BEGIN atomic run … [xact <xid>]` line per attempt that won the single-flight claim (a refused one writes only `REFUSED [xact <xid>] (…)`) and an fsynced `COMMITTED <version> [xact <xid>]` line after the COMMIT succeeded, but a failed log write (full or read-only private dir) only reaches the server log and never changes the verdict — and a crash between COMMIT and that line leaves a committed run without it, so read `matrix_updates` when in doubt. A statement cancelled from outside (a shutdown, an operator) is reported as an interruption, never as the step's SQL failing. A failure the engine did not raise itself (a connection lost during COMMIT) is classified by `pg_xact_status` of the run's own transaction (read on a dedicated connection, ≤ 2 s per read) — committed, rolled back, or "outcome unknown" — never by re-reading the version. Once a run is aborted, no further statement of it is sent. No step can end the unit: transaction control is refused before it is sent; should the between-steps checkpoint ever see the transaction id change anyway, the run is reported `PARTIAL` (what ran before persisted, the version is not stamped) — never "rolled back". Known limit: `lock_timeout` bounds EVERY lock wait, row locks too — a long migration that meets a row lock held > 5 s is retried whole (maintenance mode excludes ordinary editors; a background import or runner started before it does not). |
 | Boot migrations (`install/db/migrate.ts`) | Already `SET LOCAL statement_timeout = 0` per file (the recorder sees it); the ONLINE lane uses a reserved connection with a session 0 it RESETs. |
 | `db_assets` store builds at boot (`ensureSearchStores` → one whole-table `INSERT … SELECT` backfill per matrix table; `rebuildIndexes` & co.) / `test:db:setup` / `migrate_section_id_locators`; `observer_reconcile` CLI | To enter the scope at the source (the `db_assets` builders, `reconcileObserverMirrors`). PENDING — until then they run under the ceiling, so the default flip ships together with those wraps. |
 | Retention scheduler (`src/core/retention/scheduler.ts`, after boot then daily, from a bare timer): `pruneMatrixEventRowsByAge` on `matrix_activity` (an unbatched `count(*)` + one `DELETE … RETURNING`) and the dd1758 ledger prune | PENDING — enter the scope at the retention pass entry, or batch the prune (`DELETE … WHERE id IN (SELECT … LIMIT n)`, each batch well under the ceiling). Under a ceiling an all-or-nothing DELETE over a 33 M-row log rolls back every day and never makes progress. |
 | Diffusion runners | Stay bounded (their containers already run at 60 s); measured separately. |
-| `psql` / `pg_restore` / `pg_dump` children | Never receive the startup GUC. |
+| `psql` / `pg_restore` / `pg_dump` children | Never receive the startup GUC. The hierarchy import/reset unit (`src/core/install/hierarchy_import.ts`) bounds itself: after `BEGIN`, `SET LOCAL lock_timeout` = `HIERARCHY_UNIT_LOCK_TIMEOUT` (pinned equal to `MAINTENANCE_LOCK_TIMEOUT` by `hierarchy_import_lock_bound_native`) + `SET LOCAL statement_timeout = 0`; a 55P03 rolls the unit back and it is retried WHOLE (1/2/4/8 s, abortable); an `installHierarchies` `signal` kills it at once and its outcome is READ by `pg_xact_status` (committed / rolled back / unknown), never assumed. No caller passes a signal yet (add_hierarchy is not a stoppable job). |
 | Request traffic, and requests waiting behind a maintenance lock | Bounded — a typed 503 by design. |
 
 **The typed failures.** A 57014 is mapped to `db.statement_timeout` only when
@@ -1142,7 +1143,7 @@ a shape, so an operator learns three doors, not one per subsystem:
 | --- | --- |
 | maintenance area → **Reconcile** (`reconcile_status` widget) | lists every reconcile with its last verdict; **Check** (dry) / **Apply** per row |
 | `bun scripts/reconcile.ts list` / `run <name> [--apply] [--scope a,b] [--json]` | the same from a terminal; exit 2 = drift reported and not repaired |
-| `GET /api/v1/counters` → `gauges.reconcile` | per name: `schedule`, `last_run_at`, `last_apply`, `last_drift`, `last_applied`, `last_error` (a code, never text) |
+| `GET /api/v1/counters` → `gauges.reconcile` | per name: `schedule`, `auto_apply`, `last_run_at`, `last_apply`, `last_drift`, `last_applied`, `last_deferred` (why the last apply could not happen, else null), `last_error` (a code, never text) |
 
 The registered set (grow/shrink only through `REGISTERED_NAMES` + the catalog;
 `reconcile_registry_tripwire` derives every reconcile-shaped module in the tree
@@ -1153,7 +1154,7 @@ and demands it be here):
 | `counters_media` | `matrix_counter` ↔ media file names | operator | raise-only (§6.1 step 5) |
 | `files_info` | media column `files_info` ↔ media tree | operator | judged PER ITEM: GROW/DIFF and FOREIGN (another record's files — the clone signature) rewritten, SHRINK held (`scripts/media_repair_files_info.ts --allow-shrink`); each change re-judged under the row lock through the one locked media-key writer (`missing` / `locked` / `heldOnApply` in `detail`) |
 | `observer_mirrors` | `matrix_relation_index` ↔ observer mirror slots | operator | full-law recompute (`scripts/observer_reconcile.ts` keeps `--budget`) |
-| `media_index` | `.publication/dbs` ↔ `.publication/pub` | **boot, auto-apply** | pub/ is a pure derivation: recomputed after every listen |
+| `media_index` | `.publication/dbs` ↔ `.publication/pub` | **boot + every 10 min, auto-apply** | pub/ is a pure derivation: recomputed after every listen and on the period (a diffusion runner is a separate process; one that dies between a pair's `dbs/` and `pub/` writes leaves drift while the server lives); an apply held off past its fence budget is DEFERRED and re-armed. The fence is EXCLUSIVE on every publication target, and a record delete on the request path does not wait for it (the unpublish stays pending in dd1758): so a run in sync takes no fence at all (an unfenced diff decides), and an apply that held it then drains the pending-unpublish queue — a record deleted during the hold leaves the public tier with that run, not at the next publish run (`detail.pending_unpublish`) |
 | `rag_index` | matrix records ↔ `rag_embeddings` | operator | enqueues index/delete for the drain (§11) |
 | `ontology` | `<tld>0` source records ↔ `dd_ontology` | operator | destructive re-projection per drifted TLD |
 | `ontology_identifiers` | `dd_ontology` identifier columns ↔ the identifier grammar (six CHECKs) | boot (dry) | re-derive each violator's tld from source, delete the unaddressable rest (returned whole), VALIDATE the clean CHECKs |
@@ -1179,9 +1180,20 @@ destructive re-projection or row delete, an unpublish from a museum site; the pr
 list in view, through the three doors above. A step that throws is recorded by
 its error code and the plan continues.
 
-Scheduling is the registry's, not each owner's: `boot`-class definitions run
-once after the server listens, `{everyMs}` ones on their period, both
-fire-and-forget and non-fatal (`last_error` in the gauge), stopped on SIGTERM.
+Scheduling is the registry's, not each owner's (`src/core/reconcile/scheduler.ts`):
+`boot`-class definitions run after the server listens, `{everyMs}` ones on their
+period (`atBoot: true` also after the listen), both fire-and-forget and non-fatal
+(`last_error` in the gauge). A run whose apply was DEFERRED — another writer held
+the store past the run's bound, nothing applied, `last_deferred` says why — is
+re-armed after 60 s (or its period, if shorter) until one completes; a thrown run
+is not retried sooner than its period. One run per name is in flight at a time
+(the next is armed only once the previous settled), each run executes in the
+scheduler's own scope (no principal, request id `reconcile:<name>`), and SIGTERM
+clears every pending run — one already in flight never re-arms, and the shutdown
+waits for it within `SERVER_SHUTDOWN_GRACE_MS`, before the pool closes; one still
+running at that deadline is logged (`[shutdown] reconcile run(s) still in flight
+at deadline, abandoned`) and dies with the process (its fence unit commits
+nothing; the next boot's run re-checks).
 `DEDALO_RECONCILE_SCHEDULER_ENABLED=false` (same posture as the diffusion
 scheduler, §8) keeps a smoke/maintenance copy from healing a shared store from
 the wrong root; the widget, the CLI and the gauge keep working. A scheduled run

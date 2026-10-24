@@ -22,7 +22,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
 	BROWSER_EXCLUSIONS,
@@ -30,6 +31,7 @@ import {
 	parseBiomeSummary,
 	readBudget,
 } from '../../scripts/lint_browser_budget.ts';
+import { daemonPackages } from '../helpers/daemon_package_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const CONFIG = join(REPO_ROOT, 'biome.jsonc');
@@ -70,8 +72,13 @@ const EXPECTED_EXCLUSIONS = [
 	// Static assets with no JS/TS in them.
 	'!**/tools/**/*/css',
 	'!**/tools/**/*/img',
-	// An isolated subsystem with its own toolchain.
-	'!**/publication',
+	// The publication daemons — excluded from lint, but carried by the shrink-only
+	// per-package budget below (PUBLICATION_BUDGETS).
+	'!**/publication/site_builder',
+	'!**/publication/host_agent',
+	'!**/publication/server_api/v2',
+	// The legacy PHP v1 Publication API and its vendored swagger-ui bundle.
+	'!**/publication/server_api/v1',
 	// The browser trees — excluded from lint, but carried by the shrink-only
 	// budget in scripts/lint_browser_budget.ts.
 	'!**/client',
@@ -292,6 +299,148 @@ describe('lint scope is a written-down decision', () => {
 		const configPath = materializeScopeConfig();
 		try {
 			expect(isLinted('client/dedalo/core/common/js', configPath)).toBe(true);
+		} finally {
+			rmSync(dirname(configPath), { force: true, recursive: true });
+		}
+	});
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE PUBLICATION DAEMONS (audit 2026-09-26 W4 residual, 2026-10-21).
+//
+// `!**/publication` sat in biome.jsonc with the reason "publication/ is read-only
+// and gated separately (`bun run test:publication` runs its own tsc + suite)".
+// Measured false on both counts: site_builder and host_agent are WRITERS (sites,
+// web-server rules, provisioning as root), and their separate gate — the hermetic
+// daemon block, `test:sitebuilder`, `hostagent:test` — is tsc + bun test with no
+// lint at all. `biome check publication/site_builder` answered "Checked 0 files".
+// So ~530 files of first-party TypeScript had NO static analysis while lint was
+// green: 350 errors in site_builder, 436 in host_agent, 126 in server_api/v2.
+//
+// Same remedy as the browser trees, same reason (a flag day would leave lint red
+// for the length of the burn-down): each daemon package is excluded from `bun run
+// lint` but measured under a SHRINK-ONLY error ceiling with the SAME rule set —
+// the budget config is biome.jsonc with exactly the three budget exclusions
+// removed, never a second rule list. The package census is DERIVED (every
+// directory under publication/ with a package.json and a tsconfig.json —
+// test/helpers/daemon_package_corpus.ts), so a
+// fourth daemon cannot be born dark: it is either linted by `bun run lint` or
+// budgeted here.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** The exclusion lines the publication budget removes (exactly as biome.jsonc spells them). */
+const PUBLICATION_BUDGET_EXCLUSIONS = [
+	'"!**/publication/site_builder",',
+	'"!**/publication/host_agent",',
+	'"!**/publication/server_api/v2",',
+] as const;
+
+/**
+ * Error ceilings per package — SHRINK-ONLY. Measured 2026-10-21 (biome 2.5.15).
+ * When a burn-down lowers a count by more than PUBLICATION_SLACK, lower the
+ * ceiling in the same commit; raising one is never the fix.
+ */
+const PUBLICATION_BUDGETS: Record<string, number> = {
+	'publication/host_agent': 436,
+	'publication/server_api/v2': 126,
+	'publication/site_builder': 350,
+};
+
+/** How far below its ceiling a package may fall before the ceiling must follow. */
+const PUBLICATION_SLACK = 20;
+
+/** A budget run that saw fewer files than this did not measure the package. */
+const PUBLICATION_MIN_FILES = 40;
+
+/** biome.jsonc minus the publication budget exclusions, outside the repo (see materializeScopeConfig). */
+function materializePublicationConfig(): string {
+	let scoped = readFileSync(CONFIG, 'utf8');
+	for (const exclusion of PUBLICATION_BUDGET_EXCLUSIONS) {
+		if (!scoped.includes(exclusion)) {
+			throw new Error(
+				`biome.jsonc no longer excludes ${exclusion} — if that package is linted for real ` +
+					'now, delete its budget here rather than measuring nothing.',
+			);
+		}
+		scoped = scoped.replace(exclusion, '');
+	}
+	// `scratchDir`, not `dir`: hermetic_parallel_safety_tripwire resolves names file-wide,
+	// and a second `dir` (this mkdtemp) would hide isLinted's in-tree probe from its anchor.
+	const scratchDir = mkdtempSync(join(tmpdir(), 'dedalo-lint-publication-'));
+	const path = join(scratchDir, 'biome.jsonc');
+	writeFileSync(path, scoped);
+	return path;
+}
+
+function measurePackage(pkg: string, configPath: string) {
+	const run = Bun.spawnSync(
+		['bunx', 'biome', 'check', `--config-path=${configPath}`, '--reporter=summary', pkg],
+		{ cwd: REPO_ROOT, stdout: 'pipe', stderr: 'pipe' },
+	);
+	return parseBiomeSummary(run.stdout.toString() + run.stderr.toString());
+}
+
+describe('the publication daemons are linted, or measured under a shrink-only budget', () => {
+	const packages = daemonPackages();
+
+	test('the package census is derived and real (anti-vacuity)', () => {
+		expect(packages.length).toBeGreaterThan(2);
+		expect(packages).toContain('publication/site_builder');
+		expect(packages).toContain('publication/host_agent');
+		expect(packages).toContain('publication/server_api/v2');
+	});
+
+	test('every daemon package is either linted by `bun run lint` or budgeted', () => {
+		const dark = packages.filter(
+			(pkg) => PUBLICATION_BUDGETS[pkg] === undefined && !isLinted(`${pkg}/src`),
+		);
+		expect(
+			dark,
+			'These daemon packages are read by NO static analysis: excluded from biome.jsonc and ' +
+				'not budgeted. Lint them (remove the exclusion and fix), or add a shrink-only ' +
+				'ceiling to PUBLICATION_BUDGETS with its exclusion in PUBLICATION_BUDGET_EXCLUSIONS.',
+		).toEqual([]);
+		// And a budget names a package that exists (a stale ceiling measures nothing),
+		// whose exclusion is exactly the one the budget config removes.
+		for (const pkg of Object.keys(PUBLICATION_BUDGETS)) {
+			expect(packages).toContain(pkg);
+			expect(PUBLICATION_BUDGET_EXCLUSIONS as readonly string[]).toContain(`"!**/${pkg}",`);
+		}
+	});
+
+	test('each budgeted package stays within its ceiling, and the ceiling follows a burn-down', () => {
+		const configPath = materializePublicationConfig();
+		try {
+			for (const [pkg, ceiling] of Object.entries(PUBLICATION_BUDGETS)) {
+				const counts = measurePackage(pkg, configPath);
+				// A run that measured nothing is an error, never a perfect score.
+				expect(counts.files, `${pkg}: biome measured almost nothing`).toBeGreaterThanOrEqual(
+					PUBLICATION_MIN_FILES,
+				);
+				expect(
+					counts.errors,
+					`${pkg}: ${counts.errors} biome errors > ceiling ${ceiling}. The budget only SHRINKS — ` +
+						`fix the new finding (bunx biome check --config-path=<biome.jsonc minus the ` +
+						`publication exclusions> ${pkg}).`,
+				).toBeLessThanOrEqual(ceiling);
+				expect(
+					ceiling - counts.errors,
+					`${pkg}: ${counts.errors} errors is far below the ceiling ${ceiling} — lower it in PUBLICATION_BUDGETS so the gain is banked.`,
+				).toBeLessThan(PUBLICATION_SLACK);
+			}
+		} finally {
+			rmSync(dirname(configPath), { force: true, recursive: true });
+		}
+	});
+
+	test('the BUDGET config really lints every budgeted package (the control has its own control)', () => {
+		const configPath = materializePublicationConfig();
+		try {
+			for (const pkg of Object.keys(PUBLICATION_BUDGETS)) {
+				expect(isLinted(`${pkg}/src`, configPath), pkg).toBe(true);
+				// …while `bun run lint` does not (else the budget is a stale double count).
+				expect(isLinted(`${pkg}/src`), `${pkg} is linted for real — delete its budget`).toBe(false);
+			}
 		} finally {
 			rmSync(dirname(configPath), { force: true, recursive: true });
 		}

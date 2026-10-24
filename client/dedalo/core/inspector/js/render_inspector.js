@@ -68,6 +68,7 @@
 		download_data
 	} from '../../common/js/data_manager.js'
 	import { response_data } from '../../common/js/api_error.js'
+	import { error_text } from '../../common/js/render_api_error.js'
 	import {
 		when_in_viewport,
 		dd_request_idle_callback,
@@ -667,9 +668,9 @@ render_inspector.prototype.edit = async function(options) {
 *      render_component_info via event subscriptions in inspector.js)
 *   6. project block (only when component_filter_node is already available)
 *   7. relation_list block (only when context.config.relation_list_tipo is set)
-*   8. time_machine_list block (always rendered; historically guarded by a commented-out
-*      ontology check — see commented-out block at line ~676)
-*   9. component_history block (always rendered alongside time_machine_list)
+*   8. time_machine_list block (only when context.config.time_machine_list is set —
+*      the server's per-principal history grant; render_time_machine_blocks)
+*   9. component_history block (same guard as time_machine_list)
 *  10. activity_info block
 *  11. buttons_bottom_container (data link, register download for dd1340)
 *
@@ -1011,21 +1012,13 @@ const get_content_data = function(self) {
 			content_data.appendChild(relation_list)
 		}
 
-	// Note that 'time_machine_list' is a Ontology item children of current section if defined
-	// as 'numisdata588' and is used ONLY to determine if current section have a history changes list or not
-	// The guard `if (self.caller.context.time_machine_list)` was previously used to show
-	// the block only for sections that expose a time-machine ontology item.  It is now
-	// commented out and both blocks are always rendered; visibility is controlled instead
-	// by the collapse-toggle (default_state: 'closed') and by the lazy-load in expose().
-		// if (self.caller.context.time_machine_list) {
-			// time_machine_list container
-				const time_machine_list = render_time_machine_list(self)
-				content_data.appendChild(time_machine_list)
-
-			// component_history container
-				const component_history = render_component_history(self)
-				content_data.appendChild(component_history)
-		// }
+	// time machine blocks (Latest changes + Component history)
+	// The server stamps config.time_machine_list PER PRINCIPAL: the section's
+	// time_machine_list tipo when this user may read its history (SECTION_SPEC
+	// §7.4 — the same decision the dd15 read gate takes), null otherwise
+	// (WC-2026-10-22-tm-scope-whole-request). No grant: no block, and therefore
+	// no dd15 request the server would refuse.
+		render_time_machine_blocks(self, content_data)
 
 	// activity_info
 		const activity_info = render_activity_info(self)
@@ -2116,6 +2109,75 @@ const render_relation_list = function(self) {
 
 
 /**
+* HAS_TIME_MACHINE_ACCESS
+* Whether the inspected section's context grants this user the inspector
+* history (config.time_machine_list, stamped per principal by the server).
+* @param {Object} self - Inspector instance.
+* @returns {boolean}
+*/
+export const has_time_machine_access = function(self) {
+	const value = self.caller?.context?.config?.time_machine_list
+	return typeof value==='string' && value.length>0
+}//end has_time_machine_access
+
+
+
+/**
+* RENDER_TIME_MACHINE_BLOCKS
+* Appends the Latest changes + Component history blocks to the inspector body
+* ONLY when the server granted this user the section's history
+* (has_time_machine_access). No grant: nothing is appended, so neither loader
+* ever finds a container and no dd15 request is sent.
+* @param {Object} self - Inspector instance.
+* @param {HTMLElement} content_data - the inspector body
+* @returns {boolean} whether the blocks were rendered
+*/
+export const render_time_machine_blocks = function(self, content_data) {
+
+	if (!has_time_machine_access(self)) {
+		return false
+	}
+
+	// time_machine_list container
+		content_data.appendChild( render_time_machine_list(self) )
+
+	// component_history container
+		content_data.appendChild( render_component_history(self) )
+
+	return true
+}//end render_time_machine_blocks
+
+
+
+/**
+* RENDER_BLOCK_FAILURE
+* The QUIET panel-local answer for a time machine block whose dd15 instance
+* failed to build: one small muted line inside the block. Never the page-level
+* no-access panel and never a Home link — a side panel that cannot load must
+* not look like the page failed. The request_id rides in the tooltip only (the
+* join key with the server log).
+* @param {string} label - the block label ('Latest changes', ...)
+* @param {Object|null} api_error - the instance's build_error, when known
+* @returns {HTMLElement}
+*/
+export const render_block_failure = function(label, api_error) {
+
+	const reason	= api_error ? error_text(api_error) : ''
+	const node		= ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'inspector_block_failure',
+		text_content	: reason ? label + ': ' + reason : label
+	})
+	if (api_error?.request_id) {
+		node.title = 'request_id: ' + api_error.request_id
+	}
+
+	return node
+}//end render_block_failure
+
+
+
+/**
 * RENDER_TIME_MACHINE_LIST
 * Builds the collapsible "Latest changes" block in the inspector.  When the user
 * opens (exposes) the block, load_time_machine_list() runs immediately (the
@@ -2333,10 +2395,16 @@ const load_time_machine_list_instance = async function(self) {
 		tm_list.tm_view				= 'mini'
 		tm_list.tm_template_columns	= '1fr 1.5fr 2fr'
 
-		await tm_list.build(true)
+		const built = await tm_list.build(true)
 
-	// set new tm_list
+	// set new tm_list (kept even when failed: the next load destroys it)
 		self.tm_list = tm_list
+
+	// a failed build is never rendered: render() of a failed dd15 instance
+	// paints the page-level error surface inside this side panel
+		if (built===false) {
+			return render_block_failure(get_label.latest_changes || 'Latest changes', tm_list.build_error || null)
+		}
 
 	// the rendered node replaces the placeholder (load_block contract)
 	return tm_list.render()
@@ -2558,10 +2626,15 @@ const load_component_history_instance = async function(self, component) {
 		// column header is noise in a 300px panel
 		tm_list.tm_view				= 'history'
 
-		await tm_list.build(true)
+		const built = await tm_list.build(true)
 
 	// keep the pointer so the next load can destroy this instance
 		self.component_history_list = tm_list
+
+	// a failed build is never rendered (see load_time_machine_list_instance)
+		if (built===false) {
+			return render_block_failure(get_label.component_history || 'Component history', tm_list.build_error || null)
+		}
 
 	// the rendered node replaces the placeholder (load_block contract)
 	return tm_list.render()

@@ -51,7 +51,8 @@ export interface RelatedSectionsOptions {
 	offset?: number;
 	/**
 	 * The caller (AUTHZ-05). When present, referencing records outside the
-	 * caller's read grant are dropped before any label or value is emitted.
+	 * caller's scope are excluded by the related search's SQL scope (D1) before
+	 * the window is cut — no label or value of one is ever emitted.
 	 * Undefined (internal callers) applies NO filter — the dispatch route
 	 * ALWAYS passes it (the emit-hook path is ledgered, see rewrite/LEDGER.md).
 	 */
@@ -70,7 +71,13 @@ export async function buildRelatedSections(
 	// Request-scoped data lang backstop (S2-28), never a hardcoded lang.
 	const lang = options.lang ?? currentDataLang();
 
-	let hits = await findInverseReferences(
+	// AUTHZ-05 / D1 — scoped IN the related search's SQL (record_scope
+	// rowScopeFor): the window is cut from the caller's SCOPED owner sequence.
+	const scope =
+		options.principal === undefined
+			? undefined
+			: (await import('../security/record_scope.ts')).rowScopeFor(options.principal);
+	const hits = await findInverseReferences(
 		// Canonical address in — the index probe binds ::int, so String() minting
 		// only leaked the legacy form outward (WC-2026-08-10-section-id-int-canonical).
 		locators.map((l) => ({
@@ -81,12 +88,9 @@ export async function buildRelatedSections(
 			sectionTipos: options.sectionTipos ?? 'all',
 			limit: options.limit ?? false,
 			offset: options.offset,
+			scope,
 		},
 	);
-	if (options.principal !== undefined) {
-		const { scopeInverseReferenceHits } = await import('../security/record_scope.ts');
-		hits = await scopeInverseReferenceHits(hits, options.principal);
-	}
 
 	// Distinct referencing records (the index has one row per relation edge;
 	// a record referencing the host twice must list once).

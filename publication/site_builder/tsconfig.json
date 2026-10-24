@@ -19,6 +19,6 @@
     // rewritten: an alias nothing uses is a resolution rule that can only
     // surprise the next reader.
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  "include": ["src/**/*.ts", "tests/**/*.ts", "deploy/probes/**/*.ts"],
   "exclude": ["node_modules", "templates"]
 }

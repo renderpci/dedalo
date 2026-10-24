@@ -61,12 +61,11 @@
  */
 
 import { readdirSync, readlinkSync, renameSync } from 'node:fs';
-import { readFileSync } from 'node:fs';
 import { basename, dirname, join, relative, sep } from 'node:path';
 
 import { parseEnvFile } from '../env_file';
 import type { ProvisionIo } from './apply';
-import { hostIo } from './apply';
+import { hostIo, readRegularFile } from './apply';
 import { MARKER_MODE, markedRoots, markerPath } from './plan';
 import {
   INSTANCE_MARKER,
@@ -128,11 +127,9 @@ export function adoptIo(): AdoptIo {
   const base = hostIo();
   return {
     readInstanceMarker(root: string): string | null {
-      try {
-        return readFileSync(join(root, INSTANCE_MARKER), 'utf8').trim() || null;
-      } catch {
-        return null;
-      }
+      // The same never-blocking reader as every other provisioner read: the marker sits in
+      // 2770 SITES_ROOT, so a FIFO planted there reads as null (no marker), never a hung CLI.
+      return readRegularFile(join(root, INSTANCE_MARKER))?.trim() || null;
     },
     ...base,
     rename(from: string, to: string): void {

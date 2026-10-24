@@ -39,6 +39,7 @@
  *                     which logs + continues. The dd1574 copy still carries it.
  */
 
+import { getComponentModel } from '../components/registry.ts';
 import type { MatrixJsonbColumn, MatrixRecord } from '../db/matrix.ts';
 import { assertMatrixTable, MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
@@ -51,6 +52,7 @@ import {
 	getModelByTipo,
 } from '../ontology/resolver.ts';
 import { isOwnFrame, splitComposed } from '../relations/dataframe_slots.ts';
+import { maskSecretItems } from '../resolve/component_data.ts';
 import {
 	injectColumnData,
 	injectComponentData,
@@ -272,6 +274,13 @@ function bulkProcessValue(stored: number | null | undefined): number {
  * is the section_id PK) have nowhere to land — injecting would throw. PHP
  * set_component_data logs + continues past them; the dd1574 copy still
  * carries the data.
+ *
+ * A CREDENTIAL row (the model's `secretValue`, e.g. component_password) is
+ * masked HERE, before either copy lands: the raw dd1574 cell is a component_json
+ * the display mask never sees, so it would serve the stored hash verbatim to
+ * every reader of the row, admin included (WC-2026-09-30-password-hash-never-served
+ * names the Time Machine history). Restore reads matrix_time_machine itself,
+ * never this display record.
  */
 async function injectComponentSnapshot(
 	record: MatrixRecord,
@@ -279,11 +288,17 @@ async function injectComponentSnapshot(
 	sourceModel: string | null,
 	declaredSlots: readonly string[],
 ): Promise<void> {
-	const dataParsed = snapshotItems(row.data);
+	const stored = snapshotItems(row.data);
+	const dataParsed = isSecretModel(sourceModel) ? maskSecretItems(stored) : stored;
 	await injectTmField(record, TM_COLUMN_DATA, dataParsed);
 	if (!hasStorableColumn(sourceModel) || sourceModel === DATAFRAME_MODEL) return;
 	injectComponentData(record, row.tipo, sourceModel, splitComposed(dataParsed).main);
 	await injectSnapshotSlots(record, row.tipo, dataParsed, declaredSlots);
+}
+
+/** Whether the row's component is a credential (descriptor `secretValue`). */
+function isSecretModel(model: string | null): boolean {
+	return model !== null && getComponentModel(model)?.secretValue === true;
 }
 
 /** A per-component snapshot as items (PHP coerces a non-array datum to [datum]). */

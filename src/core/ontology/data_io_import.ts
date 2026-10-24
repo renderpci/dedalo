@@ -47,7 +47,12 @@ import { createGunzip } from 'node:zlib';
 import { z } from 'zod';
 import { readEnv } from '../../config/env.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
-import { connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
+import {
+	connFromConfig,
+	type DbConnDescriptor,
+	runPsql,
+	runPsqlScript,
+} from '../install/pg_exec.ts';
 import { isSafeSectionTipo, safeTld } from './data_io.ts';
 import { DATA_NOLAN, ONTOLOGY_TLD } from './ontology_tipos.ts';
 import { requiredOntologyTld } from './tld.ts';
@@ -579,10 +584,10 @@ export async function importFromCopyFile(
 		}
 
 		// -- sequence bump (PHP parity; non-fatal)
-		const setval = await runPsql(conn, [
-			'-c',
+		const setval = await runPsqlScript(
+			conn,
 			`SELECT setval('${options.matrixTable}_id_seq', (SELECT MAX(id) FROM "${options.matrixTable}")+1);`,
-		]);
+		);
 		if (setval.exitCode !== 0) {
 			console.warn(`[data_io_import] sequence bump failed (non-fatal): ${setval.stderr.trim()}`);
 		}
@@ -611,9 +616,8 @@ export async function consolidateSectionCounter(
 ): Promise<boolean> {
 	if (!isSafeSectionTipo(sectionTipo) || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(matrixTable))
 		return false;
-	// psql performs NO variable interpolation with -c (only via -f or interactively),
-	// so the already-validated tipo is inlined directly rather than passed as :'tipo'
-	// (which would reach the server literally and fail with "syntax error at or near :").
+	// The already-validated tipo is inlined as a quoted literal (psql never
+	// substitutes inside one) — no `-v tipo=` variable for a one-statement script.
 	// High-water mark, not MAX(live section_id) — see hierarchy_import and
 	// matrix_write.ts counterFloorExpression (P0-14): a counter row this CREATES
 	// must not restart inside the ids of records deleted before the import.
@@ -622,7 +626,7 @@ SELECT live.section_tipo,
        GREATEST(live.max_id, COALESCE((SELECT MAX(tm.section_id) FROM matrix_time_machine tm WHERE tm.section_tipo = live.section_tipo), 0))
   FROM (SELECT section_tipo, MAX(section_id) AS max_id FROM "${matrixTable}" WHERE section_tipo = '${sectionTipo}' GROUP BY section_tipo) live
 ON CONFLICT (tipo) DO UPDATE SET value = GREATEST(matrix_counter.value, EXCLUDED.value);`;
-	const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', sql]);
+	const run = await runPsqlScript(conn, sql);
 	return run.exitCode === 0;
 }
 
@@ -696,11 +700,11 @@ export async function normalizeOntologyTld(
      AND ("string"->'${ONTOLOGY_TLD}'->0->>'value') IS DISTINCT FROM '${tld}'
   RETURNING 1
 ) SELECT count(*) FROM upd;`;
-	// `-X`: a server-side ~/.psqlrc (\timing, \pset …) prints banners on STDOUT,
-	// which is the only thing this function reads. Without it a developer's rc
-	// file turned a successful rewrite into an unparseable count — and, before
-	// the callers were made fatal, into a silently skipped normalization.
-	const run = await runPsql(conn, ['-X', '-v', 'ON_ERROR_STOP=1', '-t', '-A', '-c', statement]);
+	// runPsqlScript's `-X`: a server-side ~/.psqlrc (\timing, \pset …) prints banners
+	// on STDOUT, which is the only thing this function reads. Without it a developer's
+	// rc file turned a successful rewrite into an unparseable count — and, before the
+	// callers were made fatal, into a silently skipped normalization.
+	const run = await runPsqlScript(conn, statement, { flags: ['-t', '-A'] });
 	if (run.exitCode !== 0) return null;
 	const rewritten = Number.parseInt(run.stdout.trim(), 10);
 	return Number.isFinite(rewritten) ? rewritten : null;

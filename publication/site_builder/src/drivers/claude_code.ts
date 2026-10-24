@@ -276,6 +276,19 @@ export async function writeMcpConfig(opts: SessionStartOptions): Promise<string>
   );
 }
 
+/**
+ * CLAUDE CODE'S OWN OFF-PLAN TRAFFIC, turned OFF — by the DRIVER, in EVERY mode: the
+ * auto-updater (which would replace the binary the probe proved, under a turn) and the
+ * non-essential traffic (telemetry, error reporting — hosts no plan names). These lived only in
+ * the confined run's egress keys (`childEgressEnv`), which a declared-`none` turn never gets: a
+ * `none` claude_code turn ran with both on, the same gap `OPENCODE_TRAFFIC_SWITCHES` closed for
+ * opencode. Merged at the supervisor's one merge point (the plan's `env` wins over the caller's).
+ */
+export const CLAUDE_TRAFFIC_SWITCHES: Readonly<Record<string, string>> = Object.freeze({
+  CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+  DISABLE_AUTOUPDATER: '1',
+});
+
 /** The per-turn seams: the binary and how it is probed. Production states neither. */
 export interface ClaudeTurnSeams {
   readonly bin?: string;
@@ -296,6 +309,7 @@ export function claudeTurnSetup(opts: SessionStartOptions, seams: ClaudeTurnSeam
     return {
       argv: claudeTurnArgv({ bin, prompt: opts.prompt, mcpConfigPath, brief, resumeToken: opts.resumeToken }),
       parseLine: parseStreamJsonLine,
+      env: { ...CLAUDE_TRAFFIC_SWITCHES },
       // Through the no-follow door: a turn can rename `.builder` away and plant a link in its
       // place, and a path-based rm then unlinked `mcp.json` in whatever directory it named.
       cleanup: () => removeFilePrivate(config.SITES_ROOT, relativeUnderRoot(config.SITES_ROOT, mcpConfigPath)),

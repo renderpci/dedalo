@@ -74,6 +74,10 @@ import {
 	resolveOwnUserRecordPermission,
 } from '../security/permissions.ts';
 import type { LaneValue, RowLaneState } from '../tm_record/lane_state.ts';
+import {
+	currentTimeMachineScopeSection,
+	isTimeMachineRead,
+} from './list_definitions/tm_scope_context.ts';
 import { pickReadSource } from './read_source.ts';
 import { prefetchRecords } from './record_loader.ts';
 
@@ -110,18 +114,13 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 	// browse included: its PRESENCE is the `data_source === 'tm'` signal, its
 	// SECTION is the authorization input, and an absent section (the bare browse)
 	// is the fail-closed "admin only" answer.
-	if ((rqo.sqo as { mode?: string } | undefined)?.mode === 'tm') {
-		const [{ resolveTimeMachineScopeSection }, { runWithTimeMachineScope }] = await Promise.all([
-			import('./list_definitions/time_machine_list.ts'),
-			import('./list_definitions/tm_scope_context.ts'),
-		]);
-		const scope = resolveTimeMachineScopeSection(rqo.sqo as Record<string, unknown> | undefined);
-		return runWithTimeMachineScope(scope.sectionTipo, () =>
-			runWithRecordMemo(() => readSectionScoped(rqo, principal)),
-		);
-	}
-
-	return runWithRecordMemo(() => readSectionScoped(rqo, principal));
+	// The API handlers open the same scope around their whole body (Gate A
+	// included — WC-2026-10-22-tm-scope-whole-request); this re-open is the
+	// same answer from the same SQO, kept for the direct callers.
+	const { withTimeMachineReadScope } = await import('./list_definitions/time_machine_list.ts');
+	return withTimeMachineReadScope(rqo.sqo, () =>
+		runWithRecordMemo(() => readSectionScoped(rqo, principal)),
+	);
 }
 
 /**
@@ -151,6 +150,58 @@ function stripSessionSqoStamp(
 		}
 	}
 	return context;
+}
+
+/**
+ * The stored session SQO a read may inherit from. The rule: the session never
+ * widens a Time Machine read (`sqo.mode 'tm'`) past the scope the §7.4 gate
+ * admitted — and the gate judged the SQO the client SENT, before this merge.
+ *
+ *   - A PER-SECTION scope is open (the client named section S): the read
+ *     inherits NO scope-bearing key (`filter`, `filter_by_locators`). A stored
+ *     pin naming another section (an earlier admitted read, a grant revoked
+ *     since, pins a plain read stored under the same callerTipo) would otherwise
+ *     replace S after the gate (WC-2026-10-22-tm-scope-whole-request, review r1
+ *     addendum). Pagination keys (order/limit/offset) still ride the session.
+ *   - UNSCOPED (the standalone dd15 browse: no filter sent, or none yet): the
+ *     gate admitted the global admin only — there is no per-section scope to
+ *     widen, so the admin's saved TM search is his own navigation and is
+ *     inherited whole (else a reload lost it and the persist below overwrote
+ *     the stored SQO with the bare one). Anyone else, or no TM scope open at
+ *     all, keeps the strip — fail-closed.
+ *
+ * The row/count backstop (read_tm assertTmWhereInOpenedScope) still refuses any
+ * WHERE outside a per-section scope, whatever produced it.
+ */
+const TM_SCOPE_SQO_KEYS = ['filter', 'filter_by_locators'] as const;
+function sessionSqoForMerge(
+	clientSqo: Rqo['sqo'],
+	storedSqo: unknown,
+	principal: Principal | undefined,
+): unknown {
+	const sqo = clientSqo as { mode?: unknown } | undefined;
+	if (sqo?.mode !== 'tm' || isUnscopedAdminTmBrowse(principal)) return storedSqo;
+	return withoutTmScopeKeys(storedSqo);
+}
+
+/** A copy of the stored SQO minus its scope-bearing keys (a non-object passes through). */
+function withoutTmScopeKeys(storedSqo: unknown): unknown {
+	if (storedSqo === null || typeof storedSqo !== 'object' || Array.isArray(storedSqo)) {
+		return storedSqo;
+	}
+	const inheritable = { ...(storedSqo as Record<string, unknown>) };
+	for (const key of TM_SCOPE_SQO_KEYS) delete inheritable[key];
+	return inheritable;
+}
+
+/**
+ * The unscoped dd15 browse, read by whom its gate admits: a TM read scope is
+ * open WITHOUT a section, and the principal is a global admin (or there is no
+ * request principal — an internal caller, which no gate judges).
+ */
+function isUnscopedAdminTmBrowse(principal: Principal | undefined): boolean {
+	if (!isTimeMachineRead() || currentTimeMachineScopeSection() !== undefined) return false;
+	return principal === undefined || principal.isGlobalAdmin;
 }
 
 async function readSectionScoped(rqo: Rqo, principal?: Principal): Promise<ReadResult> {
@@ -1282,33 +1333,34 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		}
 		return literalData as DataItem[];
 	}
-	// Client-managed paging: the paginator rqo carries sqo.limit/offset, and
-	// PHP sanitize_client_sqo CLAMPS the limit — 0/'all'/out-of-range → the
-	// client ceiling (show-all becomes limit 1000 in the response pagination).
-	// A NULL limit is NOT show-all: the real client sends sqo.limit:null on
-	// every tool-component read meaning "server decides" (common.js "force to
-	// generate default limit from server") — PHP answers with the component's
-	// config limit (wire-pinned 2026-07-10: the epigraphy coins read with
-	// limit:null pages at the override's 1, not 1000). Treating null as 0
-	// clamped every tool portal to the full list — the 34-coins bug.
-	const { CLIENT_MAX_LIMIT } = await import('../concepts/sqo.ts');
+	// Client-managed paging: the paginator rqo carries sqo.limit/offset — a
+	// CLIENT page, bounded HERE by the ONE page primitive (clampClientPage,
+	// READ-4), never by trusting that the wire schema bounded it first: save's
+	// echo hands this door a limit read from `data.pagination`, which no sqo
+	// schema ever parsed. 0/'all'/out-of-range → the client ceiling (show-all
+	// becomes the ceiling in the response pagination); a negative / non-numeric
+	// offset → 0, one past any page (1e21) → an empty page, never a raw sink
+	// refusal.
+	// A NULL (or absent) limit is NOT show-all: the real client sends
+	// sqo.limit:null on every tool-component read meaning "server decides"
+	// (common.js "force to generate default limit from server") — PHP answers
+	// with the component's config limit (wire-pinned 2026-07-10: the epigraphy
+	// coins read with limit:null pages at the override's 1, not 1000). So the
+	// DOOR DEFAULT is maxRowsPerPage (clamped too); treating null as 0 clamped
+	// every tool portal to the full list — the 34-coins bug.
+	// Gate: client_page_doors_native (every member bounds its OWN page).
+	const { clampClientPage } = await import('../concepts/sqo.ts');
 	const rawLimit = rqo.sqo?.limit;
-	const parsedLimit =
-		typeof rawLimit === 'number'
-			? rawLimit
-			: rawLimit == null
-				? dedaloConfig.features.maxRowsPerPage
-				: 0;
-	const limit =
-		!Number.isFinite(parsedLimit) || parsedLimit <= 0 || parsedLimit > CLIENT_MAX_LIMIT
-			? CLIENT_MAX_LIMIT
-			: parsedLimit;
-	const sqoOffset = typeof rqo.sqo?.offset === 'number' ? rqo.sqo.offset : 0;
+	const { limit, offset: sqoOffset } = clampClientPage(
+		rawLimit,
+		rqo.sqo?.offset,
+		sectionTipo,
+		dedaloConfig.features.maxRowsPerPage,
+	);
 
 	// relation_index: COMPUTED inverse page (offset-aware) + pool-accumulated
 	// related_list children — its own flow, no stored locators to expand.
 	if (model === 'component_relation_index') {
-		const offset = typeof rqo.sqo?.offset === 'number' ? rqo.sqo.offset : 0;
 		const { readRelationIndexData } = await import('../relations/models/relation_index.ts');
 		// related_list children resolve in the CURRENT data lang (PHP
 		// DEDALO_DATA_LANG, seeded from the session), independent of the rqo lang
@@ -1320,7 +1372,7 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 			sectionTipo,
 			String(sectionId),
 			limit,
-			offset,
+			sqoOffset,
 			currentDataLang(),
 			emitDdoData,
 			source.mode ?? 'edit',
@@ -2126,11 +2178,23 @@ export async function readSectionRows(
 	// never reaches emitDdoData — client-sent maps included (the config-build
 	// gates only shape the server-derived default map). Admin-flagged users go
 	// through the matrix too (PHP parity); superuser passes via getPermissions.
+	// A Time Machine (dd15) read judges EVERY ddo in dd15, whatever parent the
+	// client names: emitTmRow reads each cell from the virtual dd15 record by
+	// tipo alone, so the parent the gate judges must be the record the value
+	// comes from — the dd15 floor (the (scope section, component) pair), the
+	// same parent buildTmContext's authorizedTmColumns judges. Otherwise a
+	// rule-granted parent (dd655 preset, dd1324 tools register, a public list)
+	// re-authorized a level-0 component's past values. Keyed on what picks the
+	// read source (sqo.mode 'tm' → tmReadSource), not only on the request
+	// source: a forged source naming another section still reads dd15 rows.
+	const readsTimeMachine =
+		rqo.sqo?.mode === 'tm' || (source.section_tipo ?? callerTipo) === TIME_MACHINE_SECTION_TIPO;
 	if (principal !== undefined) {
 		const authorized: Ddo[] = [];
 		for (const ddo of ddoMap) {
-			const gateSection =
-				ddo.section_tipo === undefined || ddo.section_tipo === 'self'
+			const gateSection = readsTimeMachine
+				? TIME_MACHINE_SECTION_TIPO
+				: ddo.section_tipo === undefined || ddo.section_tipo === 'self'
 					? (source.section_tipo ?? callerTipo)
 					: ddo.section_tipo;
 			if (await ddoIsAuthorized(principal, gateSection, ddo.tipo)) authorized.push(ddo);
@@ -2156,7 +2220,10 @@ export async function readSectionRows(
 		const { currentRequestContext } = await import('../security/request_context.ts');
 		const storedSqo = currentRequestContext()?.session?.sqoSession?.[callerTipo];
 		if (storedSqo !== undefined) {
-			mergeSessionSqo(rqo.sqo as Record<string, unknown>, storedSqo);
+			mergeSessionSqo(
+				rqo.sqo as Record<string, unknown>,
+				sessionSqoForMerge(rqo.sqo, storedSqo, principal),
+			);
 		}
 	}
 
@@ -2349,6 +2416,7 @@ export async function readSectionRows(
 			callerTipo,
 			emission,
 			emitDdo: emitDdoData,
+			principal,
 		});
 	}
 	return emission.items;

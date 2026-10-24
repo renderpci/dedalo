@@ -102,3 +102,14 @@
   action's parsed window bounded), `test/unit/search_related_page_window_native.test.ts`
   (the sink's typed refusal), `test/unit/relation_list_grid_native.test.ts` (limit 0 =
   the ceiling, with the notice).
+
+## Addendum 2026-10-22 — the relation doors scope BEFORE the window
+
+Superseded in part by `WC-2026-10-22-related-search-one-scope` (owner decisions 2026-10-21,
+D1/D3): on `get_relation_list` / `related_search` the caller's scope now applies IN SQL
+BEFORE the window, so the *AUTHZ-05 note* above no longer holds for them — a non-admin's page
+is full while more of their records exist. The defaulted-notice probe is now
+`search_related.ts` `anyInverseReferencePast` over the SCOPED owner set (scoped by
+`record_scope.ts` `rowScopeFor`), not `findInverseReferencesPast` → `anyRowInScope` over the
+unscoped tail; `buildAnyRowInScopeSql` became `buildRowsInScopeSql` (the scoped rows, not a
+boolean). `get_indexation_grid` is unchanged (its groups are still scoped after the window).

@@ -74,6 +74,7 @@ import {
 	diffusionModelSet,
 	referencesOfRows,
 } from '../../src/core/ontology/ontology_references.ts';
+import { inspectOntology } from '../../src/core/ontology/ontology_state.ts';
 import {
 	DIFFUSION_MODEL_ROOT,
 	HIERARCHY_TLD,
@@ -148,6 +149,44 @@ function zzjc(): FixtureOntologyTld {
 		typologyName: 'Catalog',
 		// dependencies OMITTED: the older-server case
 		nodes: [{ id: 1, parent: 'zzjc0', model: 'zzjy3', term: 'zz orphan' }],
+	};
+}
+
+/**
+ * (h) A model CYCLE across two packages: zzjq's nodes take their model from zzjp (declared),
+ * and zzjp's node 3 takes its model from zzjq (NOT declared — the reverse edge of a cycle).
+ * Installed deps first, zzjp is derived while zzjq2 does not exist yet: its node 3 has
+ * `model` NULL until a second derive.
+ */
+function zzjp(): FixtureOntologyTld {
+	return {
+		tld: 'zzjp',
+		name: 'zz cycle provider',
+		typologyId: 8,
+		typologyName: 'Catalog',
+		dependencies: [{ tld: 'dd', main: 'ontology35', mandatory: true }],
+		nodes: [
+			{ id: 1, parent: 'zzjp0', model: coreModel, term: 'zz cycle models' },
+			{ id: 2, parent: 'zzjp1', model: coreModel, term: 'zz_model_p', isModel: true },
+			{ id: 3, parent: 'zzjp1', model: 'zzjq2', term: 'zz uses a later model' },
+		],
+	};
+}
+
+function zzjq(): FixtureOntologyTld {
+	return {
+		tld: 'zzjq',
+		name: 'zz cycle consumer',
+		typologyId: 8,
+		typologyName: 'Catalog',
+		dependencies: [
+			{ tld: 'dd', main: 'ontology35', mandatory: true },
+			{ tld: 'zzjp', main: 'ontology35', mandatory: true },
+		],
+		nodes: [
+			{ id: 1, parent: 'zzjq0', model: 'zzjp2', term: 'zz cycle root' },
+			{ id: 2, parent: 'zzjq1', model: coreModel, term: 'zz_model_q', isModel: true },
+		],
 	};
 }
 
@@ -557,6 +596,44 @@ describe('the installer ontology door (suite DB, zz TLDs)', () => {
 				String(existing.length + 1),
 			);
 			expect((await nonScratchCensus()).matrixDd).toBe(before.matrixDd);
+		});
+	});
+
+	test('(h) a model cycle settles in the SHARED layer: every model resolved, both tlds in sync, no installer re-derive', async () => {
+		// The installer once ran its own upsert-only re-derive (setRecordsInDdOntology
+		// wholeSection: no orphan sweep, no transaction, no projection lock) for exactly this
+		// case. Retired: the shared layer's pass 2 (deriveOntologyPackages, through
+		// rebuildOntology) is the ONE place the cross-package model fixpoint is reached —
+		// mutation-proven: with pass 2 disabled this leg is RED (nothing else settles zzjp3).
+		await guarded(async () => {
+			const dir = writePackage(
+				join(scratchDir('cycle'), 'ontology'),
+				buildOntologyPackage([zzjp(), zzjq()]),
+			);
+			const resolved = await resolveOntologyCatalog(
+				{ kind: 'local', path: dir },
+				{ allowedServers: [] },
+			);
+			const { closure, installed } = await installChosen(['zzjq'], resolved.catalog);
+			expect(closure.order).toEqual(['zzjp', 'zzjq']);
+			expect(installed.installed.map((item) => item.tld)).toEqual(['zzjp', 'zzjq']);
+			// the reverse edge resolved: zzjp3 was derived BEFORE zzjq2 existed
+			expect((await readDdOntologyRow('zzjp3'))?.model).toBe('zz_model_q');
+			expect((await readDdOntologyRow('zzjq1'))?.model).toBe('zz_model_p');
+			// no node of either tld left with a model it could resolve but did not
+			const unresolved = (await readDdOntologyReferenceRows(['zzjp', 'zzjq'])).filter(
+				(row) => row.model === null && row.model_tipo !== null,
+			);
+			expect(unresolved.map((row) => row.tipo)).toEqual([]);
+			for (const tld of ['zzjp', 'zzjq']) {
+				const state = await inspectOntology(tld);
+				expect({ tld, drift: state.drift, inSync: state.inSync }).toEqual({
+					tld,
+					drift: [],
+					inSync: true,
+				});
+			}
+			resolved.cleanup();
 		});
 	});
 });

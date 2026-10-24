@@ -532,6 +532,30 @@ describe('G-W1 — the relay’s own edges', () => {
 		expect(codeShape(body?.error).code).toBe('site_builder.failed');
 	});
 
+	test('a reason spelled like an Object.prototype key is UNKNOWN at both doors (G5): the fallback, never a prototype member', () => {
+		// The maps are plain objects: a lookup by `in` or by bare indexing would take `__proto__`,
+		// `constructor`, `toString`… as LISTED reasons and answer a function or Object.prototype as
+		// the code. Each is the daemon's text, not a reason this engine knows.
+		const PROTO = ['__proto__', 'constructor', 'toString', 'hasOwnProperty', 'valueOf'];
+		const control = wire.codeForProblem({ reason: 'slug_exists' }, 'site_builder.rejected');
+		const problems = Object.fromEntries(
+			PROTO.map((reason) => [reason, wire.codeForProblem({ reason }, 'site_builder.rejected')]),
+		);
+		const frames = Object.fromEntries(
+			PROTO.map((reason) => {
+				const projected = wire.projectStreamRecord(
+					`data: ${JSON.stringify({ seq: 1, ts: 't', body: { type: 'error', reason } })}`,
+				);
+				return [reason, records(`${projected ?? ''}\n\n`)[0]?.data?.body?.error?.code ?? '(none)'];
+			}),
+		);
+		expect({ control, problems, frames }).toEqual({
+			control: 'site_builder.slug_exists',
+			problems: Object.fromEntries(PROTO.map((reason) => [reason, 'site_builder.rejected'])),
+			frames: Object.fromEntries(PROTO.map((reason) => [reason, 'site_builder.failed'])),
+		});
+	});
+
 	test('a TRAILING error record with no terminator is projected, never flushed raw', async () => {
 		const produced = await setupDoor('confinement.identity_missing');
 		const { bytes } = await daemonBytes([

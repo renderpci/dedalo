@@ -9,7 +9,7 @@
  */
 
 import { setServerState } from '../resolve/server_state.ts';
-import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsqlScript } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
 /** The step's answer on the ONLY path that returns: sealed (every refusal throws). */
@@ -25,10 +25,11 @@ const PASSWORD_COMPONENT = 'dd133';
 /** Seal the install once the root user + password exist. */
 export async function installFinish(conn?: DbConnDescriptor): Promise<InstallFinishResult> {
 	const connection = conn ?? connFromConfig();
-	const probe = await runPsql(connection, [
-		'-tAc',
+	const probe = await runPsqlScript(
+		connection,
 		`SELECT coalesce(jsonb_array_length(string->'${PASSWORD_COMPONENT}'), 0) FROM matrix_users WHERE section_id = ${ROOT_SECTION_ID} AND section_tipo = '${USERS_SECTION_TIPO}'`,
-	]);
+		{ flags: ['-tA'] },
+	);
 	if (probe.exitCode !== 0 || probe.stdout.trim() === '') {
 		refuseInstall(
 			'install.state_conflict',

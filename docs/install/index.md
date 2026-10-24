@@ -123,19 +123,28 @@ The installer never installs Docker and never changes the firewall: it checks Do
 
 ## The pages
 
-- **[Trial](quickstart.md)** — the simple stack for an evaluation: plain HTTP, no media protection.
-- **[Production install](production.md)** — the recommended route: run the installer, then what each host step does and how to check or repair it by hand.
-- **[Install by hand](manual_install.md)** — the Production route without the installer: every host step as the commands and files it consists of, for administrators who install by hand, and for migrated v6 hosts.
+### Main installation methods
+
+- **[Production](production.md)** — the recommended route: run the installer, then what each host step does and how to check or repair it by hand.
 - **[Docker](docker.md)** — the full container stack, with the media gate.
-- **[Developer quickstart](dev_quickstart.md)** — a working Dédalo on your laptop.
-- **[Installer reference](installer_reference.md)** — every flag, the answers file, the plan and state files, resume and abort, plain mode, the host steps per route, the `.env` keys and the exit codes.
-- **[The web server site](reverse_proxy.md)** — what the installer writes for nginx and Apache, the media gate, and the settings that matter.
+- **[Simple](quickstart.md)** — the simple container stack for an evaluation: plain HTTP, no media protection.
+- **[Developer](dev_quickstart.md)** — a working Dédalo on your laptop.
+
+### Additional installation guides
+
 - **[Several instances on one host](multi_instance.md)** — the named-instance model and what instances share.
+- **[Install by hand](manual_install.md)** — the Production route without the installer: every host step as the commands and files it consists of, for administrators who install by hand, and for migrated v6 hosts.
+- **[A host set up by hand](manual_host.md)** — where a hand-built host differs and what to keep in mind.
+- **[Publication host agent](publication_host.md)** — optional: serve the public website and the Publication APIs from a separate server.
+- **[H.264 streaming module](install_h264_module.md)** — serve audiovisual fragments by time range.
+
+### Installation helpers
+
+- **[The web server site](reverse_proxy.md)** — what the installer writes for nginx and Apache, the media gate, and the settings that matter.
+- **[Installer reference](installer_reference.md)** — every flag, the answers file, the plan and state files, resume and abort, plain mode, the host steps per route, the `.env` keys and the exit codes.
 - **[Troubleshooting](troubleshooting.md)** — installer refusals, resume and abort, boot refusals, serving and media problems.
 - **[Upgrading](upgrading.md)** — the in-app code update, the runtime pin, boot migrations, retired keys, rollback.
 - **[Migrating a v6 install to v7](migrating_from_v6.md)** — the whole operator path from a v6 installation.
-- **[Publication host agent](publication_host.md)** — optional: serve the public website and the Publication APIs from a separate server.
-- **[H.264 streaming module](install_h264_module.md)** — serve audiovisual fragments by time range.
 
 ## After the install
 

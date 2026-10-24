@@ -4,6 +4,7 @@
 
 // imports
 import { ui } from '../../../../common/js/ui.js';
+import { last_run_text, schedule_text } from './reconcile_status_text.js';
 
 /**
  * RENDER_RECONCILE_STATUS
@@ -18,40 +19,6 @@ export const render_reconcile_status = function () {
 	// and the widget would resolve null (client_prototype_contract_tripwire).
 	return true;
 }; //end render_reconcile_status
-
-/**
- * SCHEDULE_TEXT
- * @param {string|Object} schedule - 'operator' | 'boot' | {everyMs}
- * @returns {string}
- */
-const schedule_text = (schedule) => {
-	if (schedule && typeof schedule === 'object' && schedule.everyMs) {
-		return `every ${Math.round(schedule.everyMs / 60000)} min`;
-	}
-	return String(schedule);
-}; //end schedule_text
-
-/**
- * LAST_RUN_TEXT
- * @param {Object|null} last_run
- * @returns {string}
- */
-const last_run_text = (last_run) => {
-	if (!last_run) {
-		return 'never (this process)';
-	}
-	if (last_run.error) {
-		return `${last_run.ranAt} FAILED: ${last_run.error}`;
-	}
-	return (
-		last_run.ranAt +
-		' ' +
-		(last_run.apply ? 'apply' : 'check') +
-		' — drift ' +
-		last_run.drift +
-		(last_run.apply ? `, applied ${last_run.applied}` : '')
-	);
-}; //end last_run_text
 
 /**
  * LIST
@@ -193,6 +160,23 @@ const get_content_data_edit = async (self) => {
 				button_check.classList.remove('button_spinner');
 			}
 		});
+		// APPLY only where THIS viewer may apply (row.can_apply — the registry's apply
+		// policy, WC-2026-09-03 addendum 2026-10-21): a refused or root-only apply is a
+		// disabled button that says why, never a click the server answers with a refusal.
+		if (item.can_apply !== true) {
+			const why =
+				item.apply === 'refused'
+					? 'Apply is not offered here'
+					: 'Only the root user can apply this reconcile';
+			ui.create_dom_element({
+				element_type: 'button',
+				class_name: 'light button_action reconcile_apply',
+				inner_html: 'Apply',
+				title: item.apply_reason ? `${why}: ${item.apply_reason}` : why,
+				parent: actions,
+			}).disabled = true;
+			continue;
+		}
 		const button_apply = ui.create_dom_element({
 			element_type: 'button',
 			class_name: 'light warning button_action reconcile_apply',

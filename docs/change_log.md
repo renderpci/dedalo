@@ -22,6 +22,17 @@ Merged since the last release; these ship with the next one.
 
 ### For users
 
+#### Security
+
+- **The change history of a password field no longer shows the stored password hash.**
+
+    The *Value* column of a record's change history showed, for each past change of a password field,
+    the stored (encrypted) password itself, to administrators and to any user allowed to read that
+    field. It now shows the mask `****************`, as the field does everywhere else. Restoring a
+    past password from the Time Machine is unchanged.
+
+    Wire contract: `WC-2026-09-30-password-hash-never-served`.
+
 #### Removed
 
 - **The hidden 'Calm Scholarly' design preview is removed.**
@@ -298,6 +309,15 @@ Merged since the last release; these ship with the next one.
     regenerated: one **Regenerate files** click in the media versions tool clears it,
     and the record then shows the normal empty placeholder.
 
+- **Turning pages in *Latest changes* no longer fails with a permission error for users who are not administrators.**
+
+    A user allowed to see a section's change history could open the inspector's *Latest changes*,
+    but moving to the next page of the list answered with a permission error. History lists are
+    read-only, so they no longer take part in field locking at all, and paging through them works for
+    every user the profile allows.
+
+    Wire contract: `WC-2026-10-23-own-lock-cleanup-ungated`.
+
 - **The image vector editor now deletes shapes and layers reliably**
 
     Deleting a selected shape with Delete/Backspace did nothing when several shapes
@@ -315,6 +335,15 @@ Merged since the last release; these ship with the next one.
     broken-image placeholder. The drawing was saved correctly all along; only the
     editor's live view lost the image until the record was reloaded. Switching the
     image quality now also keeps working on images that carry a vector drawing.
+
+- **The acquisition tools no longer start an import while a new Preview is loading**
+
+    In the auction-catalogue and journal acquisition tools, clicking **Preview** again
+    left the previous review on screen, with its **Confirm import** still enabled,
+    until the new preview arrived. An import started in that moment was then hidden by
+    the new review, and the new review's **Confirm import** could start a second import
+    beside the first. The previous review now disappears as soon as you click
+    **Preview**, and **Confirm import** does nothing while a preview is loading.
 
 - **Remove background works again in the image rotation tool.**
 
@@ -336,6 +365,133 @@ Merged since the last release; these ship with the next one.
     `preprocessor_config.json`, `onnx/model.onnx`) to `<private>/ai_models/`. Until it
     is there the tool says so plainly instead of hanging.
 
+- **Unpublishing every record of an RDF, XML or Markdown publication now also removes its combined file and ZIP**
+
+    An RDF, XML or Markdown publication writes one file per record. It also writes a
+    combined document (RDF and XML only) and a ZIP archive, both built from the records
+    the run published. If a run published nothing, for example because every record in
+    it had been unpublished, the run removed the per-record files but kept the combined
+    document and the ZIP from the previous run. Those files still held the unpublished
+    records, so anyone could still download them from the public files directory. The
+    run still reported that it had completed. Now a run that publishes no records
+    removes the previous combined document and ZIP as well.
+
+- **A refused side panel no longer takes over the whole page.**
+
+    When a part of the page that a user may not open — for example a history block in the
+    inspector — was refused, the whole page switched to the "You don't have permission to access
+    this page" panel and stayed there: every other block showed the same panel and navigating
+    elsewhere did not recover. The refusal now stays inside the part that was refused, the rest of
+    the page keeps working, and moving to another section clears a page-level refusal. See
+    [errors](./core/system/errors.md).
+
+- **The References panel and its graph open for every user who can read the record, and their page counts add up**
+
+    A user who was not the superuser got *Insufficient permissions* when opening a
+    record's References panel or its relations graph, even with read access to the
+    record. They now open for anyone who can read the record, listing only the
+    referring records that user may see. The total shown by the panel's paginator
+    now matches its pages: before, a user who could not see some referring records
+    got short pages and could never reach the total, and counting those records grew
+    slower with every record the user could not see. See
+    [relation_list](./core/ontology/relation_list.md).
+
+    Wire contract: `WC-2026-10-22-related-search-one-scope`.
+
+- **Users who are allowed to see a section's change history can open *Latest changes* and *Component history* again.**
+
+    A user who is not an administrator but whose profile grants a section's history list got a
+    permission error in the inspector's *Latest changes* and *Component history*. The history now opens for every user the profile allows, also when the
+    history list sits inside a group of the section. Users without that permission no longer see the
+    two blocks at all, and a block that cannot load shows one short line inside the block instead of a
+    full-page error. The record counter of a history list follows the same permission.
+    The history follows the same rule as the Time Machine tool: a user allowed to see a section's
+    history sees the changes of every record of that section, also of records outside their projects
+    and of deleted records.
+    The history never shows the past values of a field the user's profile does not let them read on
+    the record: those cells stay empty, the rest of the change (who, when, which field) is shown.
+
+    Wire contract: `WC-2026-10-22-tm-scope-whole-request`.
+
+- **The acquisition tools no longer let you start a second import while the first one's outcome is unknown**
+
+    In the auction-catalogue and journal acquisition tools, **Confirm import** stays
+    disabled while the server has not said what an import did. Three ways around that
+    could still start a second import beside the first:
+
+    - Running **Preview** again replaced the review, including its disabled **Confirm**,
+      with a new one you could click. **Preview** is now disabled until the import's
+      outcome is known, or until you choose to try again.
+    - An import that ended without saying what it did turned **Confirm** back on by
+      itself. That happens when the server process running it stopped, when it was
+      stopped partway, or when the server could no longer find it. The panel now shows
+      the server's own message, asks you to check the records, and turns **Confirm**
+      back on only when you say so.
+    - **Check my jobs** offered "It did not start: allow a new attempt" even when it
+      listed an import of the same kind that had just finished, which might be the one
+      you started. You now open that import first to see what it did. When no import of
+      that kind is running or finished recently, the button now says only that, and
+      leaves the decision to you.
+
+- **The acquisition tools no longer go silent when a job's progress is lost, and the move panels show a refused run.**
+
+    In the auction-catalogue and journal acquisition tools, if the connection that
+    reports a preview's or an import's progress dropped before the job finished, the
+    panel showed nothing more and re-enabled its button, although the job could still be
+    running on the server. Clicking again could start a second import beside the first.
+    The panel now says that it lost the job's status and that the job may still be
+    running, keeps the button disabled, and offers **Check again**, which reconnects to
+    the same job.
+
+    In the auction-catalogue tool's company picker, a slow first search for the auction
+    house could answer after a newer search you had typed, and replace your choice of
+    Entity with the old one. Only the latest search now counts. A search that fails is
+    shown as an error, not as "no candidates" with *Create new Entity* already selected.
+    **Confirm** also waits until the Entity is chosen, so an import never drops the
+    auction's company link without telling you.
+
+    In the maintenance move panels (move TLD, language, locators, to portal, to table),
+    a run the server refused, for example because of a bad option, used to show nothing
+    in the panel. The panel now shows the reason, the server's own sentence, and the
+    request id.
+
+    For developers: with `SHOW_DEBUG` on, the browser console's request line now lists
+    only the names of a request's options and hides their values. Before, it hid only
+    some secret keys and printed the login password.
+
+- **The acquisition tools show why a preview or an import failed, instead of "Done."**
+
+    In the auction-catalogue and journal acquisition tools, a preview or an import that
+    failed on the server was reported as "Done.", and the panel then stopped responding
+    for that run. Pasting a URL the tool does not support, a page that could not be
+    read, or an import the server refused all looked like a success.
+
+    The panel now shows the reason, in your language, with the server's own sentence
+    when it says more — for example *Only OAI-PMH journal/repository URLs are supported
+    right now.* If your session expired while the job was running, the login window
+    opens. A job you stopped is no longer reported as done either: the panel says it
+    ended without a result.
+
+    The per-record lines of an import summary state their failures the same way.
+
+    In the maintenance move panels (move TLD, language, locators, to portal, to table),
+    when two previews of the same files run at once, only the latest one can now reveal
+    the Execute button. Before, an older clean preview could reveal it after your newer
+    preview had failed.
+
+- **A record restored from an archive no longer shows the history of a deleted record that had the same id.**
+
+    Restoring an archive re-creates each record with the id it had when it was archived. If
+    this installation once held a different record with that id, deleted since, the restored
+    record's history used to list that deleted record's changes as if they were its own, and
+    they could be restored onto it. A restored record's history now starts with the restore,
+    as it already did for records imported with an explicit id. The deleted record's history
+    is kept.
+
+- **The assistant's find-or-create no longer duplicates a record under concurrent calls**
+
+    When two assistant requests asked for the same record at the same moment (find it by its fields, or create it), both could miss it and both create it, leaving two records with the same identity. The search is now asked again under a lock before anything is created, so the second request finds the record the first one created.
+
 - **The "Report a problem" tab only appears for users whose profile grants the error-report tool.**
 
     An administrator whose profile does not include **Error report** still saw the purple "Report a problem" tab on the right edge; clicking it only answered "The tool is not active or not authorized for your user".
@@ -343,6 +499,36 @@ Merged since the last release; these ship with the next one.
     The server now tells the page whether the tool is granted (no extra request), and the tab shows only then, so it appears exactly for the users who can use it: those whose profile includes the tool, and the superuser. To give an administrator the tab, add **Error report** to their profile's tools.
 
     Wire contract: `WC-2026-10-21-error-report-granted`.
+
+- **Stopping a background export now stops it at once, even while its record selection is still being computed.**
+
+    Pressing Stop on a background export used to wait until the database had finished computing
+    the export's whole record selection — on a large selection, minutes in which the export kept a
+    database connection busy for nothing. Now Stop (and the export lane's deadline, and a server
+    restart) interrupts that computation in the database itself: the export ends as stopped
+    straight away and its connection is freed.
+
+    Wire contract: `WC-2026-10-11-export-buffered-cap-and-admission`.
+
+- **The acquisition tools and move panels no longer re-enable an action when the server did not confirm whether the job started.**
+
+    In the auction-catalogue and journal acquisition tools, a preview or an import
+    whose start the server never confirmed (the request timed out, the connection
+    dropped, or the server answered that the same request was still in progress or
+    its outcome was unknown) used to re-enable **Confirm** as if it had been refused.
+    Clicking again could start a second import beside the first. The panel now says
+    the job may be running and keeps the button disabled. **Check my jobs** lists your
+    jobs of this kind: **Show this job** follows the one that started, and a new attempt
+    is offered only when none of them is running or queued.
+
+    The action buttons are now truly disabled while a job runs, so the keyboard can no
+    longer start the same job twice. A job status that falls silent, or stops halfway
+    through, is declared lost after 15 seconds, with **Check again** to reconnect to the
+    same job.
+
+    In the maintenance move panels (move TLD, language, locators, to portal, to table),
+    a run whose start the server did not confirm is no longer shown as refused: the
+    panel says it may have started and asks you to check before running it again.
 
 - **The reference picker of a text area separates the term and its thesaurus part (… | …), instead of gluing them.**
 
@@ -357,6 +543,22 @@ Merged since the last release; these ship with the next one.
     Reusing a reference (the *Reuse tag* list) is also clearer and safer: each entry shows its tag number and an icon, selecting one shows its term in the *New tag* field, and deleting or moving one of several text fragments that share a reused reference no longer unlinks the term the other fragments still point at. A reused reference also takes the label of the reference it reuses.
 
     Draw tags: *Apply* in the draw tag picker saves the chosen term again (it failed before), and *Delete* no longer fails on a record without draw links.
+
+- **Update cache never overwrites an edit saved while it runs**
+
+    *Update cache* regenerates a field by saving its current value again. It used to read each
+    record once, at the start of that record's turn, and save that copy later, possibly
+    minutes later when a media field of the same record was rebuilt first. A change someone
+    saved to the field in between was silently replaced by the old value, and a record deleted
+    in between was brought back. Now each field is read and saved again in one step, with the
+    record locked, so a change saved meanwhile is kept and a deleted record stays deleted. A
+    record that stays locked by someone else is skipped and listed, and a re-save the system
+    refuses is listed instead of being counted as done.
+    A record whose stored value the system refuses to save again (for example an old value in
+    a shape the field no longer accepts) is now listed and left untouched, and the run goes on
+    with the next record: it used to stop the whole run at that record.
+
+    Wire contract: `WC-2026-10-21-update-cache-locked-resave`.
 
 - **Translatable fields in tool forms show the value in your data language, not always in Spanish**
 
@@ -685,6 +887,53 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **SQL the engine runs through psql no longer appears on the psql command line**
+
+    Several maintenance and installation doors (ontology import and export, ontology
+    update snapshots, thesaurus export, the restore door, the installer's probes and
+    the seed compiler) passed their SQL to `psql` as a command-line argument. Any
+    local user could read those statements in the process list while they ran, and on
+    Linux a statement over 128 KiB failed to start at all (`E2BIG`). The SQL now
+    reaches `psql` on its standard input; the command line carries only connection
+    and output options. The terminal installer's host-preparation plan keeps its
+    short catalog probes on the command line, where its Review shows them.
+
+- **A user can only assign a record to projects they belong to**
+
+    The *Projects* field lists only the projects the logged user belongs to, but the
+    server used to store any project it was sent. A modified or out-of-date request
+    could therefore place a record in a project the user is not a member of, or, on
+    a user's own *Projects* field, grant a project the editor cannot see. Saving now
+    refuses a project the user is not a member of with a message, and nothing is
+    stored. Global administrators can still assign any project. Projects already on a
+    record, including those added by colleagues in other projects, are never removed
+    by this check. See [component_filter](./core/components/component_filter.md#security-model).
+
+    Wire contract: `WC-2026-10-22-filter-project-pick-membership`.
+
+- **Site builder: a Claude Code turn turns off its auto-updater and telemetry in every confinement mode, not only when confined**
+
+    A site builder turn run by Claude Code now always starts the agent with its
+    auto-updater and its non-essential traffic (telemetry, error reporting) switched
+    off. Before, those two switches were applied only to a turn confined under its
+    site identity: on an instance declared `AGENT_CONFINEMENT=none`, a Claude Code
+    turn ran with the auto-updater on — which could replace the very binary the
+    daemon had checked before the turn — and sent traffic to hosts the instance's
+    plan does not name. opencode turns already had their equivalent switches in
+    every mode. Nothing to configure.
+
+- **Site builder: `provision remove` and `provision adopt` can no longer be hung by a pipe planted at a turn HOME's `.gitconfig`, a site's `site.json` or an instance marker**
+
+    The site builder provisioner reads a few files that an agent or a site
+    identity can write — a turn HOME's `.gitconfig` when an instance is removed, a
+    site's `site.json` and the instance marker (`.dedalo_site_instance`) at the
+    root of an install when it is adopted. A named pipe planted at any of those
+    names made the root command wait forever. Those reads now open without waiting
+    and read only a regular file; anything else is treated as unreadable (a marker
+    that is not a regular file counts as no marker), which each command already
+    reports. Regular files — including an operator's symlinked password file — are
+    read as before.
+
 - **Bun no longer fetches packages by name outside the lockfile.**
 
     Running a Bun command in a checkout where `bun install` had not been run let
@@ -969,11 +1218,398 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Aborting an install (`--abort`) no longer fails with a deadlock when something else is connected to its database.**
+
+    When `--abort` (or a reinstall over an aborted install) resets the install's database, any
+    other session still connected to that database — a server left running, an open `psql`, a
+    monitoring tool — could hold a table the reset had to drop. The reset then failed with
+    `deadlock detected`, or waited indefinitely behind a session idle in a transaction.
+
+    The reset now ends every other session on **that database only** (never another database,
+    never the installer's own lock) before it starts, waits until they are gone, and runs again
+    when the server still picks it as a deadlock victim or a lock wait times out — up to four
+    times, each attempt one transaction that rolls back whole. If it still cannot finish, it
+    stops with a line naming the reason and any session the installer's database role is not
+    allowed to end ([Troubleshooting](./install/troubleshooting.md)); when it completes despite
+    such a session, its result line names that session too.
+
+- **The installer no longer crashes when a check's helper process stops before reading its request.**
+
+    Each installer check (System, database, mail, …) runs in a helper process of its own. If that
+    process stopped before reading what it was asked to check — failing at start, or stopped at its
+    time limit — the installer itself could exit with a "broken pipe" error. The check now simply
+    fails, with a sentence saying the helper did not read its request, and the installer stays open.
+
+- **A maintenance job whose progress cannot be followed now says so instead of waiting forever.**
+
+    When the progress of a long job (a backup, a code update, a move of terms or languages) could
+    not be followed at all — the connection failed, the server refused the request, or it answered
+    without any content — the panel kept showing what it showed before, and a move whose run could
+    not be followed kept its form locked ("an execute is still running") until the page was
+    reloaded. The panel now states the failure inside the panel, with the request id to look up in
+    the server log, and the form is released. A refusal there never turns the whole page into an
+    error page.
+
+- **The publication host's `install.sh` no longer hangs on a stalled Bun download.**
+
+    Before, `install.sh` downloaded Bun with a size limit only: a mirror (or GitHub) that accepted the
+    connection and then stopped answering — during the TLS handshake or mid-download — left the
+    install waiting forever, holding its lock. Now every download has a connect deadline and a total
+    deadline; when one passes, `install.sh` stops with a line saying so and naming the ways on
+    (retry, `--mirror <https base url>`, or `--offline <bun zip>`). See the
+    [publication host guide](./install/publication_host.md).
+
+- **Installing or resetting a thesaurus no longer waits without limit behind another session's lock**
+
+    **Maintenance › Install hierarchies** (both **Install** and **Reset to seed**) imports
+    a thesaurus in one transaction. If another session held a lock on one of its terms
+    (for example, an editor's unfinished save, or a database session left idle in a
+    transaction), the import waited for that lock with no limit. While it waited, it kept
+    the terms it had already reached locked, so edits to those terms queued behind it,
+    and nothing could stop it. Now each lock wait gives up after 5 seconds, the same limit
+    every other maintenance operation uses, and the whole import is retried a few times.
+    If the lock is still held, the import stops with a message saying that another
+    session holds a lock on the thesaurus. Nothing is changed, and you can run it again
+    once the lock is released. If the import is stopped, it ends at once and nothing is
+    changed. The result names any case where it could not confirm whether the import
+    was applied.
+
+- **The publication-marker index is now repaired every 10 minutes as well as at startup, and a repair held off by a running publication is retried instead of skipped.**
+
+    The web server decides whether anonymous visitors may open a record's media by a marker the engine keeps in `.publication/pub`. That set is re-derived from the per-publication truth after every start, to repair a marker pair a crash left half-written. When a publication was writing at that moment for longer than two minutes, the repair was skipped and not tried again until the next restart, so a published record's media could stay unreachable — or a withdrawn one stay public — for as long as the server kept running. The repair is now retried a minute later until it completes, and it also runs every 10 minutes, which heals a pair left half-written by a publication process that died while the server stayed up. The periodic repair holds the publication targets only when it actually has something to repair, and when it did hold them it then completes the removals of records deleted meanwhile, so a record deleted while it ran leaves the public site with that run instead of waiting for the next publication. In the maintenance area, **Reconcile** shows the schedule as `boot + every 10 min` and marks a run that had to wait as *DEFERRED*, with the reason; `GET /api/v1/counters` carries it as `last_deferred`.
+
+    Wire contract: `WC-2026-10-22-reconcile-deferred-rearm`.
+
+- **A running move execute in Maintenance can no longer be hidden by a new Preview**
+
+    In the five Maintenance move widgets (move languages, locators, TLD, to portal, to
+    table), clicking **Preview** while an **Execute** was still running replaced the
+    execute's progress panel and the record that lets a reloaded page find it again.
+    The result of the execute (completed, rolled back, partly applied, or unknown) was
+    never shown, so it was easy to run the same move a second time. While an execute
+    runs, **Preview** and **Execute** now explain why they wait instead of starting a
+    new run. A reloaded page reconnects to a running execute and keeps it in front.
+    If the server did not confirm an execute, the widget waits for a page reload
+    before it starts another run.
+
+- **The publication host installer never puts a cut-off file in place on a full disk**
+
+    When the disk of a publication host was nearly full, the root provisioner
+    could write only part of a systemd unit, an environment file, a sudoers or
+    polkit rule, or the copied Bun binary. It then moved that cut-off file into
+    place and reported the step as done. A short write is now continued until
+    every byte is on disk. If the disk is really full, the step fails, the old
+    file stays where it was and no temporary file is left behind.
+
+    Cursor keys pressed at a guided-install prompt no longer leave stray
+    characters such as `[D` in the answer.
+
+- **An archive restore refuses an ontology node another writer created between the plan and the write**
+
+    A restore plans its ontology definitions first and writes them later. A definition another writer created in between used to be overwritten silently, as if it were new. The plan is now checked again at the moment of writing: an identical definition is left alone, and a different one is refused unless the restore was asked to overwrite conflicts. The restore's report now counts what was actually written.
+
+- **An archive restore no longer plants ontology definitions that the next ontology rebuild would delete**
+
+    An archive carries the ontology definitions of its sections, but not the ontology records they are built from. Restoring it into an installation whose ontology already has records for the same TLD used to add those definitions anyway: the next ontology update (or a rebuild from the ontology parser tool) removed them again, and the restored records were left without their definitions. The restore now refuses this case before writing anything, and names the TLD and the definitions involved. Install or update that ontology so that it defines them, then run the restore again: the definitions are then found unchanged, or the conflict is named. A TLD for which this installation has no ontology records restores as before. The restore also waits for any ontology rebuild of the same TLD that is in progress, instead of writing at the same time. See [The archive door](./core/exporting_data.md#the-archive-door).
+
+- **A backup's verification proof now survives a power cut, and a backup is reported done only once its name is safely on disk.**
+
+    When a backup is verified, Dédalo writes a small proof file next to it so the archive is not read in full again. That proof could be lost in a power cut right after the verification, or left half-written by an interrupted write, and the next check then re-read the whole archive. It is now written through the same durable path as every other engine file: complete, synced, and its name synced too. If the disk refuses to make a finished backup's name durable (an I/O error), the backup job now says it failed instead of reporting it done; the backup file itself is kept.
+
 - **Code updates of a git-checkout install no longer refuse over `.claude` and `CLAUDE.md`**
 
     An install made with `git clone` holds two files that no release ships, `.claude` and `CLAUDE.md`. The code updater saw them as unknown files and refused every update with "Unknown entries at the code-tree root". The updater now reads the files a release leaves out from the release's own `.gitattributes`. Those files move into the backup with the old code, and the update proceeds.
 
     **One manual step for checkout installs on an earlier release:** the refusal is checked by the code that is already running, so the next update still refuses once. Before updating, delete the two links from the install directory: `rm .claude CLAUDE.md`. They are tracked by git, so `git checkout -- .claude CLAUDE.md` restores them.
+
+- **An update or a move transform that committed after a lost connection says what did not run**
+
+    If the database connection fails while a data update or a *move* transform file is
+    being committed, Dédalo asks the database whether the work committed and reports it as
+    applied when it did. Some follow-up actions only run after a commit Dédalo saw
+    succeed, such as updating dependent fields and ending the sessions of users whose
+    access changed. In this case they were skipped without a word. The report now says
+    that they did not run and what to do: run the *observer_mirrors* reconcile (an update
+    starts one itself), and end the sessions of any account whose access the change
+    affected.
+
+- **An export's record selection now respects the database statement ceiling.**
+
+    With `DB_STATEMENT_TIMEOUT_MS` set, computing an export's record selection could still run
+    far past it: PostgreSQL lifts the statement ceiling at the moment it builds the selection.
+    Now the selection runs under the same ceiling as every other request: an export whose
+    selection takes longer to compute is stopped at the ceiling with `db.statement_timeout`,
+    before its first line, and its database connection is freed. Installations that keep the
+    default `0` (no ceiling) see no change.
+
+    Wire contract: `WC-2026-10-11-export-buffered-cap-and-admission`.
+
+- **A lookup in an external catalogue now always ends within its timeout, even when the name server or the answer stalls.**
+
+    The timeout of an external record service (for example Zenon) started only when the
+    connection was opened. Resolving the service's name, and reading an answer that stopped
+    arriving, were not covered, so a stalled name server or a stalled answer could keep the
+    lookup — and one of the service's few parallel request slots — waiting indefinitely. The
+    whole request, from the name lookup to the last byte of the answer, is now covered by the
+    service's configured timeout, and such a request is reported as timed out.
+
+- **Exporting a thesaurus never leaves or certifies a partial dump**
+
+    The hierarchy export panel used to stream each thesaurus straight to its final file and judge the export by "the file exists". A dump cut short (a server error, a dropped connection, a full disk) still left a valid-looking file, and `hierarchy.json` then certified it with a checksum, so an installation importing it received a partial thesaurus. Each dump is now written beside its final name and moved into place only when psql succeeded, the file reads to its end, and it holds exactly the rows psql reported; otherwise the panel names the reason and the previous good file is kept. Building `hierarchy.json` also refuses, keeping the previous manifest, when a data file it would list is torn or changed while it was built. A complete but short dump left by an export made before this fix cannot be told apart: export those thesauri again.
+
+- **Installer and container fixes — `--abort` removals survive a power cut, a half-imported thesaurus is no longer reported installed, the published client never points at a missing copy**
+
+    - **`--abort` survives a power cut.** When the installer takes back what it wrote — the
+      `.env` it created, its backups and staged copies of the secrets, and its own run record —
+      the removals are now forced to disk before it reports *aborted*. Before, a power cut right
+      after could bring those files back: the database password on disk again, or a run record
+      that `--resume` took for a live install.
+    - **A thesaurus whose models never landed is no longer "already installed".** When the terms
+      of a thesaurus are in the database but a section its release ships data for (typically the
+      models) is empty, installing it again used to answer *already installed — skipped*, and
+      the missing section never arrived. It is now refused with a line naming the empty section
+      and *Reset to seed* (*Maintenance → Install hierarchies*), which imports the whole
+      thesaurus; nothing is written by the refusal.
+    - **Container stacks: the client copy is replaced without a gap.** When the engine
+      republishes a damaged copy of the client at start-up, the new copy now gets its own
+      directory and the web server is switched to it in one step. Before, there was a short
+      window — and, after a power cut there, a lasting one until the next start — in which the
+      web server pointed at a copy that was not there.
+    - **The installer's ontology step says what it checked.** Downloaded ontology files are
+      checked for their format, over a verified connection to the configured ontology server;
+      the master server does not publish digests to check them against. The step now reports
+      them as *shape-checked*, not *verified*.
+
+    Wire contract: `WC-2026-10-21-hierarchy-import-partial-refused`.
+
+- **The installer's configuration and the published client now survive a power cut**
+
+    Three install and start-up writes were safe against a crashed process but not against
+    a power cut or a kernel crash.
+
+    - **The `.env` the installer writes** (the only copy of the generated salt and the
+      database password) is now forced to disk before the installer records that step as
+      done. So is the pre-install backup that `--abort` restores, and so is the restored
+      file itself. Before, a power cut could bring the `.env` back empty while the
+      installer's own record said it had been written. A failed write no longer leaves a
+      staged copy of the secrets next to it either.
+    - **The client a container publishes for nginx** is now written to disk in full before
+      the switch to it. At every start the engine also re-checks the published files
+      against the client it runs, so a copy damaged by a power cut is republished instead
+      of being served until the next update. A republish no longer empties the live copy
+      first, which used to cause a short burst of 404s.
+    - **The seed restore** no longer passes the database dump through a predictable file
+      name in the shared temporary directory. Before, another local user on a multi-user
+      Linux host could plant that file and add SQL to what the installer ran. The dump now
+      goes to a fresh private directory.
+
+- **The temporary audio copy made for on-premise transcription is deleted as soon as it has been sent.**
+
+    Automatic transcription with the institution's own recognition server makes a temporary
+    speech-quality copy of the interview and sends its bytes to that server. The copy used to
+    be deleted only when the background check of the transcription finished, so it stayed on
+    disk when the submission failed, when the check never ran (the job was stopped while
+    waiting, or the server restarted) or when the check could not be scheduled. It is now
+    deleted the moment the submission ends, whatever its outcome.
+
+- **Interrupted exports and transcriptions no longer leave temporary files behind**
+
+    A thesaurus export stopped mid-dump (the server killed or restarted) left a
+    `<tipo>.copy.gz.tmp-…` or `hierarchy.json.tmp-…` file in `install/import/hierarchy`
+    for good. The next export now removes such leftovers once they are more than six hours
+    old; a newer one, which may belong to an export still running, is kept. Building
+    `hierarchy.json` also checks each data file in one streamed pass instead of reading
+    whole dumps into memory. A background transcription that failed with an unexpected
+    error kept its temporary copy of the recording on disk; the copy is now removed however
+    the job ends.
+
+- **Deleting or restoring an ontology record now removes or restores its runtime node.**
+
+    Deleting an ontology record (or emptying its data) left its node in the runtime ontology, still
+    served everywhere; restoring a deleted record from the Time Machine brought the record back
+    without its node. Both now move the node with the record, in the same transaction. A local
+    override follows the same rule: deleting or restoring it re-applies the node it overrides.
+    Writing a record's content into the runtime ontology stays a developer action: when a user who
+    is not a developer restores a record, or deletes or restores an override, the record changes
+    but the node does not, and the ontology inspection lists it as drift for a developer to apply.
+    The same holds when no user is identified at all (for example a write through the stdio MCP
+    server): only a developer's action writes node content.
+    An ontology rebuild, a registry activation and a record delete or restore on the same TLD no
+    longer race each other, and activating a TLD while it is being deleted no longer leaves its root
+    node behind.
+    See [Ontology write pipeline](./core/ontology/ontology_write.md).
+
+    Wire contract: `WC-2026-10-21-ontology-record-lifecycle`.
+
+- **Building the ontology recovery file no longer stops the server when the disk is full, and the file survives a power cut**
+
+    The ontology recovery file (*Maintenance → Build database version*) is the safety net an
+    ontology update relies on.
+
+    - **A full disk or a read-only private directory** while the file was being written used
+      to stop the whole server process, or leave the request waiting forever. The build now
+      fails like any other failed build: it reports the error, keeps the previous recovery
+      file as it was, and leaves no partial file behind.
+    - **A power cut right after a successful build** could leave an empty or partial recovery
+      file under its final name. The file is now forced to disk before it replaces the
+      previous one, and so is the replacement itself.
+
+- **The ontology status panel reports a TLD shown under the wrong typology, and the hierarchy typology groups are filed where the master ontology files them**
+
+    In the ontology tree, each TLD hangs under the typology set in its registry record. A TLD placed under a different typology used to be reported as in sync. The ontology status panel now reports it as drift, and **Rebuild** puts it back under the right typology. Separately, the first time a thesaurus is created, Dédalo registers the `hierarchytype` and `hierarchymtype` groups itself, because no ontology update brings them in. It used to file them under *Core*, with generic names. It now uses the typology and names that the master ontology gives them. Installations that registered these groups before this change keep their current placement, which stays consistent and is not reported as drift.
+
+- **The installer's downloaded ontology files survive a power cut**
+
+    The installer fetches the chosen ontology files before it touches the database, and
+    records that step as done. The files were not forced to disk, so a power cut right
+    after that step could lose them, and resuming the installation then refused with a
+    "changed outside the installer" error that only recreating the installation would
+    clear. The files and their checklist are now written to disk safely before the step
+    counts as done, and each file appears under its final name only once it has been
+    checked.
+
+- **An ontology update now removes the nodes a new package no longer carries.**
+
+    Before, **Update ontology** only added and refreshed nodes: a node dropped upstream stayed in the
+    runtime ontology for good, and a record whose TLD field named another TLD was silently written
+    into that other TLD. Each updated TLD is now re-derived in one transaction by the same writer the
+    ontology parser uses: dropped nodes go, a misfiled record is skipped and named in the update's
+    warnings, and the nodes that remain keep their internal ids. A model that the update adds or
+    renames now reaches every component that uses it in the same update, including components in
+    another updated TLD. A typology grouper that this installation created (for a thesaurus or TLD
+    of a typology the release does not ship) is kept: the update re-creates its record instead of
+    removing it, so the thesauri under it stay in the ontology tree. See
+    [Ontology write pipeline](./core/ontology/ontology_write.md).
+
+    Wire contract: `WC-2026-10-21-ontology-update-rebuild`.
+
+- **Phantom-language removal and the public-tier reconcile no longer hang on a busy publication target**
+
+    Removing phantom publication languages and applying the public-tier reconcile
+    used to wait without limit while a publication run held the target database.
+    They now wait at most 2 minutes in total, then report the busy target and leave
+    it untouched: re-run the action when the publication run has finished.
+
+    The publication-host kit (`hostagent:pack`) is now written durably, and a failed
+    pack no longer leaves a temporary file beside it.
+
+    Wire contract: `WC-2026-09-30-diffusion-target-fence`.
+
+- **A publication run or unpublish no longer waits without limit on a lock held outside Dédalo**
+
+    Publishing to a MariaDB database waited as long as MariaDB let it (a day, by
+    default) when another session held a lock on the table — for example a long read
+    on the public website while a run added a column. Meanwhile every other
+    publication to that database waited too, and deleted records stayed published.
+    Now a statement waits at most 30 seconds for such a lock: the run fails and
+    releases the database (re-run it), a deleted record's unpublish stays pending and
+    is retried, and the language sweep and the media-index rebuild report the table.
+
+    Wire contract: `WC-2026-10-21-target-statement-lock-wait`.
+
+- **The Reconcile panel offers *Apply* only where you can apply, and a refusal no longer replaces the page**
+
+    In *Maintenance → Reconcile*, every row showed an *Apply* button. Two of them could not
+    work for most people: *media_copy* applies only for the root user, and *publication_apis*
+    never applies there at all (Publication API code is pushed from the publication-hosts
+    panel). Clicking either one showed the no-access page in place of the panel.
+
+    Now each row knows who may apply it. Where you cannot, *Apply* is disabled and its tooltip
+    says why. *Check* (the dry run) works as before on every row.
+
+    Wire contract: `WC-2026-09-03-maintenance-reconcile-status-widget`.
+
+- **New installations and imported thesauri store record references in their final form**
+
+    Every reference from one record to another names the target record by number. Dédalo
+    stores that number as a number, but a fresh installation was born with thousands of
+    references written as text (the administrator account's profile and project, the
+    languages, the core ontology), and installing or resetting a thesaurus from
+    *Maintenance › Install hierarchies* copied the text form of the vendored files as it
+    was. Searches matched both forms, so nothing looked wrong, but the text form is what
+    the planned clean-up of old installations removes. Now a new installation and every
+    thesaurus you install or reset store numbers only, and a new installation records that
+    its data is already in the final form. Nothing else in the data changes.
+
+    Wire contract: `WC-2026-10-21-seed-and-thesaurus-int-clean`.
+
+- **Installing or resetting a thesaurus takes effect at once and no longer needs gigabytes of memory**
+
+    After *Maintenance › Install hierarchies* installed a thesaurus, or *Reset to seed*
+    replaced its terms, lists and counts built from those terms could keep showing the old
+    terms until the server was restarted: deleted terms were still offered and edited
+    labels still shown. They now refresh as soon as the import finishes.
+
+    The import also no longer loads whole thesaurus files into the server's memory. The
+    largest vendored thesaurus is about one gigabyte once unpacked, and the server needed
+    more than two gigabytes to import it, enough to be stopped on a modest machine with
+    every user's request lost. It now reads the files piece by piece. A file that changes
+    on disk while it is being imported is refused, and nothing of that thesaurus is
+    changed.
+
+    A reset still does not rebuild what other parts of Dédalo derived from the deleted
+    terms. The result message now says so and names what to run afterwards: the
+    *observer_mirrors* reconcile, and a new publication or semantic-search reconcile if
+    the thesaurus is published or indexed.
+
+- **Time machine restores respect every record's projects and every field's permission; the ontology recovery file is built one at a time**
+
+    - **Reverting a bulk change never brings back a record outside your projects.** When a
+      revert re-links a record that an earlier revert deleted, that record is now checked
+      against your projects like any other. If it is outside them, that change is skipped as
+      *out of scope* and the record stays deleted.
+    - **Restoring a field's history needs permission on its dataframe too.** *Apply value* in
+      the time machine also rewrites the dataframe attached to the field, such as roles or
+      ratings. It now needs edit permission on that dataframe as well. A user who can only
+      read the dataframe gets a permission error, and nothing is restored.
+    - **One recovery-file build or restore at a time.** In *Maintenance → Build database
+      version*, a second build or restore of the ontology recovery file started while one is
+      running is refused with *already running*. Before, two at once could leave a damaged
+      recovery file behind a success message.
+    - **An ontology update that has finished is not undone by a late error.** If a final
+      report step of *Update ontology* fails after the new ontology is in place, the update
+      stays in place. The message now says that the update landed and that nothing was rolled
+      back.
+
+    Wire contract: `WC-2026-10-21-tm-restore-component-write-doors`, `WC-2026-10-21-ontology-recovery-single-flight`.
+
+- **Restoring a whole record from the time machine needs permission on every field it changes; a failed ontology re-index after an update no longer brings the old ontology back**
+
+    - **Restoring a whole record checks every field it changes.** *Apply value* on a whole
+      record in the time machine now needs edit permission on each field the restore would
+      change, like restoring a single field already does. A user who manages user accounts can
+      no longer give their own account back an earlier profile or administrator flag this way,
+      and a field you may only read is never rewritten by a restore. A refused restore changes
+      nothing. Undeleting a record works as before.
+    - **An ontology update whose re-indexing fails keeps the new ontology.** If *Update
+      ontology* has imported the new ontology but rebuilding the ontology tree from it fails,
+      the update now stays in place and the message names the ontologies to rebuild in
+      *Maintenance*. Before, the old ontology was put back under a tree already partly rebuilt
+      from the new one.
+    - **A stuck recovery-file build no longer blocks the next one.** Building or restoring the
+      ontology recovery file in *Maintenance → Build database version* now gives up after ten
+      minutes and reports it, instead of waiting forever and refusing every later attempt as
+      *already running*.
+
+    Wire contract: `WC-2026-10-21-tm-section-restore-write-door`, `WC-2026-10-21-ontology-update-derive-landed`, `WC-2026-10-21-ontology-recovery-deadline`.
+
+- **Unpublished media stays unpublished after a power cut — and is never reported withdrawn while it is still served**
+
+    - **A power cut can no longer bring back the media of a withdrawn record.** When a record is
+      deleted or unpublished, the markers that let the web server serve its media files
+      anonymously are now forced to disk before the record is reported unpublished. Before, a
+      power cut right after could restore them, and the next start-up re-derived public access
+      from them — with nothing left to retry the withdrawal.
+    - **A withdrawal that could not remove the markers stays pending.** If the media markers of
+      an unpublished record cannot be removed (a permission problem on the media store, a full
+      disk), the unpublish is now kept *pending* and retried, instead of being recorded as
+      *unpublished* over media that is still public.
+
+    Wire contract: `WC-2026-10-21-unpublish-markers-durable`.
+
+- **Rebuilding or updating one user's activity statistics never counts a day twice**
+
+    Two rebuilds of the same user's activity statistics running at once, or a rebuild and an update, could each save the same day, so that day's totals appeared twice. Every writer of one user's statistics now waits for the other, and a day already saved is never saved again.
 
 - **Docker stacks — ontology update no longer fails with EACCES**
 
@@ -996,7 +1632,32 @@ Merged since the last release; these ship with the next one.
 
 ### For developers
 
+#### Security
+
+- **The component lock requests refuse a section that is not an ontology tipo.**
+
+    `dd_utils_api` `update_lock_components_state` and `get_lock_status` now check that
+    `options.section_tipo` is a string in the tipo grammar before doing anything, for every
+    action — including the caller's own lock cleanup, which runs no section read check. A missing
+    value still answers `400 request.invalid_options`; a present value that is not a tipo (an array,
+    an object, a number, a free string) now answers `400 request.invalid_tipo` and touches no lock,
+    where it used to reach the database as-is. The Dédalo client always sends a tipo, so nothing
+    changes for it.
+
+    Wire contract: `WC-2026-10-23-lock-section-tipo-grammar`.
+
 #### Changed
+
+- **"Build database version: the install-seed build's answer and panel values are documented"**
+
+    *Maintenance → Build database version → Build install version* compiles the install seed
+    from the repository's own sources (since 7.0.0-beta.6). Its answer (the step readout and file size on success; a `maintenance.action_failed`
+    error carrying the same readout on a refusal) and the panel's three values (now the seed
+    sources, the scratch database pattern and the seed file, never the installation's database
+    name) are now recorded in the wire contract, for anyone scripting against the maintenance
+    API.
+
+    Wire contract: `WC-2026-10-09-build-install-version-owned-mode`.
 
 - **A developer install gets its own unix socket, named after its entity, and is refused while another server holds it.**
 
@@ -1097,6 +1758,21 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The ontology tool's "set records" can no longer write a node into another TLD's namespace.**
+
+    A record of `<tld>0` now only ever produces the node `<tld><id>`. A record whose TLD field
+    names another TLD is reported and skipped instead of overwriting that TLD's node; the tool
+    refuses sections that hold no ontology nodes (`test3`, `ontology1`, `localontology0`…) with
+    `request.invalid_options`; in list mode the search must target exactly the tool's section, and
+    a search with "recursive children" ticked is refused, because it would pick records the search
+    did not select. On a TLD registry record (`ontology35`), a TLD that still has rows in
+    `dd_ontology` but whose nodes drifted (for example only its root is left) is now re-derived in
+    full, not just its root; a TLD already in sync only has its root refreshed, and a TLD with no
+    rows stays empty — this action does not re-activate a TLD. See
+    [tool_ontology](./development/tools/reference/tool_ontology.md).
+
+    Wire contract: `WC-2026-10-21-ontology-projection-guard`.
+
 - **A developer install now installs the development dependencies `bun run dev` needs, and the development listener can serve HTTPS (`SERVER_TCP_TLS_CERT_FILE` + `SERVER_TCP_TLS_KEY_FILE`).**
 
     **Development dependencies.** The installer's bootstrap installs only its own,
@@ -1148,14 +1824,34 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 6 entries"
+??? note "Wire contract — 26 entries"
 
+    - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
     - `WC-2026-10-19-design-line-removed`
     - `WC-2026-10-19-inspector-record-info`
     - `WC-2026-10-20-element-context-default-lang`
     - `WC-2026-10-21-error-report-granted`
+    - `WC-2026-10-21-hierarchy-import-partial-refused`
+    - `WC-2026-10-21-ontology-projection-guard`
+    - `WC-2026-10-21-ontology-record-lifecycle`
+    - `WC-2026-10-21-ontology-recovery-deadline`
+    - `WC-2026-10-21-ontology-recovery-single-flight`
+    - `WC-2026-10-21-ontology-update-derive-landed`
+    - `WC-2026-10-21-ontology-update-rebuild`
+    - `WC-2026-10-21-seed-and-thesaurus-int-clean`
+    - `WC-2026-10-21-target-statement-lock-wait`
+    - `WC-2026-10-21-tm-restore-component-write-doors`
+    - `WC-2026-10-21-tm-section-restore-write-door`
     - `WC-2026-10-21-tool-permissions-description`
+    - `WC-2026-10-21-unpublish-markers-durable`
+    - `WC-2026-10-21-update-cache-locked-resave`
+    - `WC-2026-10-22-filter-project-pick-membership`
+    - `WC-2026-10-22-reconcile-deferred-rearm`
+    - `WC-2026-10-22-related-search-one-scope`
+    - `WC-2026-10-22-tm-scope-whole-request`
+    - `WC-2026-10-23-lock-section-tipo-grammar`
+    - `WC-2026-10-23-own-lock-cleanup-ungated`
 
 ## 7.0.0-beta.6 — 2026-10-15
 

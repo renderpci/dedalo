@@ -185,10 +185,10 @@ import {
 	buildWriterClosure,
 	declarationDoorCalls,
 	deriveRawPrimitives,
+	hasPsqlDoorEdge,
 	isPsqlMatrixWriter,
 	MATRIX_WRITE,
 	moduleRuntimeExports,
-	PSQL_DOOR,
 	RAW_PRIMITIVES,
 	RECORD_WRITE_CHOKEPOINTS,
 	rawCallsIn,
@@ -722,11 +722,9 @@ else {
 		'tools/tool_update_cache/server/index.ts :: updateCache': {
 			doors: {
 				saveComponentData: {
-					verdict: 'lossless',
-					readVerified: true,
-					sites: 2,
+					verdict: 'new-record',
 					reason:
-						'two calls. (1) The regenerate re-saves, per language group, the items it just READ from the record (readComponentItems → groupItemsByLang → set_data per lang), under the run’s bulkProcessId: the undo log records each BEFORE/AFTER pair, and a canonical no-op writes none (WC-2026-09-27-bulk-revert-undo-log retired the v6 "TM disabled for the sweep"). (2) The dd800 run label on the bulk-process record created in the same transaction. Honest limit: the items are read outside any lock, so a concurrent edit between the read and the re-save is replaced — it is kept in the BEFORE row and the Time Machine.',
+						'one call: the dd800 run label on the bulk-process record created in the same transaction (the regenerate re-save moved to resaveUnderRowLock, its own cell). Nothing stored is replaced.',
 				},
 				transformStoredMediaItems: {
 					verdict: 'derived-state',
@@ -738,6 +736,18 @@ else {
 					verdict: 'new-record',
 					reason:
 						'mints the dd800 bulk-process record of the run (created in the same transaction as its label, before any record is touched). Nothing stored is replaced.',
+				},
+			},
+		},
+
+		'tools/tool_update_cache/server/index.ts :: resaveUnderRowLock': {
+			doors: {
+				saveComponentData: {
+					verdict: 'lossless',
+					lockedRead: true,
+					readVerified: true,
+					reason:
+						'the regenerate re-saves, per language group, the items READ UNDER THE ROW LOCK in the same transaction (readMatrixKeyForUpdate, then readComponentItems on the locked record → groupItemsByLang → set_data per lang), under the run’s bulkProcessId: the undo log records each BEFORE/AFTER pair, and a canonical no-op writes none (WC-2026-09-27-bulk-revert-undo-log). A concurrent edit committed before the lock is what gets re-saved, never the run’s snapshot; a record deleted meanwhile is not recreated; a refused group — an ok:false answer or a thrown caller/permission refusal — rolls the whole component back and the sweep goes on (WC-2026-10-21-update-cache-locked-resave; gates update_cache_locked_resave_native, update_cache_refused_resave_native).',
 				},
 			},
 		},
@@ -1371,12 +1381,14 @@ else {
 		},
 		'tools/tool_ontology/server/tool_ontology.ts :: toolOntologySetRecords': {
 			doors: {
-				setRecordsInDdOntology: {
+				// setRecordsInDdOntology (the projection route) is no longer a matrix door:
+				// since ONT-2 it writes dd_ontology only, through the guarded primitive.
+				syncOntologyActivation: {
 					verdict: 'derived-state',
 					bypass_reason: BYPASS.ontology,
 					sites: 2,
 					reason:
-						'parses the ontology section records into dd_ontology (the single write driver): ontology DEFINITIONS derived from the matrix_ontology records, with their own gates — not a curated value.',
+						"the ontology35 route (ONT-1/2): projection of the registry activation — a tld that still holds rows and DRIFTED is re-derived from its records (ontology_state.rebuildOntology, mainNode 'existing': the registry is read, never written, and the root names its typology grouper without building it); a converged one only has its `<tld>0` root re-planted; a tld with no rows is left empty, and nothing is retracted. It stays a matrix door STATICALLY only because rebuildOntology's 'ensure' main-node branch (ensureMainSection / createParentGrouper) is reachable from it. Ontology DEFINITIONS derived from the matrix_ontology records, with their own gates — not a curated value.",
 				},
 			},
 		},
@@ -2403,7 +2415,7 @@ else {
 			expect(CLOSURE.psqlSeeds, 'psql seeds by binding vs psql writers by name').toEqual(byName);
 			for (const seed of CLOSURE.psqlSeeds) {
 				expect(
-					CLOSURE.preciseEdgesOf(seed).has(PSQL_DOOR),
+					hasPsqlDoorEdge(CLOSURE.preciseEdgesOf(seed)),
 					`${seed}: no resolved runPsql edge`,
 				).toBe(true);
 			}

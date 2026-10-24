@@ -397,7 +397,7 @@ const render_pair_form = function (self, row, card, body_response) {
 		const file = file_input.files && file_input.files[0];
 		const passphrase = pass_input.value;
 		// the passphrase leaves the page in this one request and nowhere else (the debug
-		// request line redacts it: data_manager.js DEBUG_REDACTED_OPTION_KEYS)
+		// request line redacts it: data_manager.js debug_redacted (every options value))
 		pass_input.value = '';
 		if (!file || passphrase.trim() === '') {
 			body_response.textContent =

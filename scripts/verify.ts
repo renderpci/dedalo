@@ -85,6 +85,7 @@ const TRIPWIRES = [
 	'test/unit/pdf_extract_symmetry_tripwire.test.ts',
 	'test/unit/ssrf_one_guard_tripwire.test.ts',
 	'test/unit/lint_scope_tripwire.test.ts',
+	'test/unit/lint_scope_local_only_untracked_tripwire.test.ts',
 	'test/unit/compose_invocation_tripwire.test.ts',
 	'test/unit/gate_vacuity_tripwire.test.ts',
 	'test/unit/batch_scope_tripwire.test.ts',
@@ -321,6 +322,9 @@ const TRIPWIRES = [
 	'test/unit/diffusion_attach_scope_native.test.ts',
 	'test/unit/diffusion_artifact_rss_native.test.ts',
 	'test/unit/media_index_reconcile_fence_native.test.ts',
+	// D5 (owner decision 2026-10-21): a deferred scheduled reconcile is re-armed until done.
+	'test/unit/reconcile_scheduler_native.test.ts',
+	'test/unit/reconcile_status_client.test.ts',
 	// WRITE-DOOR / SEC-1 / SEC-2-media / SEC-3 / TOOLS-3 / TOOLS-4 grant half (closure Step 3, 2026-10-01).
 	'test/unit/write_door_native.test.ts',
 	'test/unit/authz_door_matrix_native.test.ts',
@@ -393,6 +397,7 @@ const TRIPWIRES = [
 	'test/unit/client_page_doors_native.test.ts',
 	'test/unit/wire_sqo_page_bound_native.test.ts',
 	'test/unit/search_related_page_window_native.test.ts',
+	'test/unit/related_scope_equivalence_native.test.ts',
 	'test/unit/filter_projects_membership_native.test.ts',
 	'test/unit/filter_projects_scope_native.test.ts',
 	'test/unit/install_screen_model_tripwire.test.ts',
@@ -418,6 +423,11 @@ const TRIPWIRES = [
 	'test/unit/release_identity_separation_tripwire.test.ts',
 	'test/unit/section_toolbar_phone_tripwire.test.ts',
 	'test/unit/install_launcher_native.test.ts',
+	'test/unit/daemon_typecheck_scope_tripwire.test.ts',
+	'test/unit/target_lock_census_tripwire.test.ts',
+	'test/unit/psql_matrix_write_obligations_tripwire.test.ts',
+	'test/unit/advisory_lock_class_tripwire.test.ts',
+	'test/unit/psql_argv_sql_tripwire.test.ts',
 	'test/unit/hermetic_parallel_safety_tripwire.test.ts',
 ];
 

@@ -29,6 +29,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { policyFromConfig, type ConfinementPolicy } from '../src/drivers/confinement';
 import { spawnAgentProcess, type TurnPlan } from '../src/drivers/process';
+import { TURN_ERROR_RETRIABLE } from '../src/drivers/turn_errors';
 import type { AgentEvent, SessionStartOptions } from '../src/drivers/types';
 import * as daemonErrors from '../src/errors';
 import { WebspaceError } from '../src/sites/site_table';
@@ -232,6 +233,52 @@ describe('G-W2 (b) — the supervisor’s own faults are reasons too', () => {
 
   test('the turn faults are the design’s closed list (none is a daemon reason)', () => {
     for (const fault of TURN_FAULTS) expect({ fault, daemon: DAEMON_REASONS.includes(fault) }).toEqual({ fault, daemon: false });
+  });
+});
+
+/**
+ * G4 — THE EVENT'S `retriable` IS THE TABLE'S, not merely a boolean. Before, every assertion read
+ * `typeof retriable === 'boolean'`, so an event constructor that answered `true` (or `false`) for
+ * every reason passed: the browser's "try again" would have been wrong for half the vocabulary.
+ * The supervisor's faults are spelled here (the design's table: it clears by itself → true,
+ * someone must act → false); each daemon reason's event carries `TURN_ERROR_RETRIABLE[reason]`,
+ * which the engine gate (tool_sitebuilder_stream_codes) holds equal to the registry's `retryable`.
+ */
+describe('G4 — an error event’s retriable is its reason’s, value for value', () => {
+  const retriableOf = (events: AgentEvent[]) => errorOf(events).retriable;
+
+  test('the supervisor’s faults: timeout/interrupt/killed retriable, setup failure and agent exit not', async () => {
+    const setupFailed = await drain(spawnAgentProcess(options(), async () => { throw new Error('no reason'); }, nonePolicy()).events);
+    const timedOut = await drain(spawnAgentProcess(options(150), () => new Promise<TurnPlan>(() => {}), nonePolicy()).events);
+    const proc = spawnAgentProcess(options(), () => new Promise<TurnPlan>(() => {}), nonePolicy());
+    const drained = drain(proc.events);
+    await proc.interrupt();
+    const interrupted = await drained;
+    const killed = await drain(spawnAgentProcess(options(), async () => plan(['/bin/sh', '-c', 'kill -9 $$']), nonePolicy()).events);
+    const exited = await drain(spawnAgentProcess(options(), async () => plan(['/bin/sh', '-c', 'exit 3']), nonePolicy()).events);
+    expect({
+      turn_setup_failed: retriableOf(setupFailed),
+      turn_timeout: retriableOf(timedOut),
+      turn_interrupted: retriableOf(interrupted),
+      turn_agent_killed: retriableOf(killed),
+      turn_agent_exited: retriableOf(exited),
+    }).toEqual({
+      turn_setup_failed: false,
+      turn_timeout: true,
+      turn_interrupted: true,
+      turn_agent_killed: true,
+      turn_agent_exited: false,
+    });
+  });
+
+  test('every daemon reason’s event carries the table’s value — and the table holds both answers', async () => {
+    const got: Record<string, unknown> = {};
+    for (const reason of DAEMON_REASONS) {
+      got[reason] = retriableOf(await drain(spawnAgentProcess(options(), async () => { throw daemonThrowFor(reason); }, nonePolicy()).events));
+    }
+    expect(got).toEqual(Object.fromEntries(DAEMON_REASONS.map(reason => [reason, TURN_ERROR_RETRIABLE[reason as keyof typeof TURN_ERROR_RETRIABLE]])));
+    // Non-vacuous: a constant answer cannot satisfy it (slug_exists is not retriable, a busy site is).
+    expect({ slug_exists: got.slug_exists, session_running: got.session_running }).toEqual({ slug_exists: false, session_running: true });
   });
 });
 

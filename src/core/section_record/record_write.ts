@@ -83,7 +83,7 @@
  * for the mapping of the concept onto TS.
  */
 
-import { canonicalJson } from '../concepts/canonical_json.ts';
+import { canonicalEquals, canonicalJson } from '../concepts/canonical_json.ts';
 import { ACTIVITY_SECTION_TIPO, AUDIT_TIPOS } from '../concepts/section.ts';
 import { type MatrixJsonbColumn, readMatrixRecord } from '../db/matrix.ts';
 import {
@@ -107,6 +107,7 @@ import {
 	type ObservedDeclaration,
 	type WriteReceipt,
 } from './obligation_ledger.ts';
+import { projectOntologyRecordLifecycle } from './ontology_projection.ts';
 import { fireRagRecordEvent, fireSaveEvent } from './save_event.ts';
 
 /** The record a write targets. The table comes from the ontology (getMatrixTableFromTipo). */
@@ -1045,6 +1046,62 @@ function columnKeyChanges(
 }
 
 /**
+ * A whole-record write's door (persistRecordColumns): every component tipo the
+ * write changes, asked once; THROWS to refuse.
+ */
+export type ChangedKeysDoor = (componentTipos: readonly string[]) => Promise<void>;
+
+/**
+ * Every component tipo whose stored value `values` CHANGES against the live row:
+ * each key of each written column bag present on either side and not equal
+ * (canonical JSON — key order is not a change). The non-component columns are
+ * skipped like wholeRecordChanges skips them (`relation_search` is derived,
+ * `data` / `meta` are record metadata). A covered observer slot was pinned to its
+ * live value before this runs, so it is never reported. Sorted, unique.
+ */
+function changedComponentKeys(
+	values: MatrixWriteValues,
+	liveColumns: Record<string, unknown>,
+): string[] {
+	const changed = new Set<string>();
+	for (const [column, value] of Object.entries(values)) {
+		if (NON_COMPONENT_COLUMNS.has(column)) continue;
+		for (const tipo of changedBagKeys(bagOf(liveColumns[column]), bagOf(value))) {
+			changed.add(tipo);
+		}
+	}
+	return [...changed].sort();
+}
+
+/** The written columns that hold no component (changedComponentKeys skips them). */
+const NON_COMPONENT_COLUMNS: ReadonlySet<string> = new Set(['relation_search', 'data', 'meta']);
+
+/** The keys of one column bag present on either side whose values differ (canonical JSON). */
+function changedBagKeys(before: Record<string, unknown>, after: Record<string, unknown>): string[] {
+	return [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
+		(tipo) => !canonicalEquals(before[tipo] ?? null, after[tipo] ?? null),
+	);
+}
+
+/**
+ * Ask a whole-record write's door (persistRecordColumns) with what the CALLER's
+ * columns change. The modified stamps the chokepoint merges after this overwrite
+ * whatever the caller's columns hold there (an older snapshot's differ from the
+ * live ones): never the caller's to authorize, never asked. No door: nothing asked.
+ */
+async function askChangedKeysDoor(
+	door: ChangedKeysDoor | undefined,
+	target: RecordWriteTarget,
+	audit: AuditStamp,
+	values: MatrixWriteValues,
+	liveColumns: Record<string, unknown>,
+): Promise<void> {
+	if (door === undefined) return;
+	const stamped = new Set(buildModifiedAuditWrites(target.sectionTipo, audit).map((w) => w.key));
+	await door(changedComponentKeys(values, liveColumns).filter((tipo) => !stamped.has(tipo)));
+}
+
+/**
  * Persist whole columns of a record (PHP save / save_column / the create()
  * update mode; the TM full-record restore path). Columns not present in
  * `columns` are untouched; a column set to null becomes SQL NULL.
@@ -1064,12 +1121,22 @@ function columnKeyChanges(
  * Ends in afterRecordWrite like every writer here (save event, security
  * reaction, the RAG 'index' seam — PHP save() :564 enqueues the record for
  * re-indexing on every full save — and the observer ledger).
+ *
+ * `door` (cross-write:r3): the caller's WRITE DOOR, asked under the row lock and
+ * before the update with every component tipo whose stored value this write
+ * CHANGES ({@link changedComponentKeys}) — what a whole-record restore writes is
+ * decided here, behind the lock, so no caller can judge a stale image. A throw
+ * rolls the write back. A BIRTH (absent row: an undelete) never asks it — a
+ * record lifecycle effect, authorized at the section like a create or a delete.
+ * The chokepoint itself authorizes nothing (no principal): a door that writes on
+ * a principal's behalf passes one.
  */
 export async function persistRecordColumns(
 	target: RecordWriteTarget,
 	columns: MatrixWriteValues,
 	audit: AuditStamp,
 	derived: WriteDerivation,
+	door?: ChangedKeysDoor,
 ): Promise<'updated' | 'inserted'> {
 	if (
 		Object.keys(columns).length === 0 &&
@@ -1103,6 +1170,7 @@ export async function persistRecordColumns(
 		const values: MatrixWriteValues = { ...columns };
 		const pinned = await pinCoveredObserverSlots(values, bagOf(liveColumns.relation));
 		await rederiveHiIndex(values, liveColumns);
+		await askChangedKeysDoor(door, target, audit, values, liveColumns);
 		mergeAuditStamps(values, target.sectionTipo, audit);
 		const changes = wholeRecordChanges(values, liveColumns, pinned);
 		await updateMatrixRecord(target.table, target.sectionTipo, target.sectionId, values);
@@ -1286,6 +1354,20 @@ async function writeBirth(
 		return null;
 	}
 	await assertRelationBagAcyclic(target, values.relation, 'birth');
+	// THE ONTOLOGY NODE comes back with its record (ONT-3): an undelete of a
+	// `<tld>0` record re-projects `<tld><id>` (only into a projected tld, never
+	// into another tld's namespace), an override's undelete re-projects the node
+	// it overrides — HERE, inside the birth's transaction (not the post-COMMIT
+	// ledger drain): a rolled-back undelete takes its node with it, and no drift
+	// window follows the commit. Every door that births at a known address
+	// passes here (TM undelete, bulk revert); create/duplicate do not (PHP parity).
+	// Any other section answers 'none' without touching the database.
+	await projectOntologyRecordLifecycle(
+		target.sectionTipo,
+		target.sectionId,
+		'birth',
+		values.relation,
+	);
 	await afterRecordWrite(target, {
 		door,
 		touchedKeys: columnKeys(values),

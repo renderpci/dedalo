@@ -14,16 +14,36 @@
  * volume there, and nginx mounts the same volume read-only at the directory
  * its `alias` points into):
  *
- *   releases/<id>/dedalo/…   a full copy; <id> = first 16 hex of sha256 over
- *                            the sorted (relative path, file sha256) list
- *   dedalo -> releases/<id>/dedalo   RELATIVE symlink, so it resolves in any
+ *   releases/<name>/dedalo/… a full copy; <name> = <id>, the first 16 hex of
+ *                            sha256 over the sorted (relative path, file
+ *                            sha256) list — or <id>-<nonce> when a directory
+ *                            of that id is already there (see below)
+ *   dedalo -> releases/<name>/dedalo   RELATIVE symlink, so it resolves in any
  *                            container that mounts the volume, whatever path
  *   .published               {id, published_at, files, bytes}
  *
  * The switch is one rename of a symlink over the old one — a request sees the
- * old tree or the new one, never a half-copied mix. Unchanged content (same
- * id, link resolving) copies nothing. Other releases are pruned after the
- * switch. A legacy real `dedalo/` directory is moved aside and removed.
+ * old tree or the new one, never a half-copied mix. Unchanged content copies
+ * nothing — and "unchanged" is VERIFIED, not stamped: the live link names a
+ * release of the id and the tree it resolves to re-hashes to the id (a stamp
+ * alone never vouches for bytes). Other releases are pruned after the switch. A
+ * legacy real `dedalo/` directory is moved aside and removed.
+ *
+ * A RELEASE NAME IS NEVER REUSED (cross-ops:r1). Republishing an id whose
+ * directory is already there — a torn live release, or a partial copy a crash
+ * left — builds under a FRESH name, `<id>-<nonce>`, and the link is switched to
+ * it; the old directory is pruned after. Replacing the directory in place took
+ * two renames (old name out, new one in) with the live link naming the gap
+ * between them: a request — or a cut — there met a dangling link.
+ *
+ * DURABLE ACROSS A POWER CUT, not only a kill (cross-ops:r0, 2026-10-21; the
+ * law is core/files/durable.ts's: a rename is atomic, not durable). A release
+ * is built ASIDE (`releases/.<id>.staging-<pid>`), every file and directory of
+ * it fsynced, then renamed to its unused `releases/<name>` and `releases/` fsynced; only
+ * then is the link switched (the publish dir fsynced after), and only then is
+ * the stamp written (exclusive temp, fsynced, renamed, dir fsynced). A live
+ * release is never emptied to be re-copied: its replacement is complete before
+ * it takes the name. Gate: test/unit/client_publish_durability_native.test.ts.
  *
  * WHAT IS NEVER PUBLISHED: a symlink in the source. nginx follows symlinks, so
  * one would let it serve whatever the link names; it is logged and skipped,
@@ -45,21 +65,23 @@
  */
 
 import { createHash } from 'node:crypto';
-import { existsSync, type Stats } from 'node:fs';
+import type { Stats } from 'node:fs';
 import {
 	chmod,
 	copyFile,
 	lstat,
 	mkdir,
+	open,
 	readdir,
 	readFile,
+	readlink,
 	rename,
 	rm,
 	symlink,
-	writeFile,
 } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { processEnvValue, projectRoot } from '../../config/env.ts';
+import { directoryFsyncUnsupported } from '../files/durable.ts';
 
 /** Absolute root of the client tree the engine serves and publishes. */
 export const CLIENT_ROOT: string = join(projectRoot, 'client', 'dedalo');
@@ -152,9 +174,39 @@ async function readStamp(dir: string): Promise<PublishedStamp | null> {
 	}
 }
 
-/** Already published: the stamp names this id AND the link resolves to a directory. */
-async function alreadyPublished(dir: string, id: string): Promise<boolean> {
-	return (await readStamp(dir))?.id === id && existsSync(join(dir, LINK_NAME));
+/** The release directory name a link target `releases/<name>/dedalo` names, when <name> is one of `id`. */
+function releaseNameOf(target: string, id: string): string | null {
+	const match = new RegExp(`^${RELEASES}/(${id}(?:-[a-z0-9]+)?)/${LINK_NAME}$`).exec(target);
+	return match?.[1] ?? null;
+}
+
+/** The release directory name the live link names, when it is a symlink to a release of `id`; else null. */
+async function linkedReleaseName(dir: string, id: string): Promise<string | null> {
+	const link = join(dir, LINK_NAME);
+	const stat = await lstatOrNull(link);
+	if (stat === null || !stat.isSymbolicLink()) return null;
+	return releaseNameOf(await readlink(link), id);
+}
+
+/**
+ * The live release IS this id — VERIFIED, never taken on the stamp's word
+ * (cross-ops:r0, 2026-10-21): the link is the relative link to a release of
+ * `id` (releases/<id>[-<nonce>]/dedalo) AND the tree it resolves to hashes to
+ * `id` (every file re-read: a release torn by a power cut — a name whose data
+ * never reached the disk comes back EMPTY — fails here and is republished, where
+ * trusting the stamp served it until the content changed). Answers the live
+ * release's directory name, or null. Costs one read of the published tree per
+ * boot, the same order as the source hash every boot already pays.
+ */
+async function liveReleaseVerifies(dir: string, id: string): Promise<string | null> {
+	const name = await linkedReleaseName(dir, id);
+	if (name === null) return null;
+	try {
+		const live = await readSourceTree(join(dir, LINK_NAME));
+		return live.skipped.length === 0 && clientContentId(live.files) === id ? name : null;
+	} catch {
+		return null; // a dangling link or an unreadable entry: not published
+	}
 }
 
 async function makeDir(path: string): Promise<void> {
@@ -162,16 +214,91 @@ async function makeDir(path: string): Promise<void> {
 	await chmod(path, DIR_MODE); // explicit: the process umask must not decide it
 }
 
-/** Copy the tree into a fresh release directory (a leftover partial copy is replaced). */
-async function copyRelease(source: string, release: string, tree: SourceTree): Promise<void> {
-	await rm(release, { recursive: true, force: true });
-	await makeDir(release);
-	for (const rel of tree.dirs) await makeDir(join(release, rel));
-	for (const file of tree.files) {
-		const target = join(release, file.rel);
+/**
+ * fsync one path (async: the boot step never blocks the event loop). A
+ * directory's fsync makes its entries durable; a filesystem without that
+ * guarantee is said loudly by the kernel's own predicate, never a failure.
+ */
+async function fsyncPath(path: string, directory: boolean): Promise<void> {
+	const handle = await open(path, 'r');
+	try {
+		await handle.sync();
+	} catch (error) {
+		if (!directory || !directoryFsyncUnsupported(path, error)) throw error;
+	} finally {
+		await handle.close();
+	}
+}
+
+/** Run `work` over `items`, at most `limit` at a time. */
+async function eachBounded<T>(
+	items: readonly T[],
+	limit: number,
+	work: (item: T) => Promise<void>,
+): Promise<void> {
+	let next = 0;
+	const lane = async (): Promise<void> => {
+		while (next < items.length) {
+			const item = items[next++] as T;
+			await work(item);
+		}
+	};
+	await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane));
+}
+
+/** Copies (each with its fsync) in flight at once: overlaps the per-file flush. */
+const COPY_CONCURRENCY = 16;
+
+/** Copy the tree into `root` — every file and directory DURABLE before this returns. */
+async function copyRelease(source: string, root: string, tree: SourceTree): Promise<void> {
+	await makeDir(root);
+	for (const rel of tree.dirs) await makeDir(join(root, rel)); // sorted: parents first
+	await eachBounded(tree.files, COPY_CONCURRENCY, async (file) => {
+		const target = join(root, file.rel);
 		await copyFile(join(source, file.rel), target);
 		await chmod(target, FILE_MODE);
+		await fsyncPath(target, false);
+	});
+	// Each directory's entries (deepest first), then the root's.
+	for (const rel of [...tree.dirs].reverse()) await fsyncPath(join(root, rel), true);
+	await fsyncPath(root, true);
+}
+
+/**
+ * An UNUSED release name for `id`: `<id>` itself, or — when a directory of that
+ * name is already there (a torn live release, a partial copy a crash left) —
+ * `<id>-<nonce>`. A name in use is never replaced (see the header).
+ */
+async function freshReleaseName(releases: string, id: string): Promise<string> {
+	if ((await lstatOrNull(join(releases, id))) === null) return id;
+	for (let attempt = 0; ; attempt++) {
+		const name = `${id}-${process.pid.toString(36)}${Date.now().toString(36)}${attempt.toString(36)}`;
+		if ((await lstatOrNull(join(releases, name))) === null) return name;
 	}
+}
+
+/**
+ * Build a release of `id` ASIDE and rename it in, durably, under an UNUSED name
+ * (answered). The copy goes to a staging sibling; only a COMPLETE, fsynced tree
+ * takes a release name — and never one already there, so whatever the live link
+ * names stays in place, whole or torn, until the link is switched away from it.
+ */
+async function buildRelease(
+	source: string,
+	dir: string,
+	id: string,
+	tree: SourceTree,
+): Promise<string> {
+	const releases = join(dir, RELEASES);
+	const staging = join(releases, `.${id}.staging-${process.pid}`);
+	await rm(staging, { recursive: true, force: true });
+	await makeDir(staging);
+	await copyRelease(source, join(staging, LINK_NAME), tree);
+	await fsyncPath(staging, true);
+	const name = await freshReleaseName(releases, id);
+	await rename(staging, join(releases, name));
+	await fsyncPath(releases, true);
+	return name;
 }
 
 /** An lstat that answers null for a missing path. */
@@ -193,25 +320,39 @@ async function moveLegacyAside(link: string): Promise<string | null> {
 	return aside;
 }
 
-/** Point `<dir>/dedalo` at the release: a relative link made aside, renamed over the old one. */
-async function switchLink(dir: string, id: string): Promise<void> {
+/**
+ * Point `<dir>/dedalo` at the release: a relative link made aside, renamed over
+ * the old one, and the publish directory fsynced — the switch survives a power
+ * cut before anything (the stamp) may say it happened.
+ */
+async function switchLink(dir: string, name: string): Promise<void> {
 	const link = join(dir, LINK_NAME);
 	const tmp = join(dir, `.${LINK_NAME}.tmp-${process.pid}`);
 	await rm(tmp, { force: true });
-	await symlink(join(RELEASES, id, LINK_NAME), tmp);
+	await symlink(join(RELEASES, name, LINK_NAME), tmp);
 	const legacy = await moveLegacyAside(link);
 	await rename(tmp, link);
+	await fsyncPath(dir, true);
 	if (legacy !== null) await rm(legacy, { recursive: true, force: true });
 }
 
+/** The stamp, durably: an exclusive temp, its bytes fsynced, renamed in, the directory fsynced. */
 async function writeStamp(dir: string, stamp: PublishedStamp): Promise<void> {
 	const tmp = join(dir, `${STAMP}.tmp-${process.pid}`);
-	await writeFile(tmp, `${JSON.stringify(stamp)}\n`, { mode: FILE_MODE });
-	await chmod(tmp, FILE_MODE);
+	await rm(tmp, { force: true });
+	const handle = await open(tmp, 'wx', FILE_MODE);
+	try {
+		await handle.writeFile(`${JSON.stringify(stamp)}\n`);
+		await handle.chmod(FILE_MODE);
+		await handle.sync();
+	} finally {
+		await handle.close();
+	}
 	await rename(tmp, join(dir, STAMP));
+	await fsyncPath(dir, true);
 }
 
-/** Remove every release but the live one. */
+/** Remove every release but the live one, by directory name (and any staging leftover of a killed run). */
 async function pruneReleases(dir: string, keep: string): Promise<void> {
 	for (const name of await readdir(join(dir, RELEASES))) {
 		if (name !== keep) await rm(join(dir, RELEASES, name), { recursive: true, force: true });
@@ -230,17 +371,30 @@ export async function publishClient(options: {
 	const tree = await readSourceTree(options.source);
 	const id = clientContentId(tree.files);
 	const bytes = tree.files.reduce((sum, file) => sum + file.bytes, 0);
-	const release = join(options.dir, RELEASES, id, LINK_NAME);
-	const result = { id, files: tree.files.length, bytes, skipped: tree.skipped, release };
-	if (await alreadyPublished(options.dir, id)) return { status: 'unchanged', ...result };
+	const result = { id, files: tree.files.length, bytes, skipped: tree.skipped };
+	const releaseOf = (name: string): string => join(options.dir, RELEASES, name, LINK_NAME);
+	const stampNow = (): PublishedStamp => ({
+		id,
+		published_at: (options.now?.() ?? new Date()).toISOString(),
+		files: result.files,
+		bytes,
+	});
+	const live = await liveReleaseVerifies(options.dir, id);
+	if (live !== null) {
+		// Served and whole. A stamp naming another id is a crash between the
+		// switch and the stamp: repaired without copying a byte — the live
+		// release is never touched. The prune finishes whatever a killed run left
+		// (an old release, a staging copy): one readdir when clean.
+		if ((await readStamp(options.dir))?.id !== id) await writeStamp(options.dir, stampNow());
+		await pruneReleases(options.dir, live);
+		return { status: 'unchanged', ...result, release: releaseOf(live) };
+	}
 	await makeDir(join(options.dir, RELEASES));
-	await makeDir(join(options.dir, RELEASES, id));
-	await copyRelease(options.source, release, tree);
-	await switchLink(options.dir, id);
-	const publishedAt = (options.now?.() ?? new Date()).toISOString();
-	await writeStamp(options.dir, { id, published_at: publishedAt, files: result.files, bytes });
-	await pruneReleases(options.dir, id);
-	return { status: 'published', ...result };
+	const name = await buildRelease(options.source, options.dir, id, tree);
+	await switchLink(options.dir, name);
+	await writeStamp(options.dir, stampNow());
+	await pruneReleases(options.dir, name);
+	return { status: 'published', ...result, release: releaseOf(name) };
 }
 
 /** The one log line of a publication. */

@@ -148,7 +148,7 @@ const EXEMPTIONS: Record<string, Exemption> = {
 	},
 	'test/unit/security_audit_2026_07_23_tripwire.test.ts': {
 		reason:
-			"AUTHZ-05 pins WHERE the inverse-reference scan is scoped (record_scope + the related-count door, and the door registry's scope call — scopeInverseReferenceHits / scopeRecordHits / the set-shaped anyRowInScope) and AUTHZ-06 WHERE the get_data facade self-gates; the file itself drives scopeInverseReferenceHits only as a global admin. The isRecordInScope pin is GONE (PERF-01): the projects leg is pinned as the SHARED PREDICATE (one buildSearchSql site, both doors routed through it), its behavioural twin count_native.test.ts. The AUTHZ-06 datalist pins (getUserProjects, the admin ternary) are GONE (READ-1): filter_projects_scope_native / filter_projects_membership_native hold the narrowing as outcomes.",
+			"AUTHZ-05 pins WHERE the inverse-reference scan is scoped (record_scope + the related-count door, and the door registry's scope call — scopeInverseReferenceHits / scopeRecordHits / the set-shaped anyRowInScope and rowScopeFor) and AUTHZ-06 WHERE the get_data facade self-gates; the file itself drives scopeInverseReferenceHits only as a global admin. The isRecordInScope pin is GONE (PERF-01): the projects leg is pinned as the SHARED PREDICATE (one buildSearchSql site, both doors routed through it), its behavioural twin count_native.test.ts. The AUTHZ-06 datalist pins (getUserProjects, the admin ternary) are GONE (READ-1): filter_projects_scope_native / filter_projects_membership_native hold the narrowing as outcomes.",
 		pins: {
 			getPermissions: [
 				{
@@ -158,12 +158,12 @@ const EXEMPTIONS: Record<string, Exemption> = {
 						'AUTHZ-05 — the section-read half of scopeInverseReferenceHits (getPermissions(principal, hit.section_tipo, hit.section_tipo)), driven through the indexation grid with a level-0 caller',
 				},
 			],
-			[ROLE_FLAG_MEMBER]: [
+			rowScopeFor: [
 				{
-					file: 'test/unit/count_native.test.ts',
-					case: 'AUTHZ-05: the non-admin total counts ONLY references inside their projects',
+					file: 'test/unit/related_scope_equivalence_native.test.ts',
+					case: 'D1: count == the full paged walk == the probe boundary, and the walk is exactly the in-scope referrers',
 					covers:
-						'AUTHZ-05 — `if (principal.isGlobalAdmin) … countInverseReferences`: the admin takes the index count, the non-admin the enumerate-then-scope arm (totals differ)',
+						"AUTHZ-05 / D1 — the related count, page and probe are scoped by rowScopeFor(principal) (the door registry's set-shaped scope call): driven for a non-admin with partial project scope and an unreadable referencing section — count == walk == probe, nothing out of scope leaks",
 				},
 			],
 			anyRowInScope: [

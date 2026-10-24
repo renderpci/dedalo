@@ -64,7 +64,7 @@ describe('tool_ontology module', () => {
 		expect(refusal.publicMessage).toBe('section_tipo is required');
 	});
 
-	test('an unresolvable section_tipo fails closed (no matrix table → nothing processed)', async () => {
+	test('a section_tipo that is not an ontology node section is refused before any write (ONT-2)', async () => {
 		const loaded = await getLoadedTool('tool_ontology');
 		const spec = mustGet(
 			loaded!.module.apiActions.set_records_in_dd_ontology,
@@ -73,8 +73,7 @@ describe('tool_ontology module', () => {
 		const refusal = await refusalOf(
 			spec.handler(ctx(DEVELOPER, { section_tipo: 'no_such_section_9999', section_id: 1 })),
 		);
-		expect(refusal.code).toBe('tool.action_failed');
-		// The ontology write's per-check detail rides the LOG-only message.
-		expect(refusal.message).toContain('no matrix table');
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(String(refusal.publicMessage)).toContain('is not an ontology node section');
 	});
 });

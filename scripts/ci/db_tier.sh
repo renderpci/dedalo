@@ -175,6 +175,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/diffusion_frontier_replay.test.ts
 	test/unit/diffusion_attach_scope_native.test.ts
 	test/unit/media_index_reconcile_fence_native.test.ts
+	test/unit/reconcile_scheduler_native.test.ts
 	test/unit/write_door_native.test.ts
 	test/unit/authz_door_matrix_native.test.ts
 	test/unit/agent_access_native.test.ts
@@ -195,6 +196,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/install_ontology_door_native.test.ts
 	test/unit/client_page_doors_native.test.ts
 	test/unit/search_related_page_window_native.test.ts
+	test/unit/related_scope_equivalence_native.test.ts
 	test/unit/filter_projects_membership_native.test.ts
 	test/unit/filter_projects_scope_native.test.ts
 	test/unit/term_by_tipo_label_guard.test.ts

@@ -1410,6 +1410,8 @@ async function relationAppendValidator(
 			existingItems: [...existingItems],
 			pairing: context.dataframePairing,
 			principal: request.principal,
+			// gate 2b's identity of last resort (relations/save.ts attributedUserId)
+			attributedUserId: request.userId,
 		});
 }
 
@@ -1829,6 +1831,8 @@ async function applySaveComponentData(
 					lang: effectiveLang,
 					pairing: dataframePairing,
 					principal: request.principal,
+					// gate 2b's identity of last resort (relations/save.ts attributedUserId)
+					attributedUserId: request.userId,
 				});
 			} else {
 				items = replaceLiteralItems(items, rawItems, langSliced, effectiveLang);
@@ -1921,6 +1925,8 @@ async function applySaveComponentData(
 					existingItems: items,
 					pairing: dataframePairing,
 					principal: request.principal,
+					// gate 2b's identity of last resort (relations/save.ts attributedUserId)
+					attributedUserId: request.userId,
 				});
 				if (validated === null) continue; // ignored insert (PHP returns false)
 				value = validated;
@@ -1995,6 +2001,8 @@ async function applySaveComponentData(
 				existingItems: otherItems,
 				pairing: dataframePairing,
 				principal: request.principal,
+				// gate 2b's identity of last resort (relations/save.ts attributedUserId)
+				attributedUserId: request.userId,
 			});
 			// PHP drops the element when validate_data_element returns false; we leave
 			// the stored item untouched rather than persist a bad-formed locator.

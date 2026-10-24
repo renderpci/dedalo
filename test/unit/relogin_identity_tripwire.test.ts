@@ -38,11 +38,14 @@
  * to resume: zero subscribers, and Mocha case (m) fences the OUTCOME (the event
  * moves no queued save and no recovery, whatever a subscriber's spelling).
  *
- * THE CENSUS below keeps it ONE door: the four identity primitives
- * (`relogin_identity`, `revoke_page_identity`, `clear_page_identity_revoked`,
- * `reload_page`) are called — or imported, so an alias cannot hide a call — only
- * in error_dispatch.js and the client test suite. A second caller is a second
- * decision site, which is exactly the masking pair this replaced.
+ * THE CENSUS below keeps it ONE door: the identity primitives are DERIVED from
+ * error_dispatch.js's exports (IDENTITY_EXPORTS classifies each one), and every
+ * DECISION primitive (`relogin_identity`, `revoke_page_identity`,
+ * `clear_page_identity_revoked`, `session_identity`, `settle_session_identity`,
+ * `reload_page`) is called — or imported, so an alias cannot hide a call — only
+ * in error_dispatch.js, the client test suite and its named callers. A second
+ * caller is a second decision site, which is exactly the masking pair this
+ * replaced.
  *
  * THE OUTCOME GATES are the Mocha suite
  * client/dedalo/test/client/js/test_relogin_identity.js (`bun run test:client`):
@@ -73,6 +76,48 @@ const EXEMPT_DISPATCHES: Readonly<Record<string, string>> = {
 	// (empty since 2026-10-12: the install wizard, the one exempt dispatch, was removed —
 	// WC-2026-10-12-install-surface-removed)
 };
+
+/**
+ * Every identity export of error_dispatch.js, CLASSIFIED. The set is DERIVED from
+ * the module (`identityExports()`: every `export const` whose name says
+ * `identity`, plus `reload_page`, the reload the door ends in) and must equal
+ * these keys, so a new primitive is in the census the day it is exported.
+ *
+ *  - `callers`: a DECISION primitive — it decides, or acts on, who the session
+ *    belongs to. Called or imported only in error_dispatch.js, the client test
+ *    suite, and the files listed.
+ *  - `reads`: a READ of the latch the door sets — asking it decides nothing, and
+ *    every additional caller is one more transport that refuses while revoked.
+ */
+const IDENTITY_EXPORTS: Readonly<
+	Record<string, { callers: readonly string[] } | { reads: string }>
+> = {
+	relogin_identity: { callers: [] },
+	revoke_page_identity: { callers: [] },
+	clear_page_identity_revoked: { callers: [] },
+	session_identity: { callers: [] },
+	// THE TOKEN DOOR: data_manager hands it every envelope that carries a csrf_token,
+	// before adopting the token — it is the door's transport, not a second decision.
+	settle_session_identity: { callers: ['client/dedalo/core/common/js/data_manager.js'] },
+	reload_page: { callers: [] },
+	is_page_identity_revoked: {
+		reads:
+			'a boolean view of the latch; it decides nothing, and no caller can set or lift the latch through it',
+	},
+	refused_by_page_identity: {
+		reads:
+			'THE TRANSPORT LATCH every client transport asks before it opens a connection (data_manager, upload_transport, page, the tool streams); the decision lives beside the latch, and a new caller is one more transport that refuses while revoked',
+	},
+};
+
+/** The identity exports of error_dispatch.js, read from the module source. */
+function identityExports(): string[] {
+	const code = stripComments(readFileSync(join(REPO_ROOT, ERROR_DISPATCH), 'utf8'));
+	return [...code.matchAll(/^export\s+const\s+([A-Za-z0-9_$]+)\s*=/gm)]
+		.map((match) => match[1] ?? '')
+		.filter((name) => /identity/.test(name) || name === 'reload_page')
+		.sort();
+}
 
 function scanFiles(): string[] {
 	const files: string[] = [];
@@ -159,29 +204,48 @@ describe('re-login identity — a queued save must not change author', () => {
 		expect(stale).toEqual([]);
 	});
 
-	test('ONE decision site: the identity primitives are called only by error_dispatch.js', () => {
+	test('the identity primitives are DERIVED from error_dispatch.js — every identity export is classified', () => {
+		const exported = identityExports();
+		// anti-vacuity: the derivation reads the real module
+		expect(exported.length, `${ERROR_DISPATCH}: identity exports`).toBeGreaterThan(4);
+		const unclassified = exported.filter((name) => IDENTITY_EXPORTS[name] === undefined);
+		expect(
+			unclassified,
+			'A new identity export of error_dispatch.js is unclassified: add it to IDENTITY_EXPORTS as a ' +
+				'DECISION primitive (its callers listed) or a READ of the latch (with the reason).',
+		).toEqual([]);
+		const stale = Object.keys(IDENTITY_EXPORTS).filter((name) => !exported.includes(name));
+		expect(stale, 'IDENTITY_EXPORTS names something error_dispatch.js no longer exports').toEqual(
+			[],
+		);
+		for (const [name, entry] of Object.entries(IDENTITY_EXPORTS)) {
+			if ('reads' in entry) expect(entry.reads.length, `${name}: reason`).toBeGreaterThan(40);
+		}
+	});
+
+	test('ONE decision site: the identity decision primitives are called only by error_dispatch.js (and their named callers)', () => {
 		// A second caller of any of them is a second place that decides who logged
 		// in — the masking pair (overlay guard + recovery promise) this replaced.
 		// Imports count too: `import {relogin_identity as decide}` hides every call.
-		const PRIMITIVES = [
-			'relogin_identity',
-			'revoke_page_identity',
-			'clear_page_identity_revoked',
-			'reload_page',
-		] as const;
-		const allowed = (file: string): boolean =>
-			file === ERROR_DISPATCH || file.startsWith('client/dedalo/test/');
+		const decisions = Object.entries(IDENTITY_EXPORTS).flatMap(([name, entry]) =>
+			'callers' in entry ? [{ name, callers: entry.callers }] : [],
+		);
+		expect(decisions.length, 'decision primitives in the census').toBeGreaterThan(4);
 		const offenders: string[] = [];
 		let seenInDoor = 0;
 		for (const file of scanFiles()) {
 			const code = stripComments(readFileSync(join(REPO_ROOT, file), 'utf8'));
-			for (const name of PRIMITIVES) {
+			for (const { name, callers } of decisions) {
 				const called = new RegExp(`(?<![\\w$])${name}\\s*\\(`).test(code);
 				const imported = new RegExp(
 					`import\\s*\\{[^}]*(?<![\\w$])${name}(?![\\w$])[^}]*\\}\\s*from\\s*['"][^'"]*error_dispatch\\.js['"]`,
 				).test(code);
 				if (file === ERROR_DISPATCH && called) seenInDoor++;
-				if (!allowed(file) && (called || imported)) {
+				const allowed =
+					file === ERROR_DISPATCH ||
+					file.startsWith('client/dedalo/test/') ||
+					callers.includes(file);
+				if (!allowed && (called || imported)) {
 					offenders.push(`${file}: ${called ? 'calls' : 'imports'} ${name}`);
 				}
 			}
@@ -193,7 +257,8 @@ describe('re-login identity — a queued save must not change author', () => {
 		expect(
 			offenders,
 			'An identity primitive used outside error_dispatch.js is a SECOND decision site: route it ' +
-				'through `settle_relogin_attempt(api_response)` (resume | retry_form | refused) instead.',
+				'through `settle_relogin_attempt(api_response)` (resume | retry_form | refused) or ' +
+				'`settle_session_identity(envelope, body)` (adopt | refused) instead.',
 		).toEqual([]);
 	});
 

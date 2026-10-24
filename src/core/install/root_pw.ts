@@ -15,7 +15,7 @@
 
 import { ARGON2_OPTIONS } from '../security/argon2_params.ts';
 import { passwordPolicyFailure } from '../security/password_policy.ts';
-import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsqlScript } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
 /** The step's answer on the ONLY path that returns: success (every refusal throws). */
@@ -54,10 +54,11 @@ export async function setRootPassword(
 	const connection = conn ?? connFromConfig();
 
 	// Gate: the root user must exist and still have an empty password.
-	const probe = await runPsql(connection, [
-		'-tAc',
+	const probe = await runPsqlScript(
+		connection,
 		`SELECT coalesce(jsonb_array_length(string->'${PASSWORD_COMPONENT}'), 0) FROM matrix_users WHERE section_id = ${ROOT_SECTION_ID} AND section_tipo = '${USERS_SECTION_TIPO}'`,
-	]);
+		{ flags: ['-tA'] },
+	);
 	if (probe.exitCode !== 0) {
 		refuseInstall('install.step_failed', `Cannot read root user: ${probe.stderr}`);
 	}
@@ -85,9 +86,7 @@ export async function setRootPassword(
 			jsonb_build_array(jsonb_build_object('id', 1, 'value', '${hash}', 'lang', 'lg-nolan'))
 		)
 		WHERE section_id = ${ROOT_SECTION_ID} AND section_tipo = '${USERS_SECTION_TIPO}';`;
-	const applied = await runPsql(connection, ['-v', 'ON_ERROR_STOP=1', '--quiet'], {
-		stdin: updateSql,
-	});
+	const applied = await runPsqlScript(connection, updateSql, { flags: ['--quiet'] });
 	if (applied.exitCode !== 0) {
 		refuseInstall('install.step_failed', `Failed to set password: ${applied.stderr}`);
 	}
@@ -99,10 +98,11 @@ export type RootPasswordState = 'set' | 'empty' | 'missing';
 
 /** Is the root user's password set? (`missing` = no root user / no seed / unreadable.) */
 export async function rootPasswordState(conn?: DbConnDescriptor): Promise<RootPasswordState> {
-	const probe = await runPsql(conn ?? connFromConfig(), [
-		'-tAc',
+	const probe = await runPsqlScript(
+		conn ?? connFromConfig(),
 		`SELECT coalesce(jsonb_array_length(string->'${PASSWORD_COMPONENT}'), 0) FROM matrix_users WHERE section_id = ${ROOT_SECTION_ID} AND section_tipo = '${USERS_SECTION_TIPO}'`,
-	]);
+		{ flags: ['-tA'] },
+	);
 	if (probe.exitCode !== 0 || probe.stdout.trim() === '') return 'missing';
 	return Number(probe.stdout.trim()) > 0 ? 'set' : 'empty';
 }
@@ -116,10 +116,11 @@ export async function rootPasswordMatches(
 	password: string,
 	conn?: DbConnDescriptor,
 ): Promise<boolean> {
-	const probe = await runPsql(conn ?? connFromConfig(), [
-		'-tAc',
+	const probe = await runPsqlScript(
+		conn ?? connFromConfig(),
 		`SELECT string->'${PASSWORD_COMPONENT}'->0->>'value' FROM matrix_users WHERE section_id = ${ROOT_SECTION_ID} AND section_tipo = '${USERS_SECTION_TIPO}'`,
-	]);
+		{ flags: ['-tA'] },
+	);
 	const hash = probe.stdout.trim();
 	if (probe.exitCode !== 0 || !hash.startsWith('$argon2')) return false;
 	return Bun.password.verify(password, hash);

@@ -50,7 +50,7 @@
     The descriptor `src/core/components/component_filter/descriptor.ts` registers `resolveData: 'filter'` (`src/core/relations/models/portal.ts`) — the portal engine WITHOUT own-config child expansion (filter cells never run subdatum over the project targets, `allowOwnConfigChildren: false`). In `list`/`edit`/`search` modes it resolves the authorized-projects datalist and label strings via `src/core/relations/filter_projects.ts` (`getFilterDatalist` / `getFilterListValue`, over `getUserAuthorizedProjects()`). The datalist is **caller-scoped**: a global admin gets every `dd153` project, a non-admin exactly the projects of its own `dd170` membership (the same set the per-record projects ACL filters by), and an unauthenticated call none. The cache behind it is keyed by that membership *set* plus the data language, so a membership change shows on the next read, with no eviction needed. See the *dedalo-relations-ts* skill.
 
 !!! info "Specialised purpose"
-    Unlike a generic relation component, `component_filter` is not a free-form linker. It is Dédalo's **project-based access-control** field. The locators it stores are *project* assignments, the relation type is fixed to `DEDALO_RELATION_TYPE_FILTER` (`dd675`), and saving is gated so that a non-admin user can never strip a record of projects they cannot see (see [Notes](#notes)). Its sibling model [component_filter_master](#relationship-with-component_filter_master) reuses the same machinery to record *which projects a user is allowed to work in*.
+    Unlike a generic relation component, `component_filter` is not a free-form linker. It is Dédalo's **project-based access-control** field. The locators it stores are *project* assignments, the relation type is fixed to `DEDALO_RELATION_TYPE_FILTER` (`dd675`), and saving is gated so that a non-admin user can only assign projects they belong to (see [Security model](#security-model)). Its sibling model [component_filter_master](#relationship-with-component_filter_master) reuses the same machinery to record *which projects a user is allowed to work in*.
 
 ## Definition
 
@@ -240,8 +240,12 @@ default `dd153`), both read through the typed config catalog in `src/config/conf
 
 The projects filter is a **write boundary as well as a read boundary**. A user who can edit a section may only touch records inside their authorized projects, and every write handler (save, delete, duplicate) asserts this explicitly on the target `section_id` through `isRecordInScope()` (`src/core/security/record_scope.ts`) before it mutates anything. Global admins are unscoped and short-circuit the check. Without that assertion a level-2 user could mutate a record they can never see, so the check is the single implementation reused everywhere and stays identical to list/search enforcement.
 
-!!! warning "Value-level narrowing is not applied on save"
-    The scope check gates **which records** a non-admin may write, not **which project locators** they may submit for a record they can already reach. The submitted locator set is not intersected with the user's own authorized projects, so a non-admin editing a record inside their scope can still remove a project locator they cannot themselves see. Review this before exposing project-filter saves to non-admin users.
+**Adding a project is a membership question.** A *new* project locator — on `component_filter` or on [component_filter_master](component_filter_master.md) — must name a project the saving user belongs to, the same set the checkbox list offers. Anything else is refused with `relation.insert_refused` (`details.constraint: "project_not_member"`, HTTP 400) and the whole save is rolled back: nothing stored, no Time Machine row. Global admins are exempt (they are offered every project), and a save with no identifiable user is refused. The check is made in the relation insert door, `src/core/relations/save.ts` (`refuseProjectOutsideMembership`), over `resolveProjectsScope` in `src/core/relations/filter_projects.ts`.
+
+A project the record **already** holds is never re-checked: a colleague's project on a shared record survives every save, including a `set_data` that writes the whole list back.
+
+!!! warning "Removal is not narrowed on save"
+    The membership check governs **adding** a project. The submitted locator set is not intersected with the user's own authorized projects on removal, so a non-admin editing a record inside their scope can still remove a project locator they cannot themselves see (for example with the **reset** button, or a `set_data` that omits it). Review this before exposing project-filter saves to non-admin users.
 
 ### Relationship with component_filter_master
 

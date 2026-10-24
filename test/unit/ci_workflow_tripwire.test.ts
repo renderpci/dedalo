@@ -750,6 +750,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'It models a runner batch holding the publication-target advisory lock from a second Postgres session while the media-index reconcile and rebuild doors run, so the exclusion it proves exists only on a live suite Postgres.',
 	],
 	[
+		'test/unit/reconcile_scheduler_native.test.ts',
+		'It defers the scheduled media-index reconcile by holding the publication-target advisory lock from a second Postgres session and asserts the re-armed run heals the marker store once that session releases it (and that arming inside a real transaction is refused), so the deferral it proves exists only on a live suite Postgres.',
+	],
+	[
 		'test/unit/write_door_native.test.ts',
 		'It drives the real declarative tool gate and the write-door primitives as principals minted in matrix_users/matrix_profiles/dd153 projects by authz_door_fixture, against records it builds through the engine, so every leg is a statement about stored grants and rows and cannot run without a live suite Postgres.',
 	],
@@ -828,6 +832,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
 		'test/unit/search_related_page_window_native.test.ts',
 		'It builds the zzpw situation (one host and five referencing records) on the suite database and asserts which page of those rows each sink window renders, or that it is refused, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/related_scope_equivalence_native.test.ts',
+		"It builds the zzrsq situation on the suite database (hosts, referencing records split across the reader's project and the second suite project, an unreadable referencing section, the ACL reader) and drives the real read / count doors against those rows, comparing the count with the paged walk and the probe and counting the statements and rows the query tap saw, so it cannot run without a live suite Postgres.",
 	],
 	[
 		'test/unit/filter_projects_membership_native.test.ts',

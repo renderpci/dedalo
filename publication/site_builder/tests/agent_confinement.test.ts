@@ -371,13 +371,14 @@ describe('a confined run is an instance of the SITE’s own unit, reached over i
       HTTPS_PROXY: turnEnv.HTTPS_PROXY,
       NO_PROXY: turnEnv.NO_PROXY,
       NODE_USE_ENV_PROXY: turnEnv.NODE_USE_ENV_PROXY,
-      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: turnEnv.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC,
     }).toEqual({
       HTTPS_PROXY: `http://127.0.0.1:${PROXY_PORT}`,
       NO_PROXY: '127.0.0.1,localhost',
       NODE_USE_ENV_PROXY: '1',
-      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
     });
+    // The egress layer adds no driver's traffic switch: the DRIVER states those in every mode
+    // (claude_turn_plant.test.ts P13) — a switch held here reached no declared-`none` turn.
+    expect(Object.keys(turnEnv).filter(key => key.startsWith('CLAUDE_') || key.includes('AUTOUPDATE'))).toEqual([]);
     expect(JSON.stringify(turnEnv)).not.toContain('attacker.example');
     // git reaches nothing: no proxy is offered, so none can be wrong.
     await runDoor(host, 'git', { env: { PATH: '/usr/bin' } });

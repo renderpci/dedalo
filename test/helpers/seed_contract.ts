@@ -11,11 +11,11 @@
  */
 
 import { expect } from 'bun:test';
-import { readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import { type DbConnDescriptor, runPsql } from '../../src/core/install/pg_exec.ts';
+import { type DbConnDescriptor, runPsql, runPsqlScript } from '../../src/core/install/pg_exec.ts';
 import {
 	ACTIVE_REGISTRY_SQL,
 	nonCoreRegistryRows,
@@ -36,9 +36,14 @@ import {
 import { REGISTRY_PROVISION_INPUTS_SQL } from '../../src/core/ontology/hierarchy_state.ts';
 import { DEDALO_VERSION } from '../../src/core/update/version.ts';
 
-/** One-column `-tA` rows (a failed query fails the gate with psql's sentence). */
+/**
+ * One-column `-tA` rows (a failed query fails the gate with psql's sentence). The SQL
+ * rides psql's STDIN through THE door (pg_exec runPsqlScript), never argv — the census
+ * below is past Linux's 128 KiB cap on one argv string (E2BIG at posix_spawn;
+ * seed_section_id_int_clean_native (d)).
+ */
 export async function column(conn: DbConnDescriptor, query: string): Promise<string[]> {
-	const run = await runPsql(conn, ['-X', '-v', 'ON_ERROR_STOP=1', '-tAc', query]);
+	const run = await runPsqlScript(conn, query, { flags: ['-tA'] });
 	expect(run.exitCode, run.stderr).toBe(0);
 	return run.stdout === '' ? [] : run.stdout.split('\n');
 }
@@ -52,15 +57,52 @@ function sourceRows(path: string): number {
 	return text === '' ? 0 : text.split('\n').filter((line) => line !== '').length;
 }
 
-/** Restore a seed into an EMPTY database exactly as written (no migrations, no engine). */
+/**
+ * The gate's OWN census of convertible string record addresses (independent of the
+ * compiler's: a server-side jsonb_path walk of EVERY jsonb column in public, the
+ * sweep post-verify's predicate — a paired tipo key, a string, the strict numeric
+ * rule, safe-int length). `dd_ontology.properties` is the WC's named exemption (the
+ * config DSL's sample locators are not addresses). Answers `table.column:key=n` lines.
+ */
+export async function sectionIdStringResidue(conn: DbConnDescriptor): Promise<string[]> {
+	const surfaces = await column(
+		conn,
+		`SELECT table_name || '.' || column_name FROM information_schema.columns
+		 WHERE table_schema = 'public' AND data_type = 'jsonb'
+		   AND NOT (table_name = 'dd_ontology' AND column_name = 'properties') ORDER BY 1`,
+	);
+	expect(surfaces.length, 'jsonb surfaces to census').toBeGreaterThan(100);
+	const legs = surfaces.flatMap((surface) => {
+		const [table, field] = surface.split('.') as [string, string];
+		return (['section_id', 'section_id_key', 'parent_section_id'] as const).map((key) => {
+			const tipo = key === 'section_id_key' ? 'section_tipo_key' : 'section_tipo';
+			return `SELECT '${surface}:${key}' AS leg, count(*) AS n FROM "${table}" t,
+				LATERAL jsonb_path_query(t."${field}", 'strict $.** ? (exists (@."${key}"))') AS obj
+				WHERE obj ? '${tipo}' AND jsonb_typeof(obj->'${key}') = 'string'
+				  AND obj->>'${key}' ~ '^(-?[1-9][0-9]*|0)$' AND length(ltrim(obj->>'${key}', '-')) <= 15`;
+		});
+	});
+	return column(
+		conn,
+		`SELECT leg || '=' || n FROM (${legs.join('\nUNION ALL\n')}) census WHERE n > 0 ORDER BY 1`,
+	);
+}
+
+/**
+ * Restore a seed into an EMPTY database exactly as written (no migrations, no engine).
+ * The plain SQL lands in a PRIVATE directory (mkdtemp: a fresh, unguessable 0700 dir)
+ * removed with its contents after — never a predictable name in the shared tmpdir,
+ * where a planted symlink would redirect the write onto another file.
+ */
 export async function restoreSeedRaw(conn: DbConnDescriptor, seedPath: string): Promise<void> {
-	const plain = join(tmpdir(), `dedalo_seed_contract_${process.pid}_${Date.now()}.sql`);
-	writeFileSync(plain, gunzipSync(readFileSync(seedPath)));
+	const dir = mkdtempSync(join(tmpdir(), 'dedalo_seed_contract_'));
 	try {
+		const plain = join(dir, 'seed.sql');
+		writeFileSync(plain, gunzipSync(readFileSync(seedPath)), { flag: 'wx', mode: 0o600 });
 		const run = await runPsql(conn, ['-X', '-q', '-v', 'ON_ERROR_STOP=1', '-f', plain]);
 		expect(run.exitCode, run.stderr).toBe(0);
 	} finally {
-		rmSync(plain, { force: true });
+		rmSync(dir, { recursive: true, force: true });
 	}
 }
 
@@ -134,9 +176,23 @@ export async function assertSeedContract(conn: DbConnDescriptor): Promise<void> 
 		await column(conn, `SELECT string->'dd133' FROM matrix_users WHERE section_id = -1`),
 	).toEqual(['[]']);
 	// The data version: one row, this engine's.
-	expect(await column(conn, `SELECT data->>'dedalo_version' FROM matrix_updates`)).toEqual([
-		DEDALO_VERSION,
-	]);
+	expect(
+		await column(
+			conn,
+			`SELECT data->>'dedalo_version' FROM matrix_updates WHERE data ? 'dedalo_version'`,
+		),
+	).toEqual([DEDALO_VERSION]);
+	// INT-CLEAN (WC-2026-10-21-seed-and-thesaurus-int-clean): no record address in
+	// the repealed string form anywhere, and the marker the contraction boot floor
+	// reads — the seed's stock is born swept. Nothing else in matrix_updates.
+	expect(await sectionIdStringResidue(conn), 'string-form record addresses').toEqual([]);
+	expect(
+		await column(
+			conn,
+			`SELECT data->'section_id_int_normalize'->>'origin' FROM matrix_updates WHERE data ? 'section_id_int_normalize'`,
+		),
+	).toEqual(['seed_build']);
+	expect(await count(conn, 'SELECT count(*) FROM matrix_updates')).toBe(2);
 
 	// Everything that does not ship is empty.
 	const tables = await column(conn, `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`);

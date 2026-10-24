@@ -108,12 +108,8 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	const { sql, withTransaction } = await import('../../../src/core/db/postgres.ts');
 	const { readMatrixRecord } = await import('../../../src/core/db/matrix.ts');
 	const { readComponentItems } = await import('../../../src/core/resolve/component_data.ts');
-	const { getColumnNameByModel, getMatrixTableFromTipo, getTranslatableByTipo } = await import(
-		'../../../src/core/ontology/resolver.ts'
-	);
+	const { getMatrixTableFromTipo } = await import('../../../src/core/ontology/resolver.ts');
 	const { saveComponentData } = await import('../../../src/core/section/record/save_component.ts');
-	const { canonicalStoredItems } = await import('../../../src/core/section/record/value_shape.ts');
-	const { groupItemsByLang } = await import('../../../src/core/tools/import_data.ts');
 	const { regenerateMediaDerivatives, rescanMediaItems } = await import(
 		'../../../src/core/media/repair.ts'
 	);
@@ -237,6 +233,12 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	let lockedOut = 0;
 	let stopped = false;
 	const mediaErrors: string[] = [];
+	/** Media components that wrote nothing because the record vanished / stayed locked. */
+	let mediaNotWritten = 0;
+	/** Non-media re-saves that wrote nothing (vanished, locked, refused by the save door). */
+	const resaveErrors: string[] = [];
+	/** Of those, the ones the SAVE DOOR refused (ok:false — rolled back whole). */
+	let refusedResaves = 0;
 	/** Row × component targets the WRITE DOOR refused (nothing written to them). */
 	const refusedTargets: string[] = [];
 	// The run is held in the active-run registry while it writes: a revert of
@@ -367,6 +369,7 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 					);
 					if (outcome.action === 'missing') {
 						vanished += 1;
+						mediaNotWritten += 1;
 						mediaErrors.push(
 							`${tipo}#${row.section_id}: record deleted during the run — nothing written`,
 						);
@@ -374,6 +377,7 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 					}
 					if (outcome.action === 'locked') {
 						lockedOut += 1;
+						mediaNotWritten += 1;
 						mediaErrors.push(
 							`${tipo}#${row.section_id}: the record stayed locked past the lock timeout — nothing written`,
 						);
@@ -383,53 +387,38 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 					regenerated += 1;
 					continue;
 				}
-				// The STORED items in the shape the save door accepts (value_shape.ts
-				// canonicalStoredItems): a PHP-era numeric-string number is cast as
-				// PHP's set_data did, so re-saving what the record holds is never
-				// refused as malformed (WC-2026-10-03-save-refuses-malformed-value-shape).
-				const items = canonicalStoredItems(
-					getColumnNameByModel(model),
-					readComponentItems(record, tipo, model) ?? [],
-				);
-				// NOTHING STORED, NOTHING TO REGENERATE. An absent (or empty) key has
-				// no value a derivation could refresh — and re-saving it would store
-				// `[]` over ABSENCE, which the undo log (canonicalJson keeps the two
-				// apart) records as a real change: a hidden BEFORE row plus a VISIBLE
-				// "[] saved by the sweep" history row for every record of a sparse
-				// component (two TM rows per empty record on an incident-scale
-				// section). WC …-bulk-revert-undo-log §2: a re-save that changes
-				// nothing leaves history untouched.
-				if (items.length === 0) continue;
-				const translatable = await getTranslatableByTipo(tipo);
-				// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): the
-				// regenerate bucket RE-SAVES curated values, so it must write in the
-				// language the operator is working in. Reading the install default made
-				// every user whose data lang differs re-stamp the wrong slice. Outside a
-				// request it falls back to DEDALO_DATA_LANG_DEFAULT, which is the read
-				// fallback chain's first candidate — a job's write stays reachable.
-				const componentLang = translatable ? currentDataLang() : 'lg-nolan';
-				// The stored array carries EVERY language; set_data is lang-sliced
-				// (PHP set_data_lang), so a translatable literal must be re-saved one
-				// lang group at a time — a single flat save would re-stamp every
-				// translation onto componentLang.
-				const groups = groupItemsByLang(items, componentLang);
-				for (const [lang, group] of groups) {
-					await saveComponentData({
-						componentTipo: grant.componentTipo,
-						sectionTipo: grant.sectionTipo,
-						sectionId: grant.sectionId,
-						lang,
-						changedData: [{ action: 'set_data', id: null, value: group }],
-						userId: grant.userId,
-						// THE UNDO LOG (decision D1, WC bulk-revert-undo-log): a save
-						// under a bulk id records its BEFORE/AFTER pair whatever saveTm
-						// says, and the after-row is ordinary visible history — so the
-						// v6 "TM disabled for the whole run" (:45-47) is retired here. A
-						// regenerate that re-saves the SAME value writes nothing (the
-						// pair law skips a canonical no-op), so the sweep adds history
-						// only where the derivation actually CHANGED a value.
-						bulkProcessId,
-					});
+				// THE RE-SAVE IS A LOCKED READ-MODIFY-WRITE
+				// (WC-2026-10-21-update-cache-locked-resave). The value re-saved is the
+				// one stored UNDER the row lock, in the transaction that writes it —
+				// never this run's per-row
+				// snapshot, read unlocked above and possibly minutes old (a media
+				// rebuild of the same row runs first): re-saving the snapshot replaced
+				// a cataloguer's committed edit with the pre-edit bytes, and recreated a
+				// record deleted meanwhile. One transaction per row × component (every
+				// lang group atomically), its lock wait bounded per record like the
+				// media branch's, so one held row is THAT record's `locked`.
+				const resave = await resaveUnderRowLock(grant, model, tipo, bulkProcessId);
+				if (resave === 'missing') {
+					vanished += 1;
+					resaveErrors.push(
+						`${tipo}#${row.section_id}: record deleted during the run — nothing written`,
+					);
+					continue;
+				}
+				if (resave === 'locked') {
+					lockedOut += 1;
+					resaveErrors.push(
+						`${tipo}#${row.section_id}: the record stayed locked past the lock timeout — nothing written`,
+					);
+					continue;
+				}
+				if (resave === 'empty') continue;
+				if (resave !== 'written') {
+					refusedResaves += 1;
+					resaveErrors.push(
+						`${tipo}#${row.section_id}: the re-save was refused — nothing written (${resave.refused})`,
+					);
+					continue;
 				}
 				regenerated += 1;
 			}
@@ -441,12 +430,12 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	const summaryMsg = stopped
 		? `Stopped. update_cache regenerated ${regenerated} component(s) across ${processed} of ${rows.length} matched record(s) before the stop.`
 		: `OK. update_cache regenerated ${regenerated} component(s) across ${rows.length} record(s).`;
-	const rebuildFailures = mediaErrors.length - vanished - lockedOut;
+	const rebuildFailures = mediaErrors.length - mediaNotWritten;
 	const refusedNote =
 		refusedTargets.length > 0
 			? ` ${refusedTargets.length} target(s) the caller may not write were skipped (nothing written to them).`
 			: '';
-	const msg = `${summaryMsg}${refusedNote}${derivedNote}${rebuildFailures > 0 ? ` ${rebuildFailures} media derivative rebuild(s) failed (files_info still refreshed).` : ''}${mediaHeld > 0 ? ` ${mediaHeld} stored media index(es) kept (files not on this server — shrink held).` : ''}${vanished > 0 ? ` ${vanished} record(s) deleted during the run (nothing written).` : ''}${lockedOut > 0 ? ` ${lockedOut} record(s) stayed locked (nothing written).` : ''}`;
+	const msg = `${summaryMsg}${refusedNote}${derivedNote}${refusedResaves > 0 ? ` ${refusedResaves} re-save(s) refused by the save door (nothing written to them).` : ''}${rebuildFailures > 0 ? ` ${rebuildFailures} media derivative rebuild(s) failed (files_info still refreshed).` : ''}${mediaHeld > 0 ? ` ${mediaHeld} stored media index(es) kept (files not on this server — shrink held).` : ''}${vanished > 0 ? ` ${vanished} record(s) deleted during the run (nothing written).` : ''}${lockedOut > 0 ? ` ${lockedOut} record(s) stayed locked (nothing written).` : ''}`;
 	// Final frame: the client renders the summary from the last pfile data.
 	publish({
 		msg,
@@ -461,7 +450,7 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	return ok(
 		{
 			summary: msg,
-			errors: [...mediaErrors, ...refusedTargets],
+			errors: [...mediaErrors, ...resaveErrors, ...refusedTargets],
 			regenerated,
 			refused: refusedTargets.length,
 			derived_skipped: derivedSkipped,
@@ -476,6 +465,149 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 		},
 		{ requestId: toolRequestId(ctx) },
 	);
+}
+
+/** What one locked non-media re-save did (resaveUnderRowLock). */
+type ResaveOutcome = 'written' | 'empty' | 'missing' | 'locked' | { refused: string };
+
+/** A save-door refusal carried out of the re-save's transaction (so it rolls back whole). */
+class ResaveRefused extends Error {
+	constructor(readonly reason: string) {
+		super(reason);
+		this.name = 'ResaveRefused';
+	}
+}
+
+/**
+ * The save door's REFUSAL of one re-save, or null when `error` is not one. The
+ * door says no two ways: an `ok:false` answer, or a THROWN typed error whose
+ * registry category is the request's own (`caller` — a malformed stored item
+ * the value-shape law refuses, a write lang this install does not declare) or
+ * the target's (`permission`). Both are THIS record's verdict: reported per
+ * record, never the end of the sweep (value_shape.ts: "the door then refuses
+ * it: loud, per record"). Anything else — a database failure, an internal
+ * error — is no verdict on the record and propagates.
+ */
+function saveDoorRefusal(error: unknown): string | null {
+	if (!isDedaloError(error)) return null;
+	const category = error.spec.category;
+	return category === 'caller' || category === 'permission' ? error.message : null;
+}
+
+/**
+ * ONE row × component regenerate of a NON-media component, as a locked
+ * read-modify-write in ONE transaction (WC-2026-10-21-update-cache-locked-resave;
+ * dedalo-ts-write-path §3 — the read sits under FOR UPDATE in the transaction
+ * that writes): take the row lock (its wait bounded per record, the media
+ * branch's bound: a sweep never stalls on one held row), read the record AS IT
+ * STANDS UNDER THE LOCK, re-save every lang group of the component's stored
+ * value. A refused group rolls the whole component back. `missing` = the record
+ * is gone (never recreated), `locked` = the lock was not had in time, `empty` =
+ * nothing stored (see below) — nothing written in any of those.
+ */
+async function resaveUnderRowLock(
+	grant: RecordGrant,
+	model: string,
+	dataTipo: string,
+	bulkProcessId: number,
+): Promise<ResaveOutcome> {
+	const { sql, sqlStateOf, withTransaction } = await import('../../../src/core/db/postgres.ts');
+	const { MATRIX_JSONB_COLUMNS, readMatrixRecord } = await import('../../../src/core/db/matrix.ts');
+	const { readMatrixKeyForUpdate } = await import('../../../src/core/db/matrix_write.ts');
+	const { perRecordLockWaitMs } = await import(
+		'../../../src/core/media/tools/files_info_persist.ts'
+	);
+	const { readComponentItems } = await import('../../../src/core/resolve/component_data.ts');
+	const { getColumnNameByModel, getMatrixTableFromTipo, getTranslatableByTipo } = await import(
+		'../../../src/core/ontology/resolver.ts'
+	);
+	const { saveComponentData } = await import('../../../src/core/section/record/save_component.ts');
+	const { canonicalStoredItems } = await import('../../../src/core/section/record/value_shape.ts');
+	const { groupItemsByLang } = await import('../../../src/core/tools/import_data.ts');
+
+	const table = await getMatrixTableFromTipo(grant.sectionTipo);
+	if (table === null) return 'missing';
+	// A model with no matrix column stores nothing to regenerate.
+	const column = MATRIX_JSONB_COLUMNS.find((name) => name === getColumnNameByModel(model));
+	if (column === undefined) return 'empty';
+	// Resolved BEFORE the lock (ontology reads, no row involved).
+	const translatable = await getTranslatableByTipo(dataTipo);
+	// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): the regenerate
+	// bucket RE-SAVES curated values, so it must write in the language the
+	// operator is working in. Reading the install default made every user whose
+	// data lang differs re-stamp the wrong slice. Outside a request it falls back
+	// to DEDALO_DATA_LANG_DEFAULT, the read fallback chain's first candidate — a
+	// job's write stays reachable.
+	const componentLang = translatable ? currentDataLang() : 'lg-nolan';
+	try {
+		return await withTransaction(async (): Promise<ResaveOutcome> => {
+			await sql.unsafe(`SET LOCAL lock_timeout = '${perRecordLockWaitMs()}ms'`, []);
+			// The row lock (FOR UPDATE on the record), taken through the component's key;
+			// null = the record is gone. The items are then read the way every reader
+			// and the save path read them (readComponentItems on the locked record) —
+			// never the key read's own items, which answer `[]` for a PHP-era
+			// non-array value (tool_propagate_component_data's propagateOneRecord).
+			const lockedKey = await readMatrixKeyForUpdate(
+				table,
+				grant.sectionTipo,
+				grant.sectionId,
+				column,
+				dataTipo,
+			);
+			if (lockedKey === null) return 'missing';
+			const record = await readMatrixRecord(table, grant.sectionTipo, grant.sectionId);
+			if (record === null) return 'missing';
+			// The STORED items in the shape the save door accepts (value_shape.ts
+			// canonicalStoredItems): a PHP-era numeric-string number is cast as PHP's
+			// set_data did, so re-saving what the record holds is never refused as
+			// malformed (WC-2026-10-03-save-refuses-malformed-value-shape).
+			const items = canonicalStoredItems(column, readComponentItems(record, dataTipo, model) ?? []);
+			// NOTHING STORED, NOTHING TO REGENERATE. An absent (or empty) key has no
+			// value a derivation could refresh — and re-saving it would store `[]`
+			// over ABSENCE, which the undo log (canonicalJson keeps the two apart)
+			// records as a real change: a hidden BEFORE row plus a VISIBLE "[] saved
+			// by the sweep" history row for every record of a sparse component. WC
+			// …-bulk-revert-undo-log §2: a re-save that changes nothing leaves
+			// history untouched.
+			if (items.length === 0) return 'empty';
+			// The stored array carries EVERY language; set_data is lang-sliced (PHP
+			// set_data_lang), so a translatable literal is re-saved one lang group at
+			// a time — a single flat save would re-stamp every translation onto
+			// componentLang.
+			for (const [lang, group] of groupItemsByLang(items, componentLang)) {
+				const outcome = await saveComponentData({
+					componentTipo: grant.componentTipo,
+					sectionTipo: grant.sectionTipo,
+					sectionId: grant.sectionId,
+					lang,
+					changedData: [{ action: 'set_data', id: null, value: group }],
+					userId: grant.userId,
+					// THE UNDO LOG (decision D1, WC bulk-revert-undo-log): a save under a
+					// bulk id records its BEFORE/AFTER pair whatever saveTm says, and the
+					// after-row is ordinary visible history — so the v6 "TM disabled for
+					// the whole run" (:45-47) is retired here. A regenerate that re-saves
+					// the SAME value writes nothing (the pair law skips a canonical
+					// no-op), so the sweep adds history only where the derivation
+					// actually CHANGED a value.
+					bulkProcessId,
+				}).catch((error: unknown) => {
+					const refusal = saveDoorRefusal(error);
+					if (refusal === null) throw error;
+					throw new ResaveRefused(refusal);
+				});
+				// In this (ambient) transaction a refusal leaves the refused part's
+				// writes to US: throw, so no lang group of a refused component stays —
+				// whichever way the door said no (an answer, or a typed throw above).
+				if (outcome.ok === false) throw new ResaveRefused(outcome.message);
+			}
+			return 'written';
+		});
+	} catch (error) {
+		if (error instanceof ResaveRefused) return { refused: error.reason };
+		if (sqlStateOf(error) === '55P03') return 'locked';
+		if (isDedaloError(error) && error.code === 'db.lock_timeout') return 'locked';
+		throw error;
+	}
 }
 
 /**

@@ -382,7 +382,7 @@ const CENSUS: Record<string, CensusRow> = {
 	'tools/tool_numisdata_acquisition/server/index.ts': {
 		verdict: 'not-dd128',
 		reason:
-			'commit_lots writes only HARD-BOUND sections and components named by module constants, never by the payload: NUMISDATA_OBJECT_TIPO (the lot), AUCTION_SECTION_TIPO (the Auction), ENTITY_SECTION_TIPO (the Entity), IMAGE_SECTION_TIPO (the coin-face image records, born by the OBVERSE_PORTAL_TIPO / REVERSE_PORTAL_TIPO portal add_new_element). Each is declared in its `targets` list — the section AND every (section, component) pair it writes — and src/core/tools/security.ts gates every entry through authorizeSectionTarget (level 2, the dd128-aware pair) before the handler runs. The payload supplies only VALUES and an ENTITY_SECTION_TIPO entity id (isRecordInScope-checked for a non-admin, an out-of-scope id is dropped for the name-based selection; written as a LOCATOR into AUCTION_COMPANY_TIPO, never addressed as a write target).',
+			'commit_lots writes only HARD-BOUND sections and components named by module constants, never by the payload: NUMISDATA_OBJECT_TIPO (the lot), AUCTION_SECTION_TIPO (the Auction), ENTITY_SECTION_TIPO (the Entity), IMAGE_SECTION_TIPO (the coin-face image records, born by the OBVERSE_PORTAL_TIPO / REVERSE_PORTAL_TIPO portal add_new_element). Each is declared in its `targets` list — the section AND every (section, component) pair it writes — and src/core/tools/security.ts gates every entry through authorizeSectionTarget (level 2, the dd128-aware pair) before the handler runs. The payload supplies only VALUES and an ENTITY_SECTION_TIPO entity id (isRecordInScope-checked for a non-admin, an out-of-scope id is dropped for the name-based selection; written as a LOCATOR into AUCTION_COMPANY_TIPO, never addressed as a write target). The test seam withAcquisitionSeamForTests may rebind a target only to the shipped tipo or a zz-prefixed scratch tipo — any other (dd128 included) refuses internal.invariant before the work runs (gate numisdata_acquisition_seam_scope_native).',
 	},
 	'tools/tool_bibliography_acquisition/server/index.ts': {
 		verdict: 'not-dd128',
@@ -420,9 +420,9 @@ const CENSUS: Record<string, CensusRow> = {
 			'the bulk revert’s RECORD half: undeletes a record the run’s cascade deleted (restoreSection) and deletes a record the run created (the delete door) — whole records only, gated by getSectionPermissions(section) >= 2 plus the record scope (the delete door’s own rule). No component pair exists to downgrade.',
 	},
 	'tools/tool_time_machine/server/tool_time_machine.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'apply_value restore: its level check is the inherited declarative tipo gate; it scopes the record but never consults the component rule.',
+			'apply_value: the COMPONENT branch asks authorizeComponentWrite (authorizeRecordAccess: write, level 2, section floor 1, the dd128-aware pair, the write scope) for the main and every slot it writes; the SECTION branch (a whole-record row) hands persistRecordColumns a door that asks the same for EVERY component the restore changes, behind the row lock (the chokepoint\u2019s own modified stamps excepted); a refusal rolls the restore back. An undelete (no live row) is section-level, like a create (cross-write:r3). Matrix tool:tool_time_machine:apply_value:section DD1725 leg.',
 	},
 	'tools/tool_time_machine/server/dataframe_restore.ts': {
 		verdict: 'PENDING',
@@ -451,7 +451,7 @@ const EXTRA_ROWS: Record<string, CensusRow> = {
 };
 
 /** PINNED. Shrink-only: this may go DOWN, never up. */
-const PENDING_COUNT = 4;
+const PENDING_COUNT = 3;
 
 /**
  * THE DELEGATING ENGINES — a `delegates` row on a file with no principal of its

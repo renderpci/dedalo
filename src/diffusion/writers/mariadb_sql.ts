@@ -26,9 +26,18 @@
  *   byte-identical client renders.
  * - abort(): no-op — SQL work is transactional; anything uncommitted was
  *   already rolled back by the failed writeRows call.
+ *
+ * Every statement that can WAIT on a target-side lock runs through
+ * boundSqlTargetStatement (core/diffusion_bridge/target_lock.ts): the runner
+ * calls this writer inside its fenced unit, which keeps its target for as long
+ * as a statement waits — a metadata lock held by the public site's long read
+ * would otherwise hold the target fence (and every door on it) for MariaDB's
+ * default `lock_wait_timeout`, a day. Waited out, the statement fails (errno
+ * 1205), the unit rolls back and the run fails loudly.
  */
 
 import { readString } from '../../config/readers.ts';
+import { boundSqlTargetStatement } from '../../core/diffusion_bridge/target_lock.ts';
 import { DedaloError } from '../../core/errors/index.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
@@ -107,9 +116,11 @@ class MariadbWriterSession implements WriterSession {
 		const pool = getTargetPool(this.database);
 		for (const section of this.plan.sections) {
 			// 1. Table with the full plan anatomy (no-op when it already exists).
-			await pool.unsafe(generateCreateTable(section), []);
+			await pool.unsafe(boundSqlTargetStatement(generateCreateTable(section)), []);
 
 			// 2. Diff live columns against the plan (covers pre-existing tables).
+			//    Unbounded on purpose: INFORMATION_SCHEMA takes a high-priority
+			//    metadata lock that never queues behind a pending writer.
 			const columnsQuery = generateColumnsQuery(this.database, section.tableName);
 			const rows = (await pool.unsafe(columnsQuery.sql, columnsQuery.params)) as {
 				COLUMN_NAME: string;
@@ -121,7 +132,7 @@ class MariadbWriterSession implements WriterSession {
 				.map((field) => field.columnName)
 				.filter((columnName) => !existingColumns.has(columnName));
 			for (const alterSql of generateAddColumns(section, missingColumns)) {
-				await pool.unsafe(alterSql, []);
+				await pool.unsafe(boundSqlTargetStatement(alterSql), []);
 			}
 		}
 		this.schemaEnsured = true;
@@ -154,7 +165,7 @@ class MariadbWriterSession implements WriterSession {
 			for (const batch of batches) {
 				const statement = generateBatchUpsert(section.tableName, columnNames, batch);
 				const result = (await transaction.unsafe(
-					statement.sql,
+					boundSqlTargetStatement(statement.sql),
 					statement.params,
 				)) as MariadbExecResult;
 				affectedRows += result.affectedRows ?? 0;
@@ -203,7 +214,10 @@ class MariadbWriterSession implements WriterSession {
 			const idsBatch = sectionIds.slice(offset, offset + DELETE_BATCH_IDS);
 			const statement = generateDelete(section.tableName, idsBatch);
 			try {
-				const result = (await pool.unsafe(statement.sql, statement.params)) as MariadbExecResult;
+				const result = (await pool.unsafe(
+					boundSqlTargetStatement(statement.sql),
+					statement.params,
+				)) as MariadbExecResult;
 				deletedRows += result.affectedRows ?? 0;
 			} catch (error) {
 				if (isMissingTableError(error) || isMissingDatabaseError(error)) {

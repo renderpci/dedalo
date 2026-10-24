@@ -13,14 +13,19 @@
  * statically (D1 boundary rule).
  *
  * Media publication markers: NATIVE since the S2-31 media_index port — each
- * confirmed target (deleted or errno-tolerated no-op) also drops its
- * .publication/ markers via applyTableState, exactly like the old engine's
- * delete_handler.ts:129-141. Marker failures are logged and never fail the
- * delete (fail-closed: a missing marker only hides a published record until
- * the next publish/reconcile/rebuild).
+ * target whose rows are gone (deleted or errno-tolerated no-op) also drops its
+ * .publication/ markers via applyTableState (old engine delete_handler.ts:129-141).
+ * The marker withdrawal is PART of the unpublish
+ * (WC-2026-10-21-unpublish-markers-durable): a target is confirmed only once its
+ * markers are gone AND durable (applyTableState flushes its directory barrier before it returns). A
+ * marker that could not be withdrawn leaves the media publicly readable, so that
+ * target is NOT confirmed — its dd1758 row stays pending and the retry queue
+ * re-runs the (idempotent) DELETE and the withdrawal. The old engine logged and
+ * confirmed, which reported 'unpublished' over media still served.
  */
 
 import {
+	boundSqlTargetStatement,
 	sqlTargetLockKey,
 	withDeleteDoorLock,
 } from '../../../core/diffusion_bridge/target_lock.ts';
@@ -90,8 +95,12 @@ async function deleteOneTarget(target: SqlDeleteTarget, result: SqlDeleteResult)
 	try {
 		const pool = getTargetPool(target.database_name);
 		const placeholders = target.section_ids.map(() => '?').join(', ');
+		// Lock-wait bounded: a row another session holds must not keep this
+		// door's (shared) target lock — nor the record-delete request — waiting.
 		await pool.unsafe(
-			`DELETE FROM ${escapeSqlIdentifier(target.table_name)} WHERE section_id IN (${placeholders})`,
+			boundSqlTargetStatement(
+				`DELETE FROM ${escapeSqlIdentifier(target.table_name)} WHERE section_id IN (${placeholders})`,
+			),
 			// Oracle posture: section ids bind as strings.
 			target.section_ids.map((id) => String(id)),
 		);
@@ -114,10 +123,9 @@ async function deleteOneTarget(target: SqlDeleteTarget, result: SqlDeleteResult)
 		}
 	}
 	if (!confirmed) return;
-	result.deleted.push(key);
 
-	// S2-31: drop the publication markers for the unpublished ids (oracle
-	// delete_handler.ts:129-141 — after the row DELETE, never failing it).
+	// S2-31: withdraw the publication markers of the unpublished ids — durable
+	// when applyTableState returns. Only then is the target confirmed.
 	if (target.section_tipo !== undefined && target.section_tipo !== '') {
 		try {
 			await applyTableState(
@@ -129,9 +137,14 @@ async function deleteOneTarget(target: SqlDeleteTarget, result: SqlDeleteResult)
 			);
 		} catch (error) {
 			console.error(
-				`[media_index] marker removal failed for ${key} (delete succeeded; markers heal on next reconcile/rebuild):`,
+				`[media_index] marker withdrawal failed for ${key} (rows deleted; the unpublish stays pending for the retry queue):`,
 				error,
 			);
+			result.errors.push(
+				`${key}: media markers not withdrawn (${error instanceof Error ? error.message : String(error)}) — the unpublish stays pending for the retry queue`,
+			);
+			return;
 		}
 	}
+	result.deleted.push(key);
 }

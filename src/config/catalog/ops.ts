@@ -629,9 +629,11 @@ DEDALO_JOB_LANE_TRANSCRIPTION_CONCURRENCY=2
 		heading: 'Reconcile scheduler',
 		typeLabel: 'bool',
 		doc: `Whether **this** server runs the scheduled cross-store reconciles by itself: the
-boot-class ones once after it starts listening (today: the publication-marker index, which
-re-derives the web server's \`pub/\` markers from the per-target truth) and the interval-class
-ones on their period. Every outcome is published under \`reconcile\` on \`/api/v1/counters\`
+boot-class ones after it starts listening and the interval-class ones on their period (the
+publication-marker index, which re-derives the web server's \`pub/\` markers from the
+per-target truth, runs at both: after the listen and every 10 minutes). A run that had to wait
+for a publication in progress past its bound is tried again a minute later, until it completes.
+Every outcome is published under \`reconcile\` on \`/api/v1/counters\`
 and listed by the **Reconcile** maintenance widget, which — like \`bun scripts/reconcile.ts\` —
 keeps working with the scheduler off; only the automatic runs stop.
 

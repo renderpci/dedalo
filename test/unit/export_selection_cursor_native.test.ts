@@ -46,7 +46,9 @@
  *      cursor's backend terminated) releases the slot inside the cursor itself;
  *   6. ADMISSION — with every selection slot held the next REQUEST-path open
  *      is refused EAGERLY with `export.busy` (503, retryable), never queued on
- *      the pool; 12 — a BACKGROUND build (toolExportBuildArtifact, lane
+ *      the pool; 6b — NO RESERVED SLOT (owner decision D4): the BACKGROUND
+ *      admission may take every slot, none is kept back for the request path,
+ *      which is then refused just the same; 12 — a BACKGROUND build (toolExportBuildArtifact, lane
  *      'export') is never refused for it: it waits for the slot (FIFO, the freed
  *      slot HANDED to it — never back to the free count while it waits) and
  *      completes, and a waiting build's signal ends the wait as
@@ -61,6 +63,29 @@
  *      ceilings use) BEFORE any hydration statement; the stream form of the
  *      same SQO succeeds — and, under the same tap, DOES issue hydration
  *      statements (the positive control that keeps the empty match meaningful);
+ *  16. A PRE-ABORTED OPEN (refuse admission) answers its total and releases
+ *      as it returns — nothing held, no page;
+ *  17. A STOP CUTS THE SELECTION WHILE IT IS BUILT — the signal that fires
+ *      during the open (Stop, the lane deadline, a shutdown) is the user's
+ *      `export.cancelled`, at once: 17a — fired WHILE the hold cursor's commit
+ *      materializes a 3 s selection, the running statement is cancelled on the
+ *      server (pg_cancel_backend, guarded by the transaction's start —
+ *      postgres.ts cancelBackendStatement), so the open rejects well before the
+ *      selection could finish and NO backend of this database is left running
+ *      it; 17b — fired while the open still WAITS for a pooled connection, the
+ *      open sends nothing once it gets one (a cancel landing between two
+ *      statements reaches nothing — the abort is sticky at the open's statement
+ *      door). Both give back the slot and the connection, the pool fresh;
+ *      17c — the cancel is GUARDED by the transaction it was read in: once
+ *      that transaction ended, a cancel naming it leaves the backend's next
+ *      statement alone (a late Stop never cuts the cursor's MOVE/FETCH, nor
+ *      whatever a pooled connection runs next); the same cancel inside the
+ *      transaction does cut (the control);
+ *  15. THE CEILING — the hold cursor's commit-time materialization runs under
+ *      the connection's statement ceiling (a process booted with a 300 ms
+ *      ceiling refuses a 3 s selection with `db.statement_timeout`), and every
+ *      exit leaves each pooled connection fresh (no transaction, no
+ *      transaction_timeout);
  *  11. PAGE SIZE — `openSelectionCursor` refuses a pageRows that is not an
  *      integer in [1, SELECTION_PAGE_ROWS_MAX] (`internal.invariant`) before
  *      any slot is taken: a page past it would bring back the whole-selection
@@ -739,6 +764,49 @@ else {
 			}
 		});
 
+		test('6b. NO RESERVED SLOT (D4): background cursors may take EVERY slot; a request-path open is then refused (export.busy)', async () => {
+			// The owner decision (2026-10-21): one shared pool, no slot reserved for
+			// either lane. Leg 6 holds every slot from the REQUEST path and leg 12 shows
+			// the background lane then waits; here the BACKGROUND admission takes them
+			// all — none is kept back for the request path — and the request path is
+			// refused eagerly, exactly as when it holds them itself.
+			const sqo = sanitizeClientSqo(structuredClone(SQO));
+			sqo.limit = null as unknown as number;
+			sqo.offset = 0;
+			const built = await buildSearchSql(sqo, { idsOnly: true });
+			const held: { close(): Promise<void> }[] = [];
+			try {
+				for (let i = 0; i < SLOTS; i++) {
+					// Bounded: a slot kept back from the background lane would leave
+					// this open waiting for a slot that never frees.
+					const open = openSelectionCursor(built, {
+						pageRows: SELECTION_PAGE,
+						admission: 'queue',
+					});
+					const outcome = await Promise.race([open, Bun.sleep(2_000).then(() => null)]);
+					if (outcome === null) {
+						void open.then((cursor) => cursor.close()).catch(() => undefined);
+						throw new Error(
+							`background open ${i + 1}/${SLOTS} was kept waiting: a slot is reserved`,
+						);
+					}
+					held.push(outcome);
+				}
+				expect(exportSelectionSlots()).toEqual({ slots: SLOTS, inUse: SLOTS, waiting: 0 });
+				let refusal: unknown = null;
+				try {
+					const extra = await openExportGrid(jobContext(admin, exportOptions()), runOptions());
+					await extra.lines.return(undefined);
+				} catch (error) {
+					refusal = error;
+				}
+				expect((refusal as { code?: string } | null)?.code).toBe('export.busy');
+			} finally {
+				for (const cursor of held) await cursor.close();
+			}
+			expect(exportSelectionSlots()).toEqual({ slots: SLOTS, inUse: 0, waiting: 0 });
+		});
+
 		test('11. page size: a pageRows outside [1, the grid page] is internal.invariant before any slot is taken', async () => {
 			const sqo = sanitizeClientSqo(structuredClone(SQO));
 			sqo.limit = null as unknown as number;
@@ -1253,6 +1321,107 @@ else {
 			);
 		}, 30_000);
 
+		test("15. the materialization runs under the connection's statement ceiling (db.statement_timeout); every exit leaves the pool clean", async () => {
+			// A WITH HOLD cursor is computed IN FULL when its transaction commits,
+			// and PostgreSQL disarms statement_timeout before that commit: an
+			// autocommit DECLARE ran the whole selection with NO ceiling (measured:
+			// 300 ms ceiling, 2343 ms selection served). A process BOOTED with a
+			// 300 ms ceiling and a pool of two (one selection slot): a selection that
+			// sleeps 3 s is refused with the typed ceiling code well before it could
+			// finish, holding nothing; a quick one under the same ceiling still
+			// serves (the bound is the ceiling, not a refusal of cursors); and after
+			// the refusal AND after a DECLARE that fails inside the bounded
+			// transaction, EVERY pooled connection is fresh — no transaction left
+			// open or aborted, no transaction_timeout left behind.
+			const cursorPath = join(
+				import.meta.dir,
+				'..',
+				'..',
+				'src/diffusion/export/selection_cursor.ts',
+			);
+			const postgresPath = join(import.meta.dir, '..', '..', 'src/core/db/postgres.ts');
+			const script = `
+				const m = await import(${JSON.stringify(cursorPath)});
+				const pg = await import(${JSON.stringify(postgresPath)});
+				const out = { slots: m.EXPORT_SELECTION_SLOTS };
+				const sleepy = "SELECT 'zzsc1' AS section_tipo, g AS section_id FROM generate_series(1, 30) AS g WHERE pg_sleep(0.1) IS NOT NULL ORDER BY g";
+				const started = performance.now();
+				try {
+					const c = await m.openSelectionCursor({ sql: sleepy, params: [] }, { pageRows: 5 });
+					out.slow = 'admitted ' + c.total;
+					await c.close();
+				} catch (error) {
+					out.slow = error?.code ?? String(error);
+				}
+				out.slowWithinBound = performance.now() - started < 1500;
+				out.slotsAfterSlow = m.exportSelectionSlots().inUse;
+				const quick = await m.openSelectionCursor(
+					{ sql: "SELECT 'zzsc1' AS section_tipo, g AS section_id FROM generate_series(1, 7) AS g ORDER BY g", params: [] },
+					{ pageRows: 5 },
+				);
+				let served = 0;
+				for await (const page of quick.pages) served += page.length;
+				out.quick = quick.total + '/' + served;
+				try {
+					const c = await m.openSelectionCursor(
+						{ sql: 'SELECT section_tipo, section_id FROM matrix_test WHERE section_id = $1::int', params: ['not-an-integer'] },
+						{ pageRows: 1 },
+					);
+					await c.close();
+					out.failing = 'admitted';
+				} catch (error) {
+					out.failing = 'refused';
+				}
+				out.slotsAfterFailing = m.exportSelectionSlots().inUse;
+				// As many concurrent probes as the pool has connections: each lands on
+				// its own connection, so a connection left in a transaction (open or
+				// aborted) or with a transaction_timeout is seen.
+				try {
+					const probes = await Promise.all(
+						Array.from({ length: pg.getPoolStats().max }, () =>
+							pg.sql.unsafe(
+								"SELECT now() = statement_timestamp() AS fresh, current_setting('transaction_timeout') AS bound FROM pg_sleep(0.2)",
+								[],
+							),
+						),
+					);
+					out.pool = probes.map((rows) => (rows[0].fresh ? 'fresh' : 'in-transaction') + ' ' + rows[0].bound);
+				} catch (error) {
+					out.pool = 'probe failed: ' + (error?.message ?? String(error));
+				}
+				console.log('CEILING ' + JSON.stringify(out));
+				process.exit(0);
+			`;
+			const child = Bun.spawn([process.execPath, '-e', script], {
+				env: { ...process.env, DB_POOL_MAX: '2', DB_STATEMENT_TIMEOUT_MS: '300' },
+				stdout: 'pipe',
+				stderr: 'pipe',
+			});
+			const killer = setTimeout(() => child.kill(), 30_000);
+			const [stdout, stderr] = await Promise.all([
+				new Response(child.stdout).text(),
+				new Response(child.stderr).text(),
+			]);
+			await child.exited;
+			clearTimeout(killer);
+			const line = stdout.split('\n').find((entry) => entry.startsWith('CEILING '));
+			expect({ line: line ?? null, stderr: line === undefined ? stderr.slice(-2000) : '' }).toEqual(
+				{
+					line: `CEILING ${JSON.stringify({
+						slots: 1,
+						slow: 'db.statement_timeout',
+						slowWithinBound: true,
+						slotsAfterSlow: 0,
+						quick: '7/7',
+						failing: 'refused',
+						slotsAfterFailing: 0,
+						pool: ['fresh 0', 'fresh 0'],
+					})}`,
+					stderr: '',
+				},
+			);
+		}, 40_000);
+
 		async function cancelMidStream(): Promise<void> {
 			const streamed = await exportGridUnified({
 				principal: admin,
@@ -1312,6 +1481,187 @@ else {
 			const tipoId = (record: Selected) => `${record.tipo}/${record.id}`;
 			expect(orderViolation(ids, await directSelection(admin), tipoId)).toBeNull();
 			expect(exportSelectionSlots().inUse).toBe(0);
+		});
+
+		/** A selection that materializes in ~3 s (30 rows, 0.1 s each) — what a Stop must cut. */
+		const SLEEPY_SELECTION =
+			"SELECT 'zzsc1' AS section_tipo, g AS section_id FROM generate_series(1, 30) AS g WHERE pg_sleep(0.1) IS NOT NULL ORDER BY g";
+
+		/** The backends of THIS database still running a statement, other than the asker. */
+		async function activeBackends(): Promise<string[]> {
+			const rows = (await sql.unsafe(
+				`SELECT query FROM pg_stat_activity
+				  WHERE datname = current_database() AND state = 'active'
+				    AND backend_type = 'client backend' AND pid <> pg_backend_pid()`,
+				[],
+			)) as { query: string }[];
+			return rows.map((row) => row.query);
+		}
+
+		/** How an open ended: its code (or 'admitted <total>'), and how long it took. */
+		async function openOutcome(
+			signal: AbortSignal,
+		): Promise<{ outcome: string; settledAt: number }> {
+			try {
+				const cursor = await openSelectionCursor<{ section_id: number; section_tipo: string }>(
+					{ sql: SLEEPY_SELECTION, params: [] },
+					{ pageRows: SELECTION_PAGE, signal },
+				);
+				await cursor.close();
+				return { outcome: `admitted ${cursor.total}`, settledAt: performance.now() };
+			} catch (error) {
+				return {
+					outcome: (error as { code?: string })?.code ?? String(error),
+					settledAt: performance.now(),
+				};
+			}
+		}
+
+		test('17a. a Stop WHILE the selection materializes cancels it on the server: export.cancelled at once, nothing left running', async () => {
+			const baseline = getPoolStats().inUse;
+			const controller = new AbortController();
+			const started = performance.now();
+			const settled = openOutcome(controller.signal);
+			await Bun.sleep(400);
+			// The open is inside its COMMIT (the materialization) by now.
+			controller.abort();
+			const { outcome, settledAt } = await settled;
+			const running = await activeBackends();
+			await sql`SELECT 1`;
+			expect({
+				outcome,
+				// well before the 3 s the selection needs (the abort lands at 400 ms)
+				withinBound: settledAt - started < 1500,
+				running,
+				slotsInUse: exportSelectionSlots().inUse,
+				poolInUse: getPoolStats().inUse,
+			}).toEqual({
+				outcome: 'export.cancelled',
+				withinBound: true,
+				running: [],
+				slotsInUse: 0,
+				poolInUse: baseline,
+			});
+			// Every pooled connection is fresh: no transaction left open or aborted.
+			const probes = await Promise.all(
+				Array.from({ length: POOL_MAX }, () =>
+					sql.unsafe(
+						"SELECT now() = statement_timestamp() AS fresh, current_setting('transaction_timeout') AS bound FROM pg_sleep(0.1)",
+						[],
+					),
+				),
+			);
+			expect(
+				probes.map((rows) => {
+					const row = (rows as { fresh: boolean; bound: string }[])[0];
+					return `${row?.fresh ? 'fresh' : 'in-transaction'} ${row?.bound}`;
+				}),
+			).toEqual(Array.from({ length: POOL_MAX }, () => 'fresh 0'));
+		}, 20_000);
+
+		test('17b. a Stop while the open WAITS for a pooled connection: once it gets one it sends nothing (export.cancelled), nothing held', async () => {
+			const baseline = getPoolStats().inUse;
+			// Saturate the pool: the open takes its selection slot, then queues for a
+			// connection behind these.
+			const held = await Promise.all(
+				Array.from({ length: POOL_MAX - baseline }, () => sql.reserve()),
+			);
+			const controller = new AbortController();
+			let releasedAt = Number.NaN;
+			try {
+				const settled = openOutcome(controller.signal);
+				await Bun.sleep(150);
+				// The abort lands while the open still has no connection: no backend to
+				// cancel, nothing running — only the open's own door can refuse.
+				controller.abort();
+				await Bun.sleep(150);
+				releasedAt = performance.now();
+				for (const connection of held.splice(0)) connection.release();
+				const { outcome, settledAt } = await settled;
+				const running = await activeBackends();
+				expect({
+					outcome,
+					// the open does not BEGIN the 3 s selection it was stopped for
+					withinBound: settledAt - releasedAt < 1000,
+					running,
+					slotsInUse: exportSelectionSlots().inUse,
+				}).toEqual({
+					outcome: 'export.cancelled',
+					withinBound: true,
+					running: [],
+					slotsInUse: 0,
+				});
+			} finally {
+				for (const connection of held) connection.release();
+			}
+			await sql`SELECT 1`;
+			expect(getPoolStats().inUse).toBe(baseline);
+		}, 20_000);
+
+		test("17c. the cancel is guarded by its transaction: once it ended, the backend's next statement is untouched (control: inside, it cuts)", async () => {
+			const { cancelBackendStatement, readCancelTarget } = await import(
+				'../../src/core/db/postgres.ts'
+			);
+			/** Run a 0.6 s statement on `connection` while `target` is cancelled 100 ms in. */
+			const sleepUnderCancel = async (
+				connection: Awaited<ReturnType<typeof sql.reserve>>,
+				target: Awaited<ReturnType<typeof readCancelTarget>>,
+			): Promise<string> => {
+				const running = connection.unsafe('SELECT pg_sleep(0.6)', []);
+				await Bun.sleep(100);
+				if (target !== undefined) await cancelBackendStatement(target, 'leg 17c');
+				try {
+					await running;
+					return 'completed';
+				} catch (error) {
+					return String((error as { errno?: unknown })?.errno ?? error);
+				}
+			};
+			const connection = await sql.reserve();
+			try {
+				await connection.unsafe('BEGIN', []);
+				const ended = await readCancelTarget(connection);
+				await connection.unsafe('COMMIT', []);
+				// The SAME backend, a LATER statement: the guard must spare it.
+				const afterEnd = await sleepUnderCancel(connection, ended);
+				// Control: the target of the transaction the statement runs in.
+				await connection.unsafe('BEGIN', []);
+				const live = await readCancelTarget(connection);
+				const inside = await sleepUnderCancel(connection, live);
+				await connection.unsafe('ROLLBACK', []).catch(() => undefined);
+				expect({ read: ended !== undefined, afterEnd, inside }).toEqual({
+					read: true,
+					afterEnd: 'completed',
+					inside: '57014',
+				});
+			} finally {
+				connection.release();
+			}
+		}, 20_000);
+
+		test('16. an open whose signal fired BEFORE it (refuse admission) answers its total and releases at once', async () => {
+			// The protocol still owes the meta line (the total), but no page: the
+			// cursor must give its slot and connection back as the open returns —
+			// the abort listener can never fire for a signal that already fired,
+			// and the idle window would hold the slot for 15 minutes.
+			const sqo = sanitizeClientSqo(structuredClone(SQO));
+			sqo.limit = null as unknown as number;
+			sqo.offset = 0;
+			const built = await buildSearchSql(sqo, { idsOnly: true });
+			const baseline = getPoolStats().inUse;
+			const controller = new AbortController();
+			controller.abort();
+			const cursor = await openSelectionCursor<{ section_id: number; section_tipo: string }>(
+				built,
+				{ pageRows: SELECTION_PAGE, signal: controller.signal },
+			);
+			expect({ total: cursor.total, slotsInUse: exportSelectionSlots().inUse }).toEqual({
+				total: TOTAL,
+				slotsInUse: 0,
+			});
+			expect((await cursor.pages.next()).done).toBe(true);
+			await sql`SELECT 1`;
+			expect(getPoolStats().inUse).toBe(baseline);
 		});
 	});
 }

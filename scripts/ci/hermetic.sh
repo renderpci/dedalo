@@ -141,6 +141,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/pdf_extract_symmetry_tripwire.test.ts
 	test/unit/ssrf_one_guard_tripwire.test.ts
 	test/unit/lint_scope_tripwire.test.ts
+	test/unit/lint_scope_local_only_untracked_tripwire.test.ts
 	test/unit/compose_invocation_tripwire.test.ts
 	test/unit/gate_vacuity_tripwire.test.ts
 	test/unit/batch_scope_tripwire.test.ts
@@ -331,6 +332,9 @@ HERMETIC_TRIPWIRES=(
 	test/unit/write_obligations_tripwire.test.ts
 	test/unit/value_law_agreement_tripwire.test.ts
 	test/unit/reconcile_registry_tripwire.test.ts
+	# D5 reconcile widget sentences: pure client helpers + a source pin. Verified DB-less
+	# (DB_HOST=127.0.0.1 DB_PORT=59999): 4 pass / 0 fail.
+	test/unit/reconcile_status_client.test.ts
 	test/unit/diffusion_seed_vocabulary_tripwire.test.ts
 	test/unit/archive_docs_claim_tripwire.test.ts
 	test/unit/production_import_tripwire.test.ts
@@ -508,6 +512,24 @@ HERMETIC_TRIPWIRES=(
 	# --- 2026-10-20 (installer launcher). DB-free: an import-graph scan and the real
 	#     launcher in scratch trees with a stub installer body.
 	test/unit/install_launcher_native.test.ts
+	# --- 2026-10-21 (audit 2026-09-26 G9). DB-free: spawns git and the root tsc over
+	#     each publication/ daemon package's tsconfig (--listFilesOnly).
+	test/unit/daemon_typecheck_scope_tripwire.test.ts
+	# --- 2026-10-21 (audit 2026-09-26 S2-1, target-lock census). DB-free: a babel
+	#     parse of the write-path corpus and a planted corpus; imports no src/ module
+	#     (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
+	test/unit/target_lock_census_tripwire.test.ts
+	# --- 2026-10-21 (audit 2026-09-26 cross-ops:r2, psql matrix-writer census). DB-free:
+	#     a text scan of the write-path corpus + an import of each declaring module for
+	#     its exported record (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
+	test/unit/psql_matrix_write_obligations_tripwire.test.ts
+	# --- 2026-10-22 (audit 2026-09-26 cross-write:r3, advisory-lock class census).
+	#     DB-free: a text scan of src/, tools/, scripts/ + planted controls; imports
+	#     no src/ module (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
+	test/unit/advisory_lock_class_tripwire.test.ts
+	# --- 2026-10-23 (psql argv census). DB-free: a text scan of src/ + planted
+	#     controls; imports no src/ module (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
+	test/unit/psql_argv_sql_tripwire.test.ts
 	test/unit/hermetic_parallel_safety_tripwire.test.ts
 )
 

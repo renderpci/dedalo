@@ -34,12 +34,15 @@
  *   --capture <dir>        in place: keep the raw discovery outputs (the typed fixtures' replacements)
  *   --media-nfs <src>      EL: the NFS export the network-media leg mounts (`host:/export`)
  *   --skip <leg>           skip one leg BY NAME (repeatable); the record lists every skipped leg,
- *                          and a record with a skipped required leg is refused
+ *                          and a record with a skipped required leg is refused; a name that
+ *                          matches no leg of this run is refused (exit 2) — a typo never
+ *                          silently runs the leg it meant to skip, nor reads as a skip
  *   --keep                 leave the container (Debian) for inspection
  *   --plan                 print the legs and exit 0, touching nothing
  *
  * Exit: 0 every leg green · 1 a leg red · 2 the drill cannot run here (no docker, not root,
- * no marker, not enforcing) — RED, never a skip.
+ * no marker, not enforcing, a --skip naming no leg) — RED, never a skip · 3 INCOMPLETE: no leg
+ * red, but a REQUIRED leg was skipped — never 'OK' over a property nobody measured.
  *
  * THE PROMPT TABLE (`PROMPTS`) is the one place that knows how init's terminal asks: the
  * source-digest confirmation, `Apply these N changes? [y/N]`, a decision's typed option, the
@@ -437,6 +440,104 @@ export async function fetchVerifiedBun(
 	return { zip: join(dir, `${asset}.zip`), sums: join(dir, 'SHASUMS256.txt') };
 }
 
+/* ── the systemd directive probe (the systemd-analyze leg) ─────────────────────────── */
+
+/** One directive a rendered unit carries: its section, its key, the rendered line itself. */
+export interface DirectiveForm {
+	readonly section: string;
+	readonly key: string;
+	readonly line: string;
+}
+
+/** What systemd-analyze prints for a directive this systemd does not know or cannot parse. */
+export const DIRECTIVE_REFUSED = /Unknown (key|lvalue|section)|Failed to parse/i;
+
+/** The probe's exit-status line (`directiveProbeScript` appends it): systemd-analyze's own status. */
+const PROBE_STATUS = /^rc=(\d+)$/m;
+
+/**
+ * One probe of a scratch unit: `systemd-analyze verify`, its OWN exit status kept on a last
+ * `rc=N` line (never swallowed by the `rm` after it), then the scratch removed.
+ */
+export function directiveProbeScript(path: string): string {
+	return `systemd-analyze verify ${path} 2>&1; echo "rc=$?"; rm -f ${path}`;
+}
+
+/**
+ * What one probe said: `refused` (systemd named the directive unknown / unparseable),
+ * `accepted` (it verified: status 0, no refusal), or `unrun` — no status line, or a non-zero
+ * status without a refusal: the probe itself did not run (systemd-analyze missing, the scratch
+ * unwritable, a crash). `unrun` is never counted as accepted.
+ */
+export function directiveProbeVerdict(out: string): 'accepted' | 'refused' | 'unrun' {
+	if (DIRECTIVE_REFUSED.test(out)) return 'refused';
+	const status = PROBE_STATUS.exec(out);
+	return status !== null && status[1] === '0' ? 'accepted' : 'unrun';
+}
+
+/** The probe's output with its status line removed (what systemd-analyze itself printed). */
+export function directiveProbeOutput(out: string): string {
+	return out.replace(PROBE_STATUS, '').trim();
+}
+
+/** The positive control: a directive no systemd knows. The probe MUST call it refused. */
+export const BOGUS_DIRECTIVE: DirectiveForm = {
+	section: 'Service',
+	key: 'DdNoSuchKey',
+	line: 'DdNoSuchKey=1',
+};
+
+/** The bare scaffold (its own `Type=` line): the probe MUST verify it clean — status 0, silent. */
+export const SCAFFOLD_DIRECTIVE: DirectiveForm = {
+	section: 'Service',
+	key: 'Type',
+	line: 'Type=oneshot',
+};
+
+/**
+ * Every `Key=value` directive of the rendered unit bodies, ONCE per (section, key) — the first
+ * rendering wins — in first-seen order. Comments and blank lines are not directives.
+ */
+export function renderedDirectiveForms(bodies: readonly string[]): DirectiveForm[] {
+	const forms: DirectiveForm[] = [];
+	const seen = new Set<string>();
+	for (const body of bodies) {
+		let section = '';
+		for (const raw of body.split('\n')) {
+			const line = raw.trim();
+			if (line === '' || line.startsWith('#') || line.startsWith(';')) continue;
+			const header = /^\[([A-Za-z]+)\]$/.exec(line);
+			if (header !== null) {
+				section = header[1] as string;
+				continue;
+			}
+			const directive = /^([A-Za-z][A-Za-z0-9]*)=/.exec(line);
+			if (directive === null || section === '') continue;
+			const key = directive[1] as string;
+			if (seen.has(`${section}/${key}`)) continue;
+			seen.add(`${section}/${key}`);
+			forms.push({ section, key, line });
+		}
+	}
+	return forms;
+}
+
+/**
+ * A minimal oneshot unit carrying `form`'s rendered line in its section — replacing the
+ * scaffold's own line for the same key, so the probe never holds a key twice.
+ */
+export function directiveProbeUnit(form: DirectiveForm): string {
+	const sections = new Map<string, string[]>([
+		['Unit', ['Description=dd floor probe']],
+		['Service', ['Type=oneshot', 'ExecStart=/bin/true']],
+	]);
+	const lines = (sections.get(form.section) ?? []).filter(
+		(line) => !line.startsWith(`${form.key}=`),
+	);
+	sections.set(form.section, [...lines, form.line]);
+	return `${[...sections].map(([name, body]) => `[${name}]\n${body.join('\n')}\n`).join('')}`;
+}
+
 /* ── the EL drill record (the ratchet's input) ─────────────────────────────────────── */
 
 /** What one host's run measured (spec §9.11): the facts are the host's, never another major's. */
@@ -444,6 +545,7 @@ export interface ElMeasured {
 	readonly booleans: Readonly<
 		Record<string, { readonly needed_for: string; readonly denied_without: boolean }>
 	>;
+	/** Per systemd version: every `[Section] Key=` the rendered units carry, each probed alone and accepted. */
 	readonly supported_directives: Readonly<Record<string, readonly string[]>>;
 	readonly home_traverse_type: string | null;
 	/** The home layout's v2 tree type, measured (stat): one v2 type on every layout (2026-10-09). */
@@ -625,6 +727,128 @@ export function selinuxControlVerdict(observed: {
 		: `no AVC denial of httpd_t on ${type} for the control:\n${avc.slice(-2000)}`;
 }
 
+/**
+ * THE relay probe's own denial: the v2 proxy's connect refused with httpd_can_network_relay off — a
+ * `name_connect` on a `tcp_socket`, by the Apache worker (`comm="httpd"`) in `httpd_t`. php-fpm runs in
+ * httpd_t too (its comm names it), and a connect of any other process or class is not the probe's: no
+ * such line is excused by no-avc, nor counts as the relay OFF measurement. (The drill does not hold the
+ * instance's v2 port, so `dest=` is not pinned.)
+ */
+export function relayProbeDenial(line: string): boolean {
+	return (
+		/\{ name_connect \}/.test(line) &&
+		/ tclass=tcp_socket\b/.test(line) &&
+		/ comm="httpd" /.test(line) &&
+		/ scontext=\S*:httpd_t:/.test(line)
+	);
+}
+
+/** Counts of one probe window's AVC records (`ausearch -m AVC` raw lines): every denial, and the relay probe's own. */
+export function countProbeDenials(window: string): { avcs: number; relay: number } {
+	const denied = window.split('\n').filter((line) => /denied/.test(line));
+	return { avcs: denied.length, relay: denied.filter(relayProbeDenial).length };
+}
+
+/**
+ * One boolean probe: its HTTP status, the AVC denials its own window logged (any), and how many of
+ * them are the relay probe's own (relayProbeDenial) — the relay OFF floor counts only those.
+ */
+export interface BooleanProbe {
+	readonly status: number;
+	readonly avcs: number;
+	readonly relay: number;
+}
+
+/**
+ * booleans-measured's verdict for one boolean, or null when it measured what its `what` says: ON, the
+ * probe logs no AVC (and the v1 probe answers 200); OFF, httpd_can_network_relay's proxy probe MUST log
+ * one — a relay probe that logs none with the boolean off measured nothing (its window read nothing, or
+ * the boolean does not gate the proxy), and recording that as `denied_without: false` would call an
+ * unmeasured property green.
+ */
+export function booleanProbeVerdict(
+	name: string,
+	probe: string,
+	on: BooleanProbe,
+	off: BooleanProbe,
+): string | null {
+	if (on.avcs !== 0) return `${name} on: ${probe} still logged ${on.avcs} AVC denial(s)`;
+	if (name === 'httpd_enable_homedirs' && on.status !== 200) {
+		return `${name} on: the v1 probe answered ${on.status} (run v1-handler-probe first)`;
+	}
+	if (name === 'httpd_can_network_relay' && off.relay === 0) {
+		return `${name} off: ${probe} logged no name_connect denial of the httpd worker (${off.avcs} other AVC line(s)) — the probe's window read nothing, or the boolean no longer gates the v2 proxy: the measurement proves nothing`;
+	}
+	return null;
+}
+
+/** booleans-measured's span on the TARGET's clock (epoch seconds, `date +%s` there), both ends inclusive. */
+export interface BooleansWindow {
+	readonly from: number;
+	readonly to: number;
+}
+
+/** The audit record's own time (`msg=audit(<epoch>.<ms>:<serial>)`, ausearch's raw form), whole seconds; null when absent. */
+export function auditSeconds(line: string): number | null {
+	const match = /msg=audit\((\d+)(?:\.\d+)?:\d+\)/.exec(line);
+	return match === null ? null : Number(match[1]);
+}
+
+/**
+ * no-avc's verdict over the `ausearch -m AVC,USER_AVC -ts <drill start>` window, or null when clean.
+ * The window is FLOORED on the one denial the drill causes on purpose (system-layout-v2's control,
+ * `controlDenied` = that leg measured it): a window that does not hold even that read nothing — a wrong
+ * -ts, the wrong day, a dead auditd — and a clean read of nothing is no measurement.
+ * The booleans leg's relay probe causes the other one (relayProbeDenial: the httpd worker's
+ * `name_connect` on a tcp_socket in httpd_t, the boolean off): such a line is excused ONLY when it is
+ * that denial AND its own audit time falls inside that leg's span (`booleans`, recorded by
+ * the leg on the target's clock). A name_connect anywhere else in the drill — or with no span recorded,
+ * or no readable time — is a denial the drill did not ask for, and is reported.
+ */
+export function noAvcVerdict(
+	window: string,
+	controlDenied: boolean,
+	booleans: BooleansWindow | null,
+): string | null {
+	if (!controlDenied) {
+		return 'system-layout-v2 did not measure its control denial in this drill: the window has no floor, so a clean read would prove nothing (run system-layout-v2)';
+	}
+	const avcLines = window.split('\n').filter((line) => /avc:/.test(line));
+	if (!avcLines.some(controlNamed)) {
+		return `the window read nothing: not even system-layout-v2's control denial is in it\n${window.slice(-1000)}`;
+	}
+	const inBooleans = (line: string): boolean => {
+		const at = auditSeconds(line);
+		return booleans !== null && at !== null && at >= booleans.from && at <= booleans.to;
+	};
+	const foreign = avcLines.filter(
+		(line) => !controlNamed(line) && !(relayProbeDenial(line) && inBooleans(line)),
+	);
+	return foreign.length === 0
+		? null
+		: `AVC denials during the drill:\n${foreign.slice(0, 20).join('\n')}`;
+}
+
+/**
+ * no-apparmor-denial's verdict on the AUDIT half (auditd running: the kernel's denials go to its log,
+ * not the journal), or null when that half measured. Its own floor, never borrowed from the journal's:
+ * `floor` is `ausearch -m SERVICE_START,SERVICE_STOP -ts <drill start>` and must name a unit of ours
+ * (the drill starts and restarts them) — a window that holds not even those read nothing (a wrong -ts,
+ * a dead log). `denials` is `ausearch -m AVC,USER_AVC` over the same -ts: exit 0 (records — the caller
+ * reads the apparmor="DENIED" lines), or exit 1 saying `<no matches>`; anything else is a failed read,
+ * never a clean one.
+ */
+export function auditHalfVerdict(
+	floor: Pick<Done, 'code' | 'out'>,
+	denials: Pick<Done, 'code' | 'out'>,
+): string | null {
+	if (floor.code !== 0 || !/unit=dedalo-publication-host-/.test(floor.out)) {
+		return `the audit log since the drill started holds no SERVICE_START/STOP of our units (exit ${floor.code}): its window read nothing, so a clean AVC read would prove nothing\n${floor.out.slice(-600)}`;
+	}
+	if (denials.code === 0 || (denials.code === 1 && /<no matches>/.test(denials.out))) return null;
+	return `ausearch -m AVC,USER_AVC failed (exit ${denials.code}): the audit half was not read\n${denials.out.slice(-600)}`;
+}
+
 interface Ctx {
 	readonly args: DrillArgs;
 	readonly runner: Runner;
@@ -634,7 +858,26 @@ interface Ctx {
 	readonly mirror: string;
 	readonly secrets: DrillSecrets;
 	readonly facts: Record<string, unknown>;
+	/** The drill's start on the TARGET's clock, `YYYY-MM-DD HH:MM:SS` (journalctl --since). */
 	readonly startedAt: string;
+	/** The same instant in the target's `%x %T` (ausearch -ts: a date in its locale, then a time). */
+	readonly auditStartedAt: string;
+}
+
+/**
+ * The drill's start as the TARGET's clock reads it — never this machine's (another timezone, another
+ * day, a skewed clock would move every "since the drill started" window): `date +'%F %T|%x %T'`
+ * there, both forms of one instant.
+ */
+export function parseTargetStart(out: string): { startedAt: string; auditStartedAt: string } {
+	const [startedAt = '', auditStartedAt = ''] = out.trim().split('|');
+	if (
+		!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(startedAt) ||
+		!/^\S+ \d{2}:\d{2}:\d{2}$/.test(auditStartedAt)
+	) {
+		throw new Error(`the target's clock answered '${out.trim()}', not '<%F %T>|<%x %T>'`);
+	}
+	return { startedAt, auditStartedAt };
 }
 
 interface Leg {
@@ -2430,6 +2673,8 @@ export const LEGS: readonly Leg[] = Object.freeze([
 					verdict === null,
 					`${verdict}\n(httpd error log since the control:\n${log.slice(-1500)})`,
 				);
+				// no-avc's floor: the one denial the drill caused on purpose, measured.
+				ctx.facts.selinux_control_denied = true;
 			} finally {
 				await ctx.runner.sh(
 					`rm -rf ${SELINUX_CONTROL_DIR} ${SELINUX_CONTROL_CONF} && apachectl -t >/dev/null 2>&1 && systemctl reload httpd`,
@@ -2455,12 +2700,16 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		name: 'systemd-analyze',
 		family: 'el',
 		required: true,
-		what: 'systemd-analyze verify prints NO warning naming a rendered unit; which omitted directives this systemd actually supports is measured',
+		what: 'systemd-analyze verify prints NO warning naming a rendered unit; every directive the rendered units carry is probed alone against this systemd, and the ones it accepts are recorded per systemd version',
 		async run(ctx) {
 			const units = (await must(ctx, `ls /etc/systemd/system/dedalo-*.service`, 'rendered units'))
 				.trim()
 				.split('\n');
 			const verify = await ctx.runner.sh(`systemd-analyze verify ${units.map(q).join(' ')} 2>&1`);
+			check(
+				verify.code === 0,
+				`systemd-analyze verify of the rendered units exited ${verify.code}:\n${verify.out}${verify.err}`,
+			);
 			const named = verify.out
 				.split('\n')
 				.filter((line) => units.some((u) => line.includes(u.split('/').at(-1) as string)));
@@ -2471,26 +2720,45 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			const version = (
 				await must(ctx, 'systemctl --version | head -n1', 'systemctl --version')
 			).trim();
-			const omitted =
-				(
-					await must(
-						ctx,
-						`grep -h '^# omitted' ${units.map(q).join(' ')} || true`,
-						'omitted comments',
-					)
-				).match(/[A-Za-z]+=[A-Za-z@-]*/g) ?? [];
+			const bodies: string[] = [];
+			for (const unit of units) bodies.push(await must(ctx, `cat ${q(unit)}`, `the unit ${unit}`));
+			const forms = renderedDirectiveForms(bodies);
+			check(forms.length > 0, `nothing to measure: the rendered units carry no directive`);
+			const scratch = `/run/systemd/system/dd-floor-probe.service`;
+			const probe = async (form: DirectiveForm): Promise<string> => {
+				await putRootFile(ctx, scratch, directiveProbeUnit(form), '0644');
+				return (await ctx.runner.sh(directiveProbeScript(scratch))).out;
+			};
+			// The probe is proven BEFORE it measures: it must call a bogus directive refused and
+			// the bare scaffold clean — else "accepted" would only mean "the probe did not run".
+			const bogus = await probe(BOGUS_DIRECTIVE);
+			check(
+				directiveProbeVerdict(bogus) === 'refused',
+				`the directive probe did not refuse a directive no systemd knows (${BOGUS_DIRECTIVE.line}):\n${bogus}`,
+			);
+			const bare = await probe(SCAFFOLD_DIRECTIVE);
+			check(
+				directiveProbeVerdict(bare) === 'accepted' && directiveProbeOutput(bare) === '',
+				`the directive probe's bare scaffold does not verify clean (status 0, no output):\n${bare}`,
+			);
 			const supported: string[] = [];
-			for (const form of [...new Set(omitted)]) {
-				const scratch = `/run/systemd/system/dd-floor-probe.service`;
-				await putRootFile(
-					ctx,
-					scratch,
-					`[Service]\nExecStart=/bin/true\n${form.endsWith('=') ? `${form}yes` : form}\n`,
-					'0644',
-				);
-				const out = await ctx.runner.sh(`systemd-analyze verify ${scratch} 2>&1; rm -f ${scratch}`);
-				if (!/Unknown (key|lvalue)|Failed to parse/i.test(out.out)) supported.push(form);
+			const unrun: string[] = [];
+			for (const form of forms) {
+				const out = await probe(form);
+				const verdict = directiveProbeVerdict(out);
+				if (verdict === 'accepted') supported.push(`[${form.section}] ${form.key}=`);
+				else if (verdict === 'unrun') unrun.push(`[${form.section}] ${form.key}=: ${out.trim()}`);
 			}
+			check(unrun.length === 0, `the directive probe did not run for:\n${unrun.join('\n')}`);
+			// The rendered units verified clean, so every directive they carry must probe as accepted:
+			// a refused one means the probe, not the unit, is wrong — never a silent short list.
+			check(
+				supported.length === forms.length,
+				`the probe refused directives the rendered units verified with: ${forms
+					.map((f) => `[${f.section}] ${f.key}=`)
+					.filter((f) => !supported.includes(f))
+					.join(', ')}`,
+			);
 			ctx.facts.supported_directives = { [version]: supported };
 		},
 	},
@@ -2501,42 +2769,57 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		what: "the booleans the default install rests on, measured ON then OFF, each probe's AVCs counted from its own start: httpd_can_network_relay (the v2 proxy: off → an AVC, on → none) and httpd_enable_homedirs (the v1 probe under the home through the H rule: on → 200 without an AVC, off → still 200); restored after",
 		async run(ctx) {
 			const measured: Record<string, { needed_for: string; denied_without: boolean }> = {};
+			// The span no-avc excuses this leg's relay denial in: the target's clock, epoch seconds.
+			const start = (await must(ctx, 'date +%s', 'the booleans window start')).trim();
+			check(
+				/^\d+$/.test(start),
+				`the booleans window start: the target's clock answered '${start}'`,
+			);
+			const from = Number(start);
 			/** One probe: its status and the AVC denials logged from its own start (whole seconds: a pause first). */
-			const probeOnce = async (path: string): Promise<{ status: number; avcs: number }> => {
+			const probeOnce = async (path: string): Promise<BooleanProbe> => {
 				const since = (await must(ctx, 'sleep 1.1; date +%T', 'the probe start')).trim();
 				const got = await webCheck(ctx, DOMAIN, path);
 				const avc = await ctx.runner.sh(
-					`sleep 1; ausearch -m AVC -ts ${since} 2>/dev/null | grep -c 'denied' || true`,
+					`sleep 1; ausearch -m AVC -ts ${since} 2>/dev/null || true`,
 				);
-				return { status: got.status, avcs: Number(avc.out.trim()) };
+				return { status: got.status, ...countProbeDenials(avc.out) };
 			};
 			// The v1 probe is v1-handler-probe's (a .php under the home's v1 release).
-			for (const [name, needed, probe] of [
-				['httpd_can_network_relay', 'the v2 proxy', '/dedalo/publication/server_api/v2/'],
-				[
-					'httpd_enable_homedirs',
-					'home traversal (the H rule replaces it)',
-					'/dedalo/publication/server_api/v1/probe.php',
-				],
-			] as const) {
-				const before = (await must(ctx, `getsebool ${name}`, 'getsebool')).trim().endsWith('on');
-				try {
-					await must(ctx, `setsebool ${name} on`, `${name} on`);
-					const on = await probeOnce(probe);
-					check(on.avcs === 0, `${name} on: ${probe} still logged ${on.avcs} AVC denial(s)`);
-					if (name === 'httpd_enable_homedirs')
-						check(
-							on.status === 200,
-							`${name} on: the v1 probe answered ${on.status} (run v1-handler-probe first)`,
-						);
-					await must(ctx, `setsebool ${name} off`, `${name} off`);
-					const off = await probeOnce(probe);
-					measured[name] = {
-						needed_for: needed,
-						denied_without: off.avcs > 0 || off.status !== on.status,
-					};
-				} finally {
-					await ctx.runner.sh(`setsebool ${name} ${before ? 'on' : 'off'}`);
+			try {
+				for (const [name, needed, probe] of [
+					['httpd_can_network_relay', 'the v2 proxy', '/dedalo/publication/server_api/v2/'],
+					[
+						'httpd_enable_homedirs',
+						'home traversal (the H rule replaces it)',
+						'/dedalo/publication/server_api/v1/probe.php',
+					],
+				] as const) {
+					const before = (await must(ctx, `getsebool ${name}`, 'getsebool')).trim().endsWith('on');
+					try {
+						await must(ctx, `setsebool ${name} on`, `${name} on`);
+						const on = await probeOnce(probe);
+						await must(ctx, `setsebool ${name} off`, `${name} off`);
+						const off = await probeOnce(probe);
+						const verdict = booleanProbeVerdict(name, probe, on, off);
+						check(verdict === null, verdict ?? '');
+						measured[name] = {
+							needed_for: needed,
+							denied_without:
+								(name === 'httpd_can_network_relay' ? off.relay : off.avcs) > 0 ||
+								off.status !== on.status,
+						};
+					} finally {
+						await ctx.runner.sh(`setsebool ${name} ${before ? 'on' : 'off'}`);
+					}
+				}
+			} finally {
+				// Recorded even when the leg fails (its denials happened inside this span either way), and
+				// never thrown from here (the leg's own failure stays the one reported). No readable end =
+				// no span: no-avc then excuses no name_connect at all.
+				const end = (await ctx.runner.sh('date +%s')).out.trim();
+				if (/^\d+$/.test(end)) {
+					ctx.facts.booleans_window = { from, to: Number(end) } satisfies BooleansWindow;
 				}
 			}
 			ctx.facts.booleans = measured;
@@ -2546,13 +2829,15 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		name: 'no-avc',
 		family: 'el',
 		required: true,
-		what: "ausearch -m AVC,USER_AVC since the drill started finds nothing outside the booleans leg and system-layout-v2's control file",
+		what: "ausearch -m AVC,USER_AVC since the drill started (the target's clock) finds nothing but system-layout-v2's control file and the booleans leg's relay denial (the httpd worker's name_connect on a tcp_socket in httpd_t) INSIDE that leg's span (its audit time) — and finds that control's denial: a window that holds not even it read nothing",
 		async run(ctx) {
-			const out = await ctx.runner.sh(`ausearch -m AVC,USER_AVC -ts ${ctx.startedAt} 2>&1`);
-			const lines = out.out
-				.split('\n')
-				.filter((line) => /avc:/.test(line) && !/name_connect/.test(line) && !controlNamed(line));
-			check(lines.length === 0, `AVC denials during the drill:\n${lines.slice(0, 20).join('\n')}`);
+			const out = await ctx.runner.sh(`ausearch -m AVC,USER_AVC -ts ${ctx.auditStartedAt} 2>&1`);
+			const verdict = noAvcVerdict(
+				out.out,
+				ctx.facts.selinux_control_denied === true,
+				(ctx.facts.booleans_window as BooleansWindow | undefined) ?? null,
+			);
+			check(verdict === null, verdict ?? '');
 		},
 	},
 	// ── Debian, in place only ──
@@ -2561,24 +2846,40 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		family: 'debian',
 		required: true,
 		inPlaceOnly: true,
-		what: 'AppArmor enabled on the VM\'s kernel; the journal (and audit log) since the drill started holds no apparmor="DENIED" line; which of the processes the layout runs (web servers, FPM, polkitd, the agents, v2) are confined is measured',
+		what: 'AppArmor enabled on the VM\'s kernel; the journal since the drill started (floored on our units) — and, with auditd running, the audit log (floored on its own SERVICE_START/STOP of our units, a failed read is red) — holds no apparmor="DENIED" line; which of the processes the layout runs (web servers, FPM, polkitd, the agents, v2) are confined is measured',
 		async run(ctx) {
 			check(
 				(await ctx.runner.sh('cat /sys/module/apparmor/parameters/enabled')).out.trim() === 'Y',
 				'AppArmor is not enabled on this kernel: the leg would prove nothing',
 			);
-			const log = await must(
+			// The kernel's (mediation of files, sockets, capabilities) and dbus's (USER_AVC) denials both
+			// reach the journal; with auditd RUNNING the kernel's go to its log instead — so each half is
+			// read on its own and floored on its own (a silenced audit read once rode the journal's floor).
+			const journal = await must(
 				ctx,
-				// The kernel's (mediation of files, sockets, capabilities) and dbus's (USER_AVC) denials both
-				// reach the journal; with auditd installed the kernel's go to its log instead.
-				`journalctl --no-pager -o short-iso --since ${q(ctx.startedAt)} 2>&1; if command -v ausearch >/dev/null; then ausearch -m AVC,USER_AVC -ts ${ctx.startedAt} 2>/dev/null; fi; true`,
+				`journalctl --no-pager -o short-iso --since ${q(ctx.startedAt)} 2>&1`,
 				'the journal since the start',
 			);
 			// Not vacuous: the drill's own reloads and restarts are in that window.
 			check(
-				/dedalo-publication-host-/.test(log),
+				/dedalo-publication-host-/.test(journal),
 				`the journal since ${ctx.startedAt} names no unit of ours: the window read nothing`,
 			);
+			let log = journal;
+			const auditd =
+				(await ctx.runner.sh('systemctl is-active auditd 2>/dev/null')).out.trim() === 'active';
+			if (auditd) {
+				const floor = await ctx.runner.sh(
+					`ausearch -m SERVICE_START,SERVICE_STOP -ts ${ctx.auditStartedAt} 2>&1`,
+				);
+				const denials = await ctx.runner.sh(
+					`ausearch -m AVC,USER_AVC -ts ${ctx.auditStartedAt} 2>&1`,
+				);
+				const verdict = auditHalfVerdict(floor, denials);
+				check(verdict === null, verdict ?? '');
+				log += `\n${denials.out}`;
+			}
+			ctx.facts.apparmor_denials_read = auditd ? 'journal+auditd' : 'journal';
 			const denied = log.split('\n').filter((line) => /apparmor="DENIED"/.test(line));
 			check(
 				denied.length === 0,
@@ -3247,6 +3548,13 @@ export async function main(argv: readonly string[]): Promise<number> {
 		return 2;
 	}
 	const legs = legsFor(args);
+	const unknown = unknownSkips(args.skip, legs);
+	if (unknown.length > 0) {
+		console.error(
+			`${TAG} --skip names no leg of this run: ${unknown.join(', ')} (the legs: bun run scripts/publication_host_init_drill.ts --plan …)`,
+		);
+		return 2;
+	}
 	if (args.plan) {
 		for (const leg of legs)
 			console.log(`${leg.name}${leg.required ? '' : ' (optional)'} [${leg.family}] — ${leg.what}`);
@@ -3285,7 +3593,7 @@ export async function main(argv: readonly string[]): Promise<number> {
 				apiWebUserCode: `Code-${randomBytes(9).toString('base64url')}`,
 			},
 			facts: {},
-			startedAt: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+			...parseTargetStart((await world.runner.sh("date +'%F %T|%x %T'")).out),
 		};
 		for (const leg of legs) {
 			if (skipped.includes(leg.name)) {
@@ -3311,10 +3619,38 @@ export async function main(argv: readonly string[]): Promise<number> {
 		await world?.stop();
 		rmSync(scratch, { recursive: true, force: true });
 	}
+	const verdict = drillVerdict({ failed, skipped, legs });
 	console.log(
-		`${TAG} ${failed.length === 0 ? 'OK' : `RED (${failed.join(', ')})`} on ${args.family}: ${passed.length} green, ${failed.length} red, ${skipped.length} skipped`,
+		`${TAG} ${verdict.word} on ${args.family}: ${passed.length} green, ${failed.length} red, ${skipped.length} skipped`,
 	);
-	return failed.length === 0 ? 0 : 1;
+	return verdict.code;
+}
+
+/** The --skip names that match no leg of this run: refused, so a typo is never a silent no-op. */
+export function unknownSkips(
+	skip: readonly string[],
+	legs: readonly Pick<Leg, 'name'>[],
+): string[] {
+	return skip.filter((name) => !legs.some((leg) => leg.name === name));
+}
+
+/**
+ * The run's verdict: RED (1) when a leg failed; INCOMPLETE (3) when none failed but a REQUIRED
+ * leg was skipped — a property nobody measured is never reported 'OK'; else OK (0).
+ */
+export function drillVerdict(input: {
+	failed: readonly string[];
+	skipped: readonly string[];
+	legs: readonly Pick<Leg, 'name' | 'required'>[];
+}): { code: 0 | 1 | 3; word: string } {
+	if (input.failed.length > 0) return { code: 1, word: `RED (${input.failed.join(', ')})` };
+	const skippedRequired = input.legs
+		.filter((leg) => leg.required && input.skipped.includes(leg.name))
+		.map((leg) => leg.name);
+	if (skippedRequired.length > 0) {
+		return { code: 3, word: `INCOMPLETE (required leg(s) skipped: ${skippedRequired.join(', ')})` };
+	}
+	return { code: 0, word: 'OK' };
 }
 
 if (import.meta.main) process.exit(await main(process.argv.slice(2)));

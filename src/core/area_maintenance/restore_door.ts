@@ -92,7 +92,12 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { envSnapshot } from '../../config/env.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
-import { connArgs, connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
+import {
+	connArgs,
+	connFromConfig,
+	type DbConnDescriptor,
+	runPsqlScript,
+} from '../install/pg_exec.ts';
 import { type PostRestoreReport, runPostRestore } from '../reconcile/post_restore.ts';
 import { setServerState } from '../resolve/server_state.ts';
 import {
@@ -228,15 +233,10 @@ async function foreignBackends(
 	maintenanceDatabase: string,
 	database: string,
 ): Promise<ForeignBackend[]> {
-	const listed = await runPsql(
+	const listed = await runPsqlScript(
 		admin,
-		[
-			'-tAc',
-			`SELECT pid, coalesce(application_name, ''), coalesce(usename, '') FROM pg_stat_activity WHERE datname = '${database}' AND pid <> pg_backend_pid() AND backend_type = 'client backend'`,
-			'-v',
-			'ON_ERROR_STOP=1',
-		],
-		{ database: maintenanceDatabase },
+		`SELECT pid, coalesce(application_name, ''), coalesce(usename, '') FROM pg_stat_activity WHERE datname = '${database}' AND pid <> pg_backend_pid() AND backend_type = 'client backend'`,
+		{ flags: ['-tA'], database: maintenanceDatabase },
 	);
 	if (listed.exitCode !== 0) {
 		throw new DedaloError('recovery.restore_failed', {
@@ -259,10 +259,13 @@ async function databaseExists(
 	maintenanceDatabase: string,
 	database: string,
 ): Promise<boolean> {
-	const probe = await runPsql(
+	const probe = await runPsqlScript(
 		admin,
-		['-tAc', `SELECT 1 FROM pg_database WHERE datname = '${database}'`, '-v', 'ON_ERROR_STOP=1'],
-		{ database: maintenanceDatabase },
+		`SELECT 1 FROM pg_database WHERE datname = '${database}'`,
+		{
+			flags: ['-tA'],
+			database: maintenanceDatabase,
+		},
 	);
 	if (probe.exitCode !== 0) {
 		throw new DedaloError('recovery.restore_failed', {
@@ -279,9 +282,7 @@ async function admin(
 	maintenanceDatabase: string,
 	statement: string,
 ): Promise<{ ok: boolean; stderr: string }> {
-	const run = await runPsql(conn, ['-c', statement, '-v', 'ON_ERROR_STOP=1'], {
-		database: maintenanceDatabase,
-	});
+	const run = await runPsqlScript(conn, statement, { database: maintenanceDatabase });
 	return { ok: run.exitCode === 0, stderr: run.stderr };
 }
 

@@ -168,7 +168,21 @@ result container. Clicking **Preview**:
 
 - with no uploaded file, dispatches `preview_url` as a background job and drives it through
   `stream_background_job` — `data_manager.request_stream` + `render_stream` against
-  `dd_utils_api`/`get_process_status`, rendering live progress text until the terminal frame;
+  `dd_utils_api`/`get_process_status`, rendering live progress text until the terminal frame. When
+  the stream ends WITHOUT a terminal frame (connection cut) or cannot be opened, it settles as
+  *status lost*: it states the job may still be running (with its `pid`), keeps the action button
+  disabled (a second click would start a duplicate job), and offers **Check again**, which reopens
+  `get_process_status` for the SAME `pid` — the server always ends a job's stream with a terminal
+  frame, a vanished or interrupted job included. A stream that stays SILENT (half-open body, or a fetch
+  that never connects) counts as lost too: a watchdog ends it after 15 s without a frame (the server
+  sends one every second while a job runs) and adds an idle line. When the DISPATCH itself does not
+  confirm whether the job started — `error_dispatch.outcome_unknown(api_error)`: any `client.*`
+  transport failure, `idempotency.in_progress` / `outcome_unknown` / `replay_unavailable`, or a
+  non-`ApiError` — the button stays disabled and **Check my jobs** reads `get_activity`, listing only
+  this action's jobs (job id grammar `<tool>_<action>_<pid>_<counter>`); **Show this job** follows one
+  by its `pfile`, and an explicit re-enable is offered only when none is running or queued. A real
+  refusal re-enables as before. While busy, the action buttons carry `disabled` (not only the
+  `.loading` class), so the keyboard cannot fire them;
 - with an uploaded file, calls `preview_html` as a **plain** (non-backgrounded) request instead —
   nothing is fetched over the network, so there's no job to stream.
 
