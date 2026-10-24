@@ -724,7 +724,7 @@ describe(`COMPONENT_IMAGE VECTOR EDITOR`, function() {
 		editor.stage = { getCurrentDrawing: () => drawing }
 		const self = { ar_layers: [{ layer_id:0, name:'layer_0' }], id:'sync_test' }
 		editor.active_layer = self.ar_layers[0]
-		editor._layer_snapshots.set('layer_1', { layer_id:1, name:'layer_1', layer_color:'#fff' })
+		editor._layer_snapshots.set('layer_1', { layer_id:1, name:'layer_1' })
 
 		// undo of a layer delete: the DOM layer is back, the descriptor is not
 		assert.isTrue(editor.sync_layer_descriptors(self))
@@ -744,6 +744,15 @@ describe(`COMPONENT_IMAGE VECTOR EDITOR`, function() {
 		drawing.all_layers = [layer_node('layer_0'), layer_node('layer_1')]
 		assert.isTrue(editor.sync_layer_descriptors(self))
 		assert.deepEqual(self.ar_layers.map(layer => layer.name), ['layer_0','layer_1'])
+
+		// a layer the editor did not create (no snapshot): its derived swatch takes
+		// the editor's active fill colour
+		drawing.all_layers = [layer_node('layer_0'), layer_node('layer_2')]
+		assert.isTrue(editor.sync_layer_descriptors(self))
+		assert.equal(
+			self.ar_layers.find(layer => layer.name==='layer_2')?.layer_color,
+			editor.active_fill_color
+		)
 	})
 
 

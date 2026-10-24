@@ -475,6 +475,17 @@ export const FILTER_FAMILY_MODELS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Does a SAVE ECHO attach a datalist for `model`? The ONE guard both echo doors
+ * ask (the persisted echo and the temporal echo), so a family member can never
+ * be routed by one and skipped by the other. Dynamic import: select_family.ts
+ * imports this module, so a static one would close a cycle.
+ */
+export async function echoesDatalist(model: string): Promise<boolean> {
+	const { SELECT_FAMILY_MODELS } = await import('./models/select_family.ts');
+	return SELECT_FAMILY_MODELS.has(model) || FILTER_FAMILY_MODELS.has(model);
+}
+
+/**
  * The datalist a SAVE ECHO attaches next to the saved value — ONE door for the
  * persisted echo (api/handlers/dd_core_api.ts) and the temporal echo
  * (section/record/temporal.ts), so the two cannot drift and neither can fall
@@ -498,7 +509,8 @@ export async function getEchoDatalist(
 	value: readonly unknown[],
 ): Promise<ComponentDatalistItem[] | FilterDatalistItem[] | FilterRecordsDatalistItem[]> {
 	// The SET is the routing knowledge — the guard that decides whether an echo
-	// attaches a datalist and the branch that builds it are the same test, so a
+	// attaches a datalist ({@link echoesDatalist}) and the branch that builds it
+	// are the same test, so a
 	// future family member cannot silently fall through to getEditDatalist's
 	// generic target-section enumeration (an UNSCOPED list for a user-scoped
 	// family: the leak this router exists to prevent). A new member routes to

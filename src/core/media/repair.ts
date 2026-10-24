@@ -222,6 +222,36 @@ function isHeldShrink(
 }
 
 /**
+ * THE NORMALIZED MASTER COPIES, MISSING ONLY — the browser-viewable
+ * `<id>.<defaultExtension>` beside a raw upload in each master tier
+ * (buildMasterNormalizedCopy). This is what heals a record whose master was
+ * uploaded before the copy was ever built: without it the tier holds only a
+ * `.tif`, and the client's quality selector shows no 'original' at all.
+ * MISSING ONLY is repair's contract; the ingest of a master rebuilds it
+ * (processUploadedFile). Failures are VALUES, like every other repair step.
+ */
+async function healMissingMasterCopies(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	rawExtension: string | null,
+	errors: string[],
+): Promise<void> {
+	for (const quality of spec.masterQualities) {
+		try {
+			await buildMasterNormalizedCopy(spec, identity, quality, pathOpts, {
+				rawExtension,
+				rebuild: false,
+			});
+		} catch (error) {
+			errors.push(
+				`${quality}.${spec.defaultExtension} of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
+			);
+		}
+	}
+}
+
+/**
  * Refresh every stored media item of one component on one record — the two
  * halves composed, for a caller that READS (the sweep's dry-run adjudication):
  * with `regenerate: true` the derivative files are rebuilt first
@@ -403,18 +433,7 @@ export async function regenerateMissingDerivatives(
 			// tier holds only a `.tif`, and the client's quality selector shows no
 			// 'original' at all. MISSING ONLY is repair's contract; the ingest of a
 			// master is what rebuilds it (processUploadedFile).
-			for (const quality of spec.masterQualities) {
-				try {
-					await buildMasterNormalizedCopy(spec, identity, quality, pathOpts, {
-						rawExtension: options.rawExtension,
-						rebuild: false,
-					});
-				} catch (error) {
-					errors.push(
-						`${quality}.${spec.defaultExtension} of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
-					);
-				}
-			}
+			await healMissingMasterCopies(spec, identity, pathOpts, options.rawExtension, errors);
 			// 2. default quality only when absent — and only when the original is here
 			if (!existsSync(defaultLocation.absolutePath) && source !== null) {
 				await buildImageVersion(spec, identity, spec.defaultQuality, source, pathOpts);

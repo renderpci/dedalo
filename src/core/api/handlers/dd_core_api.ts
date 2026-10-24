@@ -375,16 +375,12 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// flow). getEchoDatalist is the ONE router: select family → getEditDatalist,
 		// filter family → its user-scoped sources.
 		{
-			const { SELECT_FAMILY_MODELS } = await import('../../relations/models/select_family.ts');
-			const { FILTER_FAMILY_MODELS, getEchoDatalist } = await import('../../relations/datalist.ts');
+			const { echoesDatalist, getEchoDatalist } = await import('../../relations/datalist.ts');
 			const { getModelByTipo, getNode, getColumnNameByModel } = await import(
 				'../../ontology/resolver.ts'
 			);
 			const savedModel = await getModelByTipo(source.tipo);
-			if (
-				savedModel !== null &&
-				(SELECT_FAMILY_MODELS.has(savedModel) || FILTER_FAMILY_MODELS.has(savedModel))
-			) {
+			if (savedModel !== null && (await echoesDatalist(savedModel))) {
 				// The edit door: the read's options completed against the SAVED
 				// value (select_lang's "<name> *" entry), so echo == read.
 				const savedNode = await getNode(source.tipo);

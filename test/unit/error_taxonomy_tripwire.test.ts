@@ -362,6 +362,9 @@ const RAW_KEYED_EXEMPTIONS: Readonly<Record<string, { count: number; reason: Raw
 	'src/core/install/hierarchy_import.ts': { count: 1, reason: 'internal_outcome' },
 	'src/core/install/media_tree.ts': { count: 1, reason: 'admin_report' },
 	'src/core/media/file_ops.ts': { count: 1, reason: 'internal_outcome' },
+	// the ingest's derivative-failure list — operator-facing (the upload's tool
+	// report), the same surface as repair.ts's entries below
+	'src/core/media/ingest/process_uploaded_file.ts': { count: 1, reason: 'admin_report' },
 	'src/core/media/jobs.ts': { count: 1, reason: 'internal_outcome' },
 	'src/core/media/processing.ts': { count: 1, reason: 'internal_outcome' },
 	'src/core/media/repair.ts': { count: 2, reason: 'admin_report' },

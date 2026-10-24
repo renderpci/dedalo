@@ -1,7 +1,7 @@
 {
 	"_": "SHRINK-ONLY lint budget for the BROWSER trees biome.jsonc excludes (client/, tools/**/js). A green `bun run lint` says nothing about them, so this measures them separately with the SAME rule set, derived from biome.jsonc rather than copied. errors may only go DOWN. Regenerate after a burn-down with: bun run scripts/lint_browser_budget.ts --update — which REFUSES to raise the number. warnings/files are advisory context, not asserted.",
-	"files": 1241,
-	"errors": 1893,
-	"warnings": 8287,
-	"measured": "2026-10-21"
+	"files": 1242,
+	"errors": 1892,
+	"warnings": 8294,
+	"measured": "2026-10-23"
 }

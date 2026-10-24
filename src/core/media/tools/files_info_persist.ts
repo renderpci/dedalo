@@ -224,17 +224,24 @@ export async function transformStoredMediaItems(
 			if (canonicalEquals(decision.write, locked)) return { action: 'noop', affected: 0 };
 			const affected = await writeItems(table, target, decision.write);
 			if (affected === 0) return { action: 'missing', affected: 0 };
-			// Same transaction as the row write: a failed audit row rolls the media
-			// key back with it.
-			if (options.onWrite) {
-				await options.onWrite(decision.write);
-			}
+			await runPostWriteHook(options, decision.write);
 			return { action: 'written', affected, items: decision.write };
 		});
 	} catch (error) {
 		if (isLockTimeout(error)) return { action: 'locked', affected: 0 };
 		throw error;
 	}
+}
+
+/**
+ * The transform's post-write hook, run INSIDE the same transaction (a failed
+ * audit row rolls the media key back with it). Absent = nothing to do.
+ */
+async function runPostWriteHook(
+	options: MediaTransformOptions,
+	items: readonly StoredMediaItem[],
+): Promise<void> {
+	if (options.onWrite !== undefined) await options.onWrite(items);
 }
 
 /** The row lock was not granted within the wait (raw SQLSTATE 55P03, or its typed twin). */
@@ -337,13 +344,17 @@ export async function repairStoredFilesInfo(
 	return await runReconcile(input, true, {});
 }
 
-async function runReconcile(
+/**
+ * Resolve the drawing reset's audit identity, or null when this reconcile is not
+ * a reset. Throws when a reset carries no author: the clear is a curated-value
+ * change and must be audited.
+ */
+function drawingAuditFor(
 	input: FilesInfoReconcileInput,
-	allowCreate: boolean,
 	options: ReconcileOptions,
-): Promise<FilesInfoReconcileResult> {
-	const resetDrawing = options.resetDrawing === true;
-	if (resetDrawing && typeof options.auditUserId !== 'number') {
+): { userId: number; lang: string } | null {
+	if (options.resetDrawing !== true) return null;
+	if (typeof options.auditUserId !== 'number') {
 		throw new DedaloError('internal.invariant', {
 			message:
 				'reconcileStoredFilesInfo: resetDrawing requires auditUserId — the drawing clear must be audited',
@@ -354,9 +365,39 @@ async function runReconcile(
 			},
 		});
 	}
-	const drawingAudit = resetDrawing
-		? { userId: options.auditUserId as number, lang: input.lang ?? 'lg-nolan' }
-		: null;
+	return { userId: options.auditUserId, lang: input.lang ?? 'lg-nolan' };
+}
+
+/** The Time Machine append, as the transform's post-write hook (absent = no reset). */
+function drawingAuditHook(
+	input: FilesInfoReconcileInput,
+	audit: { userId: number; lang: string } | null,
+): Pick<MediaTransformOptions, 'onWrite'> {
+	if (audit === null) return {};
+	return {
+		onWrite: async (items: readonly StoredMediaItem[]) => {
+			await recordTimeMachine(
+				{
+					sectionTipo: input.sectionTipo,
+					sectionId: input.sectionId,
+					componentTipo: input.componentTipo,
+					lang: audit.lang,
+					userId: audit.userId,
+					data: items,
+				},
+				dbTimestamp(new Date()),
+			);
+		},
+	};
+}
+
+async function runReconcile(
+	input: FilesInfoReconcileInput,
+	allowCreate: boolean,
+	options: ReconcileOptions,
+): Promise<FilesInfoReconcileResult> {
+	const resetDrawing = options.resetDrawing === true;
+	const drawingAudit = drawingAuditFor(input, options);
 
 	let decided: FilesInfoReconcileAction = 'noop';
 	const outcome = await transformStoredMediaItems(
@@ -386,23 +427,7 @@ async function runReconcile(
 		},
 		{
 			lockWait: 'request',
-			...(drawingAudit === null
-				? {}
-				: {
-						onWrite: async (items: readonly StoredMediaItem[]) => {
-							await recordTimeMachine(
-								{
-									sectionTipo: input.sectionTipo,
-									sectionId: input.sectionId,
-									componentTipo: input.componentTipo,
-									lang: drawingAudit.lang,
-									userId: drawingAudit.userId,
-									data: items,
-								},
-								dbTimestamp(new Date()),
-							);
-						},
-					}),
+			...drawingAuditHook(input, drawingAudit),
 		},
 	);
 	if (outcome.action === 'missing') return { action: 'missing', affected: 0 };

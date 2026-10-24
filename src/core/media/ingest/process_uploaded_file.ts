@@ -222,6 +222,38 @@ function retireStalePosterframeAndThumb(
 	}
 }
 
+/**
+ * THE NORMALIZED MASTER COPY of the tier this upload landed in —
+ * `<id>.<defaultExtension>` beside the raw (Original law; see
+ * buildMasterNormalizedCopy). It must be written by the INGEST, not by
+ * regenerateImage: only the ingest knows the tier that received the file and
+ * the extension it arrived with, and a build driven from "whichever master
+ * resolves" would let a leftover raw in another tier become this tier's
+ * picture.
+ *
+ * The target is the tier just written (a `.tif` into 'modified' gets its copy
+ * in 'modified'). Non-fatal like every other post-move step — the raw landed
+ * and is indexed either way — so a failure joins `derivativeErrors`.
+ */
+async function noteMasterCopy(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	quality: string | null | undefined,
+	rawExtension: string | null,
+	derivativeErrors: string[],
+): Promise<void> {
+	const targetQuality = quality ?? spec.originalQuality;
+	try {
+		await buildMasterNormalizedCopy(spec, identity, targetQuality, pathOpts, {
+			rawExtension,
+			rebuild: true,
+		});
+	} catch (error) {
+		derivativeErrors.push(`${targetQuality}.${spec.defaultExtension}: ${(error as Error).message}`);
+	}
+}
+
 export async function processUploadedFile(input: IngestInput): Promise<IngestResult> {
 	const { spec, identity } = input;
 	// RECORD-SCOPED PATH OPTIONS. `properties.additional_path` names a sibling
@@ -311,28 +343,16 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 					// subsystem exists to end.
 					const outcome = await regenerateImage(spec, identity, pathOpts, added.extension);
 					derivativeErrors.push(...outcome.errors);
-					// THE NORMALIZED MASTER COPY — the browser-viewable
-					// `<id>.<defaultExtension>` beside the raw upload (Original law; see
-					// buildMasterNormalizedCopy). Written HERE, not in regenerateImage,
-					// because only the ingest knows the tier that received the file and
-					// the extension it arrived with: a copy is a fact about THIS upload,
-					// and a build driven from "whichever master resolves" would let a
-					// leftover raw in another tier become this tier's picture.
-					//
-					// The target is the tier just written (a `.tif` into 'modified' gets
-					// its copy in 'modified'). Non-fatal like every other post-move step:
-					// the raw landed and is indexed either way.
-					const targetQuality = quality ?? spec.originalQuality;
-					try {
-						await buildMasterNormalizedCopy(spec, identity, targetQuality, pathOpts, {
-							rawExtension: added.extension,
-							rebuild: true,
-						});
-					} catch (error) {
-						derivativeErrors.push(
-							`${targetQuality}.${spec.defaultExtension}: ${(error as Error).message}`,
-						);
-					}
+					// THE NORMALIZED MASTER COPY — written HERE because only the ingest
+					// knows the tier that received the file (see noteMasterCopy).
+					await noteMasterCopy(
+						spec,
+						identity,
+						pathOpts,
+						quality,
+						added.extension,
+						derivativeErrors,
+					);
 					break;
 				}
 				case 'component_pdf':

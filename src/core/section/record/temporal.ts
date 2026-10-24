@@ -285,7 +285,8 @@ function temporalEchoMainEntry(
  * relation-column member (all of SELECT_FAMILY_MODELS, plus component_filter /
  * _master): a datalist attach placed after the `column === 'relation'` return
  * could never run at all. The one LITERAL member — component_filter_records —
- * is attached in resolveTemporalSave's literal branch, the only arm it reaches.
+ * is attached in resolveTemporalSave's literal branch, the only arm it reaches
+ * (see attachTemporalLiteralEchoDatalist).
  */
 async function attachTemporalEchoDatalist(
 	echo: ApiResult,
@@ -299,9 +300,8 @@ async function attachTemporalEchoDatalist(
 	},
 ): Promise<void> {
 	const { model, componentTipo, sectionTipo, lang, picked } = args;
-	const { SELECT_FAMILY_MODELS } = await import('../../relations/models/select_family.ts');
-	const { FILTER_FAMILY_MODELS, getEchoDatalist } = await import('../../relations/datalist.ts');
-	if (!SELECT_FAMILY_MODELS.has(model) && !FILTER_FAMILY_MODELS.has(model)) return;
+	const { echoesDatalist, getEchoDatalist } = await import('../../relations/datalist.ts');
+	if (!(await echoesDatalist(model))) return;
 	const { getNode } = await import('../../ontology/resolver.ts');
 	const node = await getNode(componentTipo);
 	const main = temporalEchoMainEntry(echo, componentTipo, sectionTipo);
@@ -317,6 +317,36 @@ async function attachTemporalEchoDatalist(
 			picked,
 		);
 	}
+}
+
+/**
+ * The LITERAL member of the filter family — component_filter_records — reaches
+ * only the literal branch of resolveTemporalSave, so its echo datalist is
+ * attached there (the relation-column members go through
+ * attachTemporalEchoDatalist). The read door attaches it from the component's
+ * emit hook; getEchoDatalist routes the user-scoped source, so echo == read.
+ */
+async function attachTemporalLiteralEchoDatalist(
+	dataItem: unknown,
+	args: {
+		model: string;
+		componentTipo: string;
+		sectionTipo: string;
+		lang: string;
+		items: readonly unknown[];
+	},
+): Promise<void> {
+	const { model, componentTipo, sectionTipo, lang, items } = args;
+	const { FILTER_FAMILY_MODELS, getEchoDatalist } = await import('../../relations/datalist.ts');
+	if (!FILTER_FAMILY_MODELS.has(model)) return;
+	(dataItem as { datalist?: unknown }).datalist = await getEchoDatalist(
+		model,
+		componentTipo,
+		null,
+		sectionTipo,
+		lang,
+		items,
+	);
 }
 
 /**
@@ -518,20 +548,15 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 	);
 	// The one LITERAL filter-family member re-renders from data.datalist after a
 	// save (view_default_edit_filter_records iterates it) — the read door
-	// attaches it (the component's emit hook), so the echo must too
-	// (getEchoDatalist routes the user-scoped source; the relation-column
-	// members are attached in attachTemporalEchoDatalist instead).
-	const { FILTER_FAMILY_MODELS, getEchoDatalist } = await import('../../relations/datalist.ts');
-	if (FILTER_FAMILY_MODELS.has(model)) {
-		(dataItem as { datalist?: unknown }).datalist = await getEchoDatalist(
-			model,
-			componentTipo,
-			null,
-			sectionTipo,
-			lang,
-			outcome.items,
-		);
-	}
+	// attaches it (the component's emit hook), so the echo must too. The
+	// relation-column members are attached in attachTemporalEchoDatalist.
+	await attachTemporalLiteralEchoDatalist(dataItem, {
+		model,
+		componentTipo,
+		sectionTipo,
+		lang,
+		items: outcome.items,
+	});
 	return {
 		status: 200,
 		body: ok({ context: [], data: [dataItem] }, { requestId: currentRequestId() }),

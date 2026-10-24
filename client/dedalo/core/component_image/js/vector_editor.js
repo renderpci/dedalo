@@ -1923,12 +1923,14 @@ vector_editor.prototype.sync_layer_descriptors = function(self) {
 		if (snapshot) {
 			self.ar_layers.push(snapshot)
 		}else{
-			// a layer the editor did not create (legacy/foreign): derive a descriptor
+			// a layer the editor did not create (legacy/foreign): derive a descriptor.
+			// Its swatch takes the editor's active fill colour — the same rule the
+			// layer swatch itself follows (double-click assigns active_fill_color).
 			const parsed_id = Number.parseInt(name.replace('layer_', ''), 10)
 			self.ar_layers.push({
 				layer_id		: Number.isFinite(parsed_id) ? parsed_id : self.ar_layers.length,
 				layer_data		: null,
-				layer_color		: '#ffffff',
+				layer_color		: this.active_fill_color,
 				layer_opacity	: 0.3,
 				user_layer_name	: name,
 				name			: name,

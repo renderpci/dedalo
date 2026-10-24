@@ -153,14 +153,16 @@ const sync_url_record = function(self) {
 		if (!url_has_id) {
 			return
 		}
-		delete url_vars.id
-	}else{
-		if (String(url_vars.id)===String(section_id)) {
-			return
-		}
-		url_vars.id = section_id
+		// absence on the wire, without the delete operator
+		const { id: _stale_id, ...vars_without_id } = url_vars
+		history.replaceState(history.state, '', '?' + object_to_url_vars(vars_without_id))
+		return
 	}
 
+	if (String(url_vars.id)===String(section_id)) {
+		return
+	}
+	url_vars.id = section_id
 	history.replaceState(history.state, '', '?' + object_to_url_vars(url_vars))
 }//end sync_url_record
 
@@ -1899,12 +1901,16 @@ section.prototype.navigate = async function(options) {
 			// forces it), so `id` must follow the record when paginating in edit
 			// mode and must never survive into a list.
 				const url_vars = url_vars_to_object(location.search)
-				if (self.mode==='edit' && self.section_id!==null && self.section_id!==undefined) {
+				const with_record = self.mode==='edit' && self.section_id!==null && self.section_id!==undefined
+				let url
+				if (with_record) {
 					url_vars.id = self.section_id
+					url = '?' + object_to_url_vars(url_vars)
 				}else{
-					delete url_vars.id
+					// absence on the wire, without the delete operator
+					const { id: _url_id, ...vars_without_id } = url_vars
+					url = '?' + object_to_url_vars(vars_without_id)
 				}
-				const url = '?' + object_to_url_vars(url_vars)
 
 			// browser navigation update
 				push_browser_history({
@@ -2428,18 +2434,19 @@ section.prototype.goto_list = async function() {
 
 	// MODE USING PAGE user_navigation
 
-	const sqo = clone(self.rqo.sqo)
+	const cloned_sqo = clone(self.rqo.sqo)
 
 	// a record view's PIN names THIS record, not a result set: the list is a
 	// different view, and keeping the pin would publish a one-row list. Only the
 	// auto pin is dropped — a genuine result set (semantic search) is the user's
-	// list and stays.
-		if (is_own_record_pin(sqo.filter_by_locators, {
-			section_tipo	: self.section_tipo,
-			section_id		: self.section_id
-		})) {
-			delete sqo.filter_by_locators
-		}
+	// list and stays. Dropped by destructuring, not the delete operator.
+	const { filter_by_locators: own_pin, ...unpinned_sqo } = cloned_sqo
+	const sqo = is_own_record_pin(own_pin, {
+		section_tipo	: self.section_tipo,
+		section_id		: self.section_id
+	})
+		? unpinned_sqo
+		: cloned_sqo
 
 	// reset pagination from current edit sqo
 		sqo.limit = null
