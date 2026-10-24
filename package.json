@@ -90,7 +90,7 @@
 		"@highlightjs/cdn-assets": "11.12.0",
 		"@jaames/iro": "5.5.2",
 		"@modelcontextprotocol/sdk": "^1.32.1",
-		"@opentui/core": "0.6.1",
+		"@opentui/core": "0.6.6",
 		"@svgedit/svgcanvas": "7.4.2",
 		"@turf/turf": "7.4.0",
 		"cheerio": "1.2.0",
