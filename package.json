@@ -107,8 +107,8 @@
 		"zod": "^4.6.7"
 	},
 	"devDependencies": {
-		"@babel/parser": "8.0.6",
-		"@biomejs/biome": "2.5.15",
+		"@babel/parser": "8.0.7",
+		"@biomejs/biome": "2.6.2",
 		"@types/bun": "^1.4.3",
 		"@types/less": "3.0.8",
 		"axe-core": "^4.14.0",
