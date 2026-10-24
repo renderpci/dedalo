@@ -99,7 +99,7 @@
 		"d3": "7.9.0",
 		"leaflet": "1.9.4",
 		"mmdb-lib": "3.0.3",
-		"nodemailer": "^10.0.15",
+		"nodemailer": "^10.2.1",
 		"onnxruntime-web": "1.31.0-dev.20260914-8d85527a0",
 		"split.js": "1.6.5",
 		"three": "0.186.1",
@@ -126,9 +126,13 @@
 		"devalue": "^5.9.1",
 		"@hono/node-server": "^2.1.1",
 		"brace-expansion": "^2.1.4",
-		"fast-uri": "^3.1.8",
+		"body-parser": "^2.4.0",
+		"fast-uri": "^3.1.9",
 		"hono": "^4.13.13",
 		"ip-address": "^10.7.4",
-		"js-yaml": "^4.3.2"
+		"js-yaml": "^4.3.2",
+		"qs": "^6.16.1",
+		"serialize-javascript": "^7.1.4",
+		"undici": "^7.30.1"
 	}
 }
