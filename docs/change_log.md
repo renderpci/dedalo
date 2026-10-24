@@ -345,6 +345,14 @@ Merged since the last release; these ship with the next one.
 
     When two assistant requests asked for the same record at the same moment (find it by its fields, or create it), both could miss it and both create it, leaving two records with the same identity. The search is now asked again under a lock before anything is created, so the second request finds the record the first one created.
 
+- **The "Report a problem" tab only appears for users whose profile grants the error-report tool.**
+
+    An administrator whose profile does not include **Error report** still saw the purple "Report a problem" tab on the right edge; clicking it only answered "The tool is not active or not authorized for your user".
+
+    The server now tells the page whether the tool is granted (no extra request), and the tab shows only then, so it appears exactly for the users who can use it: those whose profile includes the tool, and the superuser. To give an administrator the tab, add **Error report** to their profile's tools.
+
+    Wire contract: `WC-2026-10-21-error-report-granted`.
+
 - **Stopping a background export now stops it at once, even while its record selection is still being computed.**
 
     Pressing Stop on a background export used to wait until the database had finished computing
@@ -374,6 +382,20 @@ Merged since the last release; these ship with the next one.
     In the maintenance move panels (move TLD, language, locators, to portal, to table),
     a run whose start the server did not confirm is no longer shown as refused: the
     panel says it may have started and asks you to check before running it again.
+
+- **The reference picker of a text area separates the term and its thesaurus part (… | …), instead of gluing them.**
+
+    In the reference picker of a text area, a term whose record carries no ancestor chain showed the thesaurus part glued to it (`LatinaAgrupador`). The picker now separates the columns that actually render, so the same entry reads `Latina | Agrupador`, like the rest of the list.
+
+- **A text area reference can link the same term from several references, and deleting a reused reference keeps the others linked.**
+
+    In the reference picker of a text area, giving a second reference a term that another reference already used was refused as a duplicate, yet the reference was still written into the text, pointing at a link the database never saved. The same term can now be linked from any number of references.
+
+    Opening an existing reference (or draw tag) showed an empty *New tag* field instead of its current term, and pressing *Apply* there deleted the link of the reference. The picker now shows the current term, and *Apply* without changes keeps it.
+
+    Reusing a reference (the *Reuse tag* list) is also clearer and safer: each entry shows its tag number and an icon, selecting one shows its term in the *New tag* field, and deleting or moving one of several text fragments that share a reused reference no longer unlinks the term the other fragments still point at. A reused reference also takes the label of the reference it reuses.
+
+    Draw tags: *Apply* in the draw tag picker saves the chosen term again (it failed before), and *Delete* no longer fails on a record without draw links.
 
 - **Update cache never overwrites an edit saved while it runs**
 
@@ -804,6 +826,18 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Ontology files move out of the code tree by default**
+
+    Unset, `ONTOLOGY_DATA_IO_DIR` now resolves to `<private dir>/import/ontology`. The in-tree `install/import/ontology/` holds the release that ships with the code and is only read. Before, every install resolved to the in-tree directory, because the shipped release made it look non-empty. As a result, ontology updates wrote their staging files and recovery snapshots into the code tree, and the code updater refused every update with "Runtime data lives inside the code tree".
+
+    An install whose in-tree directory holds anything that is not an ontology release file (a `recovery/` folder or `.staging` from an earlier update, any other file), or that is an ontology server, keeps that directory and logs a warning at start-up. Nothing is moved. The decision is taken once and recorded. The check goes by file name: an export of your own that carries a release file's name counts as release content. It can be rebuilt from the database, and a code update keeps it in the backup of the old code.
+
+    Setting `ONTOLOGY_DATA_IO_DIR=` to an empty value now means the same as leaving it unset. Before, the code updater read the empty value as the code directory and refused.
+
+    **One manual step for installs on an earlier release:** the refusal is checked by the code that is already running, so an existing install still refuses this update once. Before updating, run `mkdir <private dir>/import/ontology` as the service user. If you want to keep the old `install/import/ontology/7.0/recovery/` folder, move it there first.
+
+    **On an ontology server, copy before you create.** It serves its exports from that directory, and the moment `<private dir>/import/ontology` exists it serves from there instead. Copy every `<major.minor>/` directory from `install/import/ontology/` into it, exports included, then restart. Never create the directory empty.
+
 - **The installer field *Database role* is now *Database user*.**
 
     Same field, same value: the PostgreSQL user (a login role) Dédalo connects as and that
@@ -900,6 +934,14 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-10-15-release-identity-from-tag`.
 
 #### Added
+
+- **The profile tool-permissions panel explains each tool — an info button unfolds its description.**
+
+    In a profile's **Tool permissions** field, every tool row now carries a small info button. It unfolds the tool's
+    description (in the interface language) under the row and folds it again on a second click, so the panel stays
+    compact while an administrator decides which tools to grant. Tools without a description show no button.
+
+    Wire contract: `WC-2026-10-21-tool-permissions-description`.
 
 - **"A code server can publish a prerelease (`Build prerelease`), and a published release is never rebuilt."**
 
@@ -1126,6 +1168,12 @@ Merged since the last release; these ship with the next one.
 - **A backup's verification proof now survives a power cut, and a backup is reported done only once its name is safely on disk.**
 
     When a backup is verified, Dédalo writes a small proof file next to it so the archive is not read in full again. That proof could be lost in a power cut right after the verification, or left half-written by an interrupted write, and the next check then re-read the whole archive. It is now written through the same durable path as every other engine file: complete, synced, and its name synced too. If the disk refuses to make a finished backup's name durable (an I/O error), the backup job now says it failed instead of reporting it done; the backup file itself is kept.
+
+- **Code updates of a git-checkout install no longer refuse over `.claude` and `CLAUDE.md`**
+
+    An install made with `git clone` holds two files that no release ships, `.claude` and `CLAUDE.md`. The code updater saw them as unknown files and refused every update with "Unknown entries at the code-tree root". The updater now reads the files a release leaves out from the release's own `.gitattributes`. Those files move into the backup with the old code, and the update proceeds.
+
+    **One manual step for checkout installs on an earlier release:** the refusal is checked by the code that is already running, so the next update still refuses once. Before updating, delete the two links from the install directory: `rm .claude CLAUDE.md`. They are tracked by git, so `git checkout -- .claude CLAUDE.md` restores them.
 
 - **An update or a move transform that committed after a lost connection says what did not run**
 
@@ -1629,13 +1677,14 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 24 entries"
+??? note "Wire contract — 26 entries"
 
     - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
     - `WC-2026-10-19-design-line-removed`
     - `WC-2026-10-19-inspector-record-info`
     - `WC-2026-10-20-element-context-default-lang`
+    - `WC-2026-10-21-error-report-granted`
     - `WC-2026-10-21-hierarchy-import-partial-refused`
     - `WC-2026-10-21-ontology-projection-guard`
     - `WC-2026-10-21-ontology-record-lifecycle`
@@ -1647,6 +1696,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-21-target-statement-lock-wait`
     - `WC-2026-10-21-tm-restore-component-write-doors`
     - `WC-2026-10-21-tm-section-restore-write-door`
+    - `WC-2026-10-21-tool-permissions-description`
     - `WC-2026-10-21-unpublish-markers-durable`
     - `WC-2026-10-21-update-cache-locked-resave`
     - `WC-2026-10-22-filter-project-pick-membership`

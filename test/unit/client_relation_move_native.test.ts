@@ -177,6 +177,8 @@ else {
 		section_id: string;
 		from_component_tipo?: string;
 		paginated_key?: number;
+		tag_id?: string;
+		tag_type?: string;
 	};
 	type LinkOutcome = {
 		linked: Locator[];
@@ -576,6 +578,58 @@ else {
 				expect(door.batches).toHaveLength(0);
 				expect(door.items).toHaveLength(1);
 			}
+		});
+	});
+
+	// ────────────────────────────────────────────────────────────────────────────────────
+	// TEXT AREA TAGS. A tags portal (tags_reference / tags_draw) stores one locator per
+	// text tag, and one record may be linked by several tags. The server dedup key
+	// includes tag_id (relations/save.ts normalizeRelationInsert); the client level-1
+	// check compared section_tipo + section_id only, so the second tag got 'duplicate'
+	// and render_reference stamped a reference over a link the database never held.
+	describe('tag_id is part of the value identity (text area tags portal)', () => {
+		function build() {
+			const door = new FakeSaveDoor('zzrelmv_tags');
+			door.seed(
+				{ section_tipo: 'zzrelmv10', section_id: '1', tag_id: '3', tag_type: 'reference' },
+				21,
+			);
+			door.seed({ section_tipo: 'zzrelmv10', section_id: '2' }, 22);
+			const portal = make_portal({ id: 'tags_instance', tipo: 'zzrelmv_tags', door });
+			return { door, portal };
+		}
+
+		test('the same record linked by ANOTHER tag is a new value, not a duplicate', async () => {
+			const { door, portal } = build();
+
+			const outcome = await portal.link_records([
+				{ section_tipo: 'zzrelmv10', section_id: '1', tag_id: '4', tag_type: 'reference' },
+			]);
+
+			expect(outcome.refused).toEqual([]);
+			expect(outcome.linked).toHaveLength(1);
+			expect(door.items.map((item) => item.locator.tag_id)).toEqual(['3', undefined, '4']);
+		});
+
+		test('the same record by the SAME tag is still a duplicate, refused before the wire', async () => {
+			const { door, portal } = build();
+
+			const outcome = await portal.link_records([
+				{ section_tipo: 'zzrelmv10', section_id: '1', tag_id: '3', tag_type: 'reference' },
+			]);
+
+			expect(outcome.linked).toEqual([]);
+			expect(outcome.refused.map((r) => r.reason)).toEqual(['duplicate']);
+			expect(door.batches).toHaveLength(0);
+		});
+
+		test('a plain locator (no tag_id) keeps the section_tipo + section_id identity', async () => {
+			const { door, portal } = build();
+
+			const outcome = await portal.link_records([{ section_tipo: 'zzrelmv10', section_id: '2' }]);
+
+			expect(outcome.refused.map((r) => r.reason)).toEqual(['duplicate']);
+			expect(door.batches).toHaveLength(0);
 		});
 	});
 

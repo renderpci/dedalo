@@ -176,6 +176,11 @@ const CEILING_FILES = 40;
 // newly visible calls are 14 — files.ts 4, engine.ts 2, upload.ts 1 and the four
 // new entries 7. backup.ts's three (its private fsync/write helpers) were CONVERTED
 // onto core/files/durable.ts in the same change instead of being counted.
+// + code_update.ts (merged from gitdedalo/master, its own 80 → 81): it reads the
+// tree's own .gitattributes ONCE so a checkout's export-ignored agent aliases retire
+// into the backup instead of refusing every update (releaseExcludedRootEntriesOf);
+// operator-driven pipeline. MEASURED on the merged tree: 94 — the new call fits
+// under the 94 ceiling, so it holds rather than summing to 95.
 const CEILING_CALLS = 94;
 
 const EXEMPTIONS: { file: string; reason: string }[] = [
@@ -363,10 +368,19 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
  * is not paid per served request. Shrink-only, and a stale entry is RED.
  * Measured at the PERF-13 fix: 16 files, 20 calls.
  */
-const WALK_CEILING_FILES = 16;
-const WALK_CEILING_CALLS = 20;
+// 16 → 17 (2026-10-21, ONTOLOGY_DATA_IO_DIR default): the catalog probes the
+// in-tree ontology release dir to decide whether it holds operator content.
+const WALK_CEILING_FILES = 17;
+// 20 → 21: the probe above is the one new walk (its inner per-version-dir
+// listing is the same loop body).
+const WALK_CEILING_CALLS = 21;
 
 const WALK_EXEMPTIONS: { file: string; reason: string }[] = [
+	{
+		file: 'src/config/catalog/maintenance.ts',
+		reason:
+			"the ONTOLOGY_DATA_IO_DIR legacy probe lists the in-tree ontology release dir at CONFIG RESOLUTION — once while the catalog builds its default, and the update panel's census read — never per served request; the dir holds one version folder and a handful of release files",
+	},
 	{
 		file: 'src/core/api/dedalo_files.ts',
 		reason:

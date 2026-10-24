@@ -530,10 +530,136 @@ HERMETIC_TRIPWIRES=(
 	# --- 2026-10-23 (psql argv census). DB-free: a text scan of src/ + planted
 	#     controls; imports no src/ module (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
 	test/unit/psql_argv_sql_tripwire.test.ts
+	test/unit/hermetic_parallel_safety_tripwire.test.ts
+)
+
+# THE SERIAL LANE — tripwires that cannot share the machine with another test file, run
+# alone after the parallel batch (see the tripwire stage). Each entry says WHAT it shares.
+# Every entry is ALSO in HERMETIC_TRIPWIRES (the stage refuses one that is not). Moving a
+# file here is a scheduling decision with a reason, never a way to quieten a flake: fix
+# the file to stop sharing, then delete its line.
+HERMETIC_SERIAL_LANE=(
+	# Plants zz_lint_scope_probe.ts INSIDE every MUST_BE_LINTED repo dir and lints it:
+	# biome's scope is path-based, and its stdin mode neither names the rule nor honours
+	# the excludes (measured 2026-10-21), so the probe must exist on disk. A tree-walking
+	# gate in a sibling worker read it mid-delete (ENOENT, the first --parallel run).
+	test/unit/lint_scope_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"
 bun install --frozen-lockfile
+
+# THE TREE A TEST LEAVES BEHIND (2026-10-21). With the tripwires in parallel workers a
+# file that writes into the checkout races every gate that walks it, and one that leaves
+# its scratch there poisons the next run. Snapshot what git sees now (untracked included,
+# ignored excluded — node_modules and the daemons' .test-tmp are ignored on purpose) and
+# hold the tier to the same picture at the end. `git` is absent on GitLab's oven/bun
+# until the daemon block installs it, so a missing git snapshots nothing and checks nothing.
+tree_checked=0
+if command -v git >/dev/null 2>&1; then tree_before="$(git status --porcelain --untracked-files=all)"; tree_checked=1; fi
+
+# The site-builder daemon (publication/site_builder) is its own package with a fully
+# hermetic suite: no DB, no oracle, no ../private — its tests run against a repo-local
+# .env.test and scratch directories. Without this block NOTHING mechanical runs it
+# (verify.ts neighbours only scan src/ + test/), so its invariants (bearer auth, promote
+# atomicity, session single-flight) could rot silently.
+#
+# Its workspace tests shell out to the REAL `git` binary (per-site rollback substrate,
+# src/sites/git.ts). GitHub's ubuntu runner ships git; GitLab runs this same script
+# inside oven/bun (debian-slim, NO git) — every workspace-creating test dies on the
+# spawn while the git-free ones pass (the 28-pass/22-fail signature, 2026-07-18).
+# Install it when absent so the two platforms cannot drift on this gate.
+if ! command -v git >/dev/null 2>&1; then
+  echo "== hermetic: installing git (absent on this runner)"
+  apt-get update -qq && apt-get install -y -qq git >/dev/null
+fi
+# Run one isolated daemon package's gate, and NAME the failure.
+#
+# NO --timeout HERE, DELIBERATELY. The root suite gets it because it LOST a number it had
+# chosen: bunfig.toml declared `[test] timeout = 30000` and Bun 1.4.0 silently ignored it.
+# These packages never made that claim: EVERY daemon bunfig.toml declares coverage (and,
+# where enforced, coverageThreshold) and no timeout, so their green baselines were measured
+# under bun's built-in 5000 ms cap and stay comparable run to run.
+# (Corrected 2026-08-31, P2-23/GATE-43: this said publication/site_builder had NO
+# bunfig.toml at all, while eleven lines below the same file said "Both daemons set
+# coverageThreshold in their bunfig.toml" and the diagnostic below greps that file. One of
+# the two had to be false; it was this one, and the package's coverage was measured by
+# nothing. It now has the bunfig its sibling has, at the same 0.8 floor.) Widening them on no evidence would be silently loosening a gate, not restoring one.
+# Same reasoning, same wording, at the other exempt sites: the site_builder and host_agent
+# stages in scripts/verify.ts.
+#
+# A daemon that ENFORCES sets `coverageThreshold` in its bunfig.toml (server_api/v2 and
+# host_agent; site_builder only reports — ci_workflow_tripwire rule 11), and a miss makes
+# `bun test` exit 1 while printing NOTHING about coverage — the log reads
+# "290 pass / 0 fail" followed by a bare "exit code 1", which is indistinguishable from
+# a crash and sent one CI failure (2026-08-03) round several wrong hypotheses. Bun does
+# not say it, so this script does: every test passing plus a non-zero exit IS the
+# coverage gate, and the table it printed is right above the message.
+daemon_gate() {
+	local dir="$1"
+	local log
+	# PORTABLE TEMPLATE, not `mktemp -t NAME`. BSD/macOS accepts a bare suffix there;
+	# GNU coreutils demands the XXXXXX placeholder and dies with "too few X's in
+	# template" — so the developer-machine form passed locally and broke the Linux
+	# runner on the first run (2026-08-03). An explicit template satisfies both.
+	log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_gate.XXXXXX")"
+	if (cd "$dir" && bun install --frozen-lockfile && bunx tsc --noEmit && bun test) 2>&1 | tee "$log"; then
+		rm -f "$log"
+		return 0
+	fi
+	# `tee` is last in the pipe, so consult bun's own status, not tee's.
+	if grep -qE '^ +0 fail' "$log"; then
+		echo ""
+		echo "== hermetic: RED in $dir — every test PASSED but the run exited non-zero."
+		echo "   That is the bunfig.toml coverageThreshold: bun exits 1 and prints no reason."
+		echo "   The per-file table above shows which file fell below it (thresholds:"
+		grep -E 'coverageThreshold' "$dir/bunfig.toml" | sed 's/^/     /'
+		echo "   Fix by TESTING the uncovered code, not by lowering the threshold."
+	fi
+	rm -f "$log"
+	return 1
+}
+
+# THE DAEMON PACKAGES RUN CONCURRENTLY (the set is DERIVED and held by ci_workflow_tripwire
+# rule 15: every locked package with its own bunfig.toml), and this is where the tier's minutes
+# actually are: each does its OWN `bun install --frozen-lockfile` (separate
+# lockfiles) plus its own tsc and its own suite. They share no state — separate
+# directories, separate node_modules, separate bunfig, no database, no ../private
+# — so nothing orders them.
+#
+# AND THEY START HERE, BEFORE TYPECHECK, not after the tripwires (2026-10-21). They
+# touch nothing the root stages read, so running them last only appended their wall
+# clock (site_builder alone: 78 s measured) to the tier's. In the background they ride
+# under the parallel tripwire batch (~110 s on the desk); the waits and the three
+# verdicts stay at the END, unchanged.
+#
+# Bash background jobs rather than `bun run --parallel`: that flag runs
+# package.json SCRIPTS, and daemon_gate() is a shell function carrying the
+# coverageThreshold diagnostic (a threshold miss makes `bun test` exit 1 while
+# printing NOTHING about coverage — the log reads "290 pass / 0 fail" then a bare
+# exit 1). Moving these into package.json scripts to reach the flag would throw
+# that diagnostic away to use a mechanism that buys the same concurrency.
+#
+# EVERY ONE IS ALWAYS WAITED ON AND EVERY VERDICT IS REPORTED: `set -e` must not
+# abort on the first failure here, or one red daemon would hide the others'
+# result — the same reason --no-exit-on-error is used for typecheck+lint below.
+echo "== hermetic: daemon packages, concurrently in the background (site_builder + publication API v2 + publication-host agent) — verdicts at the end"
+daemon_status=0
+
+# Per-job logs come from mktemp (fresh, 0600, O_EXCL), the same pattern daemon_gate() uses:
+# a predictable `/tmp/name.$$` redirect follows a pre-planted symlink (truncates whatever
+# file it points at) and can be pre-created world-readable (the agent suite prints test
+# bearer/pairing material). ci_workflow_tripwire rule 15 holds the mktemp shape.
+sb_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_sb.XXXXXX")"
+pa_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_pa.XXXXXX")"
+ha_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_ha.XXXXXX")"
+
+daemon_gate publication/site_builder > "$sb_log" 2>&1 &
+sb_pid=$!
+daemon_gate publication/server_api/v2 > "$pa_log" 2>&1 &
+pa_pid=$!
+daemon_gate publication/host_agent > "$ha_log" 2>&1 &
+ha_pid=$!
 
 # TYPECHECK AND LINT RUN CONCURRENTLY (Bun 1.4 `bun run --parallel`).
 #
@@ -573,8 +699,51 @@ echo "== hermetic: static tripwires (${#HERMETIC_TRIPWIRES[@]})"
 tw_rc=0
 # Sorted `./` paths, never the bare array: a bare name is a bun FILTER run in readdir
 # order (per host). scripts/ci/test_order.sh; gate: tier_file_order_tripwire.
+#
+# THE FILES RUN IN PARALLEL WORKERS (2026-10-21) — every one of them, unselected. One
+# serial `bun test` over this list was 513 s of a ~10 min tier; `--parallel` (one worker
+# per core, each file in a fresh global: `--isolate` is implied, so a cross-file
+# mock.module leak is impossible here, which the single process never guaranteed) ran
+# the same files in 124 s on 8 workers. `--timings` only ORDERS the work (slowest file
+# first); a stale or missing entry changes the wall clock, never a verdict. Refresh it
+# when the list moves: the command is in engineering/CI.md → Hermetic tier.
+#
+# A file that touches SHARED state (writes into the repo tree another file walks, a
+# fixed path, a fixed port) cannot ride a worker: it runs in HERMETIC_SERIAL_LANE below,
+# alone, after the batch, with its reason next to it. Every lane entry must also be a
+# HERMETIC_TRIPWIRES entry — the lane re-schedules a gate, never adds or drops one.
+#
+# DEDALO_HERMETIC_SERIAL=1 runs the WHOLE list in one serial process (the pre-2026-10-21
+# command). The nightly full gate sets it: a coupling the lane missed shows up as a
+# parallel-green push and a serial-red night on the same sha.
 order_test_paths "${HERMETIC_TRIPWIRES[@]}" || tw_rc=$?
-bun test --timeout=30000 "${TEST_ORDER_PATHS[@]}" || tw_rc=$?
+hermetic_parallel=()
+hermetic_serial=()
+for path in "${TEST_ORDER_PATHS[@]}"; do
+	if printf '%s\n' ${HERMETIC_SERIAL_LANE[@]+"${HERMETIC_SERIAL_LANE[@]}"} | grep -qxF "${path#./}"; then
+		hermetic_serial+=("$path")
+	else
+		hermetic_parallel+=("$path")
+	fi
+done
+if [ "${#hermetic_serial[@]}" -ne "${#HERMETIC_SERIAL_LANE[@]}" ]; then
+	echo "== hermetic: HERMETIC_SERIAL_LANE names a file that is not a HERMETIC_TRIPWIRES entry (or names one twice)"
+	tw_rc=1
+fi
+if [ "${DEDALO_HERMETIC_SERIAL:-0}" = 1 ]; then
+	echo "   DEDALO_HERMETIC_SERIAL=1 — all ${#TEST_ORDER_PATHS[@]} files in ONE serial process"
+	bun test --timeout=30000 "${TEST_ORDER_PATHS[@]}" || tw_rc=$?
+else
+	echo "   ${#hermetic_parallel[@]} files in parallel workers, then ${#hermetic_serial[@]} in the serial lane"
+	TEST_ORDER_PATHS=("${hermetic_parallel[@]}")
+	bun test --timeout=30000 --parallel --timings=engineering/hermetic_timings.json "${TEST_ORDER_PATHS[@]}" || tw_rc=$?
+	# Guarded: an EMPTY lane is the goal, and `bun test` with no path discovers the whole
+	# test root (and bash 3.2 under `set -u` dies expanding an empty array).
+	if [ "${#hermetic_serial[@]}" -gt 0 ]; then
+		TEST_ORDER_PATHS=("${hermetic_serial[@]}")
+		bun test --timeout=30000 "${TEST_ORDER_PATHS[@]}" || tw_rc=$?
+	fi
+fi
 [ "$tw_rc" -eq 0 ] || { echo "== hermetic: RED in static tripwires (exit $tw_rc)"; tier_status=1; }
 
 # THE DEBT LEDGER, APPEND-ONLY AGAINST HISTORY (P2-18 / GATE-22). The crap
@@ -690,102 +859,7 @@ echo "   audit base: ${AUDIT_REFERENCE:-<none — the audit runs>}"
 bun run scripts/ci/audit.ts --changed-since "$AUDIT_REFERENCE" || da_rc=$?
 [ "$da_rc" -eq 0 ] || { echo "== hermetic: RED in the dependency audit ratchet (exit $da_rc)"; tier_status=1; }
 
-# The site-builder daemon (publication/site_builder) is its own package with a fully
-# hermetic suite: no DB, no oracle, no ../private — its tests run against a repo-local
-# .env.test and scratch directories. Without this block NOTHING mechanical runs it
-# (verify.ts neighbours only scan src/ + test/), so its invariants (bearer auth, promote
-# atomicity, session single-flight) could rot silently.
-#
-# Its workspace tests shell out to the REAL `git` binary (per-site rollback substrate,
-# src/sites/git.ts). GitHub's ubuntu runner ships git; GitLab runs this same script
-# inside oven/bun (debian-slim, NO git) — every workspace-creating test dies on the
-# spawn while the git-free ones pass (the 28-pass/22-fail signature, 2026-07-18).
-# Install it when absent so the two platforms cannot drift on this gate.
-if ! command -v git >/dev/null 2>&1; then
-  echo "== hermetic: installing git (absent on this runner)"
-  apt-get update -qq && apt-get install -y -qq git >/dev/null
-fi
-# Run one isolated daemon package's gate, and NAME the failure.
-#
-# NO --timeout HERE, DELIBERATELY. The root suite gets it because it LOST a number it had
-# chosen: bunfig.toml declared `[test] timeout = 30000` and Bun 1.4.0 silently ignored it.
-# These packages never made that claim: EVERY daemon bunfig.toml declares coverage (and,
-# where enforced, coverageThreshold) and no timeout, so their green baselines were measured
-# under bun's built-in 5000 ms cap and stay comparable run to run.
-# (Corrected 2026-08-31, P2-23/GATE-43: this said publication/site_builder had NO
-# bunfig.toml at all, while eleven lines below the same file said "Both daemons set
-# coverageThreshold in their bunfig.toml" and the diagnostic below greps that file. One of
-# the two had to be false; it was this one, and the package's coverage was measured by
-# nothing. It now has the bunfig its sibling has, at the same 0.8 floor.) Widening them on no evidence would be silently loosening a gate, not restoring one.
-# Same reasoning, same wording, at the other exempt sites: the site_builder and host_agent
-# stages in scripts/verify.ts.
-#
-# A daemon that ENFORCES sets `coverageThreshold` in its bunfig.toml (server_api/v2 and
-# host_agent; site_builder only reports — ci_workflow_tripwire rule 11), and a miss makes
-# `bun test` exit 1 while printing NOTHING about coverage — the log reads
-# "290 pass / 0 fail" followed by a bare "exit code 1", which is indistinguishable from
-# a crash and sent one CI failure (2026-08-03) round several wrong hypotheses. Bun does
-# not say it, so this script does: every test passing plus a non-zero exit IS the
-# coverage gate, and the table it printed is right above the message.
-daemon_gate() {
-	local dir="$1"
-	local log
-	# PORTABLE TEMPLATE, not `mktemp -t NAME`. BSD/macOS accepts a bare suffix there;
-	# GNU coreutils demands the XXXXXX placeholder and dies with "too few X's in
-	# template" — so the developer-machine form passed locally and broke the Linux
-	# runner on the first run (2026-08-03). An explicit template satisfies both.
-	log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_gate.XXXXXX")"
-	if (cd "$dir" && bun install --frozen-lockfile && bunx tsc --noEmit && bun test) 2>&1 | tee "$log"; then
-		rm -f "$log"
-		return 0
-	fi
-	# `tee` is last in the pipe, so consult bun's own status, not tee's.
-	if grep -qE '^ +0 fail' "$log"; then
-		echo ""
-		echo "== hermetic: RED in $dir — every test PASSED but the run exited non-zero."
-		echo "   That is the bunfig.toml coverageThreshold: bun exits 1 and prints no reason."
-		echo "   The per-file table above shows which file fell below it (thresholds:"
-		grep -E 'coverageThreshold' "$dir/bunfig.toml" | sed 's/^/     /'
-		echo "   Fix by TESTING the uncovered code, not by lowering the threshold."
-	fi
-	rm -f "$log"
-	return 1
-}
-
-# THE DAEMON PACKAGES RUN CONCURRENTLY (the set is DERIVED and held by ci_workflow_tripwire
-# rule 15: every locked package with its own bunfig.toml), and this is where the tier's minutes
-# actually are: each does its OWN `bun install --frozen-lockfile` (separate
-# lockfiles) plus its own tsc and its own suite. They share no state — separate
-# directories, separate node_modules, separate bunfig, no database, no ../private
-# — so nothing orders them.
-#
-# Bash background jobs rather than `bun run --parallel`: that flag runs
-# package.json SCRIPTS, and daemon_gate() is a shell function carrying the
-# coverageThreshold diagnostic (a threshold miss makes `bun test` exit 1 while
-# printing NOTHING about coverage — the log reads "290 pass / 0 fail" then a bare
-# exit 1). Moving these into package.json scripts to reach the flag would throw
-# that diagnostic away to use a mechanism that buys the same concurrency.
-#
-# EVERY ONE IS ALWAYS WAITED ON AND EVERY VERDICT IS REPORTED: `set -e` must not
-# abort on the first failure here, or one red daemon would hide the others'
-# result — the same reason --no-exit-on-error is used for typecheck+lint above.
-echo "== hermetic: daemon packages, concurrently (site_builder + publication API v2 + publication-host agent)"
-daemon_status=0
-
-# Per-job logs come from mktemp (fresh, 0600, O_EXCL), the same pattern daemon_gate() uses:
-# a predictable `/tmp/name.$$` redirect follows a pre-planted symlink (truncates whatever
-# file it points at) and can be pre-created world-readable (the agent suite prints test
-# bearer/pairing material). ci_workflow_tripwire rule 15 holds the mktemp shape.
-sb_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_sb.XXXXXX")"
-pa_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_pa.XXXXXX")"
-ha_log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_ha.XXXXXX")"
-
-daemon_gate publication/site_builder > "$sb_log" 2>&1 &
-sb_pid=$!
-daemon_gate publication/server_api/v2 > "$pa_log" 2>&1 &
-pa_pid=$!
-daemon_gate publication/host_agent > "$ha_log" 2>&1 &
-ha_pid=$!
+echo "== hermetic: daemon packages — waiting on the jobs started before typecheck"
 
 # `wait <pid>` returns the job's exit status; `|| rc=$?` keeps `set -e` from
 # aborting before every other job has been waited on and reported.
@@ -827,6 +901,15 @@ dump_log "$ha_log" publication/host_agent
 # are built to avoid. Fold it into the accumulator instead, and let the single
 # exit below name every stage that can be red.
 [ "$daemon_status" -eq 0 ] || tier_status=1
-[ "$tier_status" -eq 0 ] || { echo "== hermetic: RED — see the stage verdicts above (typecheck/lint, static tripwires, crap ledger, dependency audit ratchet, daemon packages)"; exit 1; }
+if [ "$tree_checked" -eq 1 ]; then
+	tree_after="$(git status --porcelain --untracked-files=all)"
+	if [ "$tree_after" != "$tree_before" ]; then
+		echo "== hermetic: RED — the run changed the checkout (a test wrote into the repo tree and left it):"
+		diff <(printf '%s\n' "$tree_before") <(printf '%s\n' "$tree_after") | sed 's/^/     /' || true
+		echo "   Write scratch under mkdtemp(tmpdir()), or move the file to HERMETIC_SERIAL_LANE with its reason AND clean up."
+		tier_status=1
+	fi
+fi
+[ "$tier_status" -eq 0 ] || { echo "== hermetic: RED — see the stage verdicts above (typecheck/lint, static tripwires, crap ledger, dependency audit ratchet, daemon packages, checkout unchanged)"; exit 1; }
 
 echo "== hermetic: GREEN"

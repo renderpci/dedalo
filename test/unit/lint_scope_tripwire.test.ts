@@ -364,8 +364,10 @@ function materializePublicationConfig(): string {
 		}
 		scoped = scoped.replace(exclusion, '');
 	}
-	const dir = mkdtempSync(join(tmpdir(), 'dedalo-lint-publication-'));
-	const path = join(dir, 'biome.jsonc');
+	// `scratchDir`, not `dir`: hermetic_parallel_safety_tripwire resolves names file-wide,
+	// and a second `dir` (this mkdtemp) would hide isLinted's in-tree probe from its anchor.
+	const scratchDir = mkdtempSync(join(tmpdir(), 'dedalo-lint-publication-'));
+	const path = join(scratchDir, 'biome.jsonc');
 	writeFileSync(path, scoped);
 	return path;
 }

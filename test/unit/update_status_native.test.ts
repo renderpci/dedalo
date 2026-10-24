@@ -128,7 +128,7 @@ describe('consumer status', () => {
 		for (const check of (await panel(superuser)).checks) {
 			expect(STATES.has(check.state)).toBe(true);
 			// A fact, never a sentence — the panel owns the wording.
-			if (check.detail !== undefined) expect(typeof check.detail).toBe('string');
+			expect(check.detail === undefined || typeof check.detail === 'string').toBe(true);
 		}
 	});
 

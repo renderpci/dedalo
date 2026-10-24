@@ -220,9 +220,9 @@ the panel's **Local files** source:
    example `7.0/`.
 2. Put that directory under the server's ontology I/O directory,
    [`ONTOLOGY_DATA_IO_DIR`](../../config/config.md#ontology-inputoutput-exportimport-or-download-directory)
-   — by default `../private/import/ontology/` once that directory exists, and
-   until then the in-tree `install/import/ontology/`. Prefer the private one: a
-   code update moves the whole code tree aside, files you added included.
+   — by default `../private/import/ontology/`. Never the in-tree
+   `install/import/ontology/`: it holds the release that ships with the code,
+   and a code update moves the whole code tree aside, files you added included.
 3. Set [`IS_AN_ONTOLOGY_SERVER=true`](../../config/config.md#is-an-ontology-master-server)
    in `../private/.env` and restart. That is what adds *Local files* to the
    panel. It also makes this installation serve the files in that directory

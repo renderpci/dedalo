@@ -11,9 +11,13 @@
 * print windows). One consistent surface, present everywhere, so there is no
 * menu-bar duplicate to reason about.
 *
-* Admin-only (matches the tool's own access). Called once from
-* core/page/js/index.js after the page renders. Idempotent, and never throws
-* (a launcher defect must not break the page).
+* Shown ONLY when the user can use the tool: page_globals.tool_error_report_granted
+* (server: global admin AND granted by the ONE grant door — profile dd1067,
+* always_active, or superuser; WC-2026-10-21-error-report-granted). Not
+* is_global_admin alone: since 2026-08-09 the tool ACL has no admin flag, so an
+* admin whose profile lacks the tool got a tab answering tool.not_authorized.
+* Called once from core/page/js/index.js after the page renders. Idempotent,
+* and never throws (a launcher defect must not break the page).
 *
 * open_tool is imported LAZILY (on click) so this global boot module does not
 * pull the tool machinery into every page load.
@@ -52,8 +56,8 @@ export function install_error_report_launcher() {
 
 	try {
 
-		// admin only (matches getUserTools: the tool is granted to global admins)
-			if (typeof page_globals==='undefined' || page_globals.is_global_admin!==true) {
+		// usable by this user (server-decided: admin AND granted)
+			if (typeof page_globals==='undefined' || page_globals.tool_error_report_granted!==true) {
 				return
 			}
 

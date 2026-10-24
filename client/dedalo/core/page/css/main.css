@@ -556,7 +556,7 @@ template {
   --color_grey_1: #212529;
   --color_black: #000000;
   --color_hilite_3: #faf7df;
-  --color_hilite: #fef1e4;
+  --color_hilite: #fff7ef;
   --color_hilite_2: #ffda86;
   --color_hilite_yellow: #ffef3d;
   --selection_bg: #ffb347;
@@ -8921,6 +8921,17 @@ body:has(.component_av.view_viewer) {
 }
 .wrapper_search > .search_global_container.hide {
   padding: 0px;
+}
+@media screen and (min-width: 1025px) {
+  .wrapper_search > .search_global_container {
+    border-radius: var(--radius-lg);
+  }
+  .wrapper_search > .search_global_container > .toggle_container_selector:first-child {
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  }
+  .wrapper_search > .search_global_container > .toggle_container_selection_presets:last-child {
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  }
 }
 .wrapper_search > .search_global_container > .toggle_container_selector {
   margin: 0px;
@@ -22383,8 +22394,11 @@ body.inspector_resizing {
 .component_check_box.view_tools > .content_data {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  column-gap: 1rem;
+  row-gap: 0.25rem;
+  align-items: stretch;
   overflow: hidden;
-  padding-bottom: 2rem;
+  padding-top: 1rem;
   width: calc(100% - 2.6rem);
 }
 .component_check_box.view_tools > .content_data .select_all {
@@ -22408,6 +22422,7 @@ body.inspector_resizing {
   padding: 0.33rem;
   align-items: flex-start;
   line-height: 1.4rem;
+  flex-wrap: wrap;
 }
 .component_check_box.view_tools > .content_data > .content_value > .tool_icon {
   height: 1.33rem;
@@ -22424,6 +22439,40 @@ body.inspector_resizing {
 .component_check_box.view_tools > .content_data > .content_value > .developer_info {
   margin-left: 0.33rem;
   flex: 1 1;
+}
+.component_check_box.view_tools > .content_data > .content_value:last-child,
+.component_check_box.view_tools > .content_data > .content_value:nth-last-child(2):nth-child(even) {
+  border-bottom: none;
+}
+.component_check_box.view_tools > .content_data > .content_value > .tool_info_toggle {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  width: 1rem;
+  height: 1rem;
+  margin-left: auto;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.15s ease-out;
+}
+.component_check_box.view_tools > .content_data > .content_value > .tool_info_toggle:hover,
+.component_check_box.view_tools > .content_data > .content_value > .tool_info_toggle:focus-visible {
+  opacity: 0.8;
+}
+.component_check_box.view_tools > .content_data > .content_value > .tool_description {
+  display: none;
+  flex-basis: 100%;
+  padding: 0.25rem 0 0.33rem 4rem;
+  font-size: 0.9em;
+  line-height: 1.3;
+  white-space: pre-line;
+  opacity: 0.7;
+}
+.component_check_box.view_tools > .content_data > .content_value.open > .tool_info_toggle {
+  opacity: 0.8;
+}
+.component_check_box.view_tools > .content_data > .content_value.open > .tool_description {
+  display: block;
 }
 .component_check_box.search > .content_data > .q_operator {
   width: 3rem;
@@ -27703,9 +27752,32 @@ dd-modal > .text_area_reference_selector .existing_tags_container .value {
   margin-left: 2.3rem;
   border-top: 1px var(--color_grey_13) solid;
   line-height: 1.7rem;
+  cursor: pointer;
+}
+dd-modal > .text_area_reference_selector .existing_tags_container .value::before {
+  content: '';
+  display: inline-block;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0 0.6rem 0 0.3rem;
+  vertical-align: -0.1rem;
+  background-color: var(--fg_muted);
+  -webkit-mask-image: url('../../themes/default/icons/tag.svg');
+  mask-image: url('../../themes/default/icons/tag.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 dd-modal > .text_area_reference_selector .existing_tags_container .value.selected_tag {
   background-color: var(--color_hilite_2);
+}
+dd-modal > .text_area_reference_selector .existing_tags_container .value.selected_tag::before {
+  background-color: var(--fg_on_brand);
+  -webkit-mask-image: url('../../themes/default/icons/check.svg');
+  mask-image: url('../../themes/default/icons/check.svg');
 }
 dd-modal > .text_area_reference_selector .existing_tags_container .value:hover {
   background-color: var(--color_grey_13);

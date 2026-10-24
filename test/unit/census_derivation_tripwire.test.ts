@@ -447,7 +447,7 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 		'ROOTS: `client/dedalo` `publication` `src` `tools` `vendor` — the five trees whose code may load code (GATE-54 added vendor/ and publication/).',
 	'test/unit/ontology_single_writer_tripwire.test.ts': 'ROOTS: `scripts` `src` `tools`.',
 	'test/unit/operator_commands_tripwire.test.ts':
-		'NO-ROOT: readdirSync lists the scratch backup trees the gate builds under test/.tmp-*.',
+		'NO-ROOT: [opaque: 5] readdirSync lists the scratch backup trees the gate builds under mkdtemp(tmpdir()) (moved out of test/ 2026-10-21: in-tree scratch raced the parallel hermetic workers).',
 	'test/unit/outbound_fetch_tripwire.test.ts': 'ROOTS: `src` `tools`.',
 	'test/unit/password_cost_tripwire.test.ts': 'ROOTS: `scripts` `src` `tools`.',
 	'test/unit/production_entrypoint_coverage_tripwire.test.ts':
@@ -499,8 +499,14 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 /** Hard cap on the private-walker baseline — it only shrinks. */
 const PRIVATE_ROOT_WALKER_CAP = 100;
 
-/** Hard cap on the walk sites this rule cannot evaluate across the baseline — each written as `[opaque: n]`. */
-const OPAQUE_SITE_CAP = 3;
+/**
+ * Hard cap on the walk sites this rule cannot evaluate across the baseline — each written as `[opaque: n]`.
+ * 3 → 8 on 2026-10-21: operator_commands_tripwire's five scratch-tree walks moved from
+ * fixed `test/.tmp-*` dirs (in-tree, racing the parallel hermetic workers) to
+ * mkdtemp(tmpdir()) — a runtime root this rule cannot read, over a scratch tree, never a
+ * repo root. Lower it when one goes.
+ */
+const OPAQUE_SITE_CAP = 8;
 
 interface SharedLister {
 	/**

@@ -201,6 +201,37 @@ export const IGNORED_ROOT_ENTRIES: ReadonlySet<string> = new Set([
 	'desktop.ini',
 ]);
 
+/** A root-anchored literal `export-ignore` rule: `/<name> … export-ignore …`. */
+const ROOT_EXPORT_IGNORE_RULE = /^\/([^/\s*?[\\]+)\s+(?:.*\s)?export-ignore(?:\s|$)/;
+
+/**
+ * Root entries the repo TRACKS but no release ships (2026-10-21): the
+ * root-anchored `export-ignore` rules of the tree's own `.gitattributes`
+ * (today the agent-alias symlinks `.claude` + `CLAUDE.md`). A CHECKOUT install
+ * (docs/install/index.md) carries them; a release archive never does, so the
+ * root whitelist read them as operator drop-ins and refused every in-app
+ * update of a checkout. Repo-owned, not operator data: they ride the old tree
+ * into the backup like a retired entry — but only as the SYMLINKS a checkout
+ * carries (a real dir/file of that name is operator content and still refuses). Read from the INCOMING tree by the
+ * swap, from the live tree by the panel (status.ts) — the same file, one rule,
+ * no second list. A missing/unreadable file yields the empty set (refuse as
+ * before: the safe direction).
+ */
+export function releaseExcludedRootEntriesOf(treeRoot: string): ReadonlySet<string> {
+	let text: string;
+	try {
+		text = readFileSync(join(treeRoot, '.gitattributes'), 'utf8');
+	} catch {
+		return new Set();
+	}
+	const names = new Set<string>();
+	for (const line of text.split('\n')) {
+		const name = ROOT_EXPORT_IGNORE_RULE.exec(line.trim())?.[1];
+		if (name !== undefined && name !== '.' && name !== '..') names.add(name);
+	}
+	return names;
+}
+
 /**
  * The pipeline's answer IS the wire body (the update_code widget's job payload
  * carries it verbatim), so it is ENVELOPE v2 — `data` is the installed release,
@@ -1291,11 +1322,12 @@ function refuseUnwritableSwapDirs(targetRoot: string, backupRoot: string): void 
 function refuseRuntimeDataInsideTree(targetRoot: string): void {
 	const insideTree = runtimePathsInsideTree(targetRoot);
 	if (insideTree.length > 0) {
-		const first = insideTree[0] as { id: string; envKey: string | null; path: string };
+		const first = insideTree[0] as (typeof insideTree)[number];
 		const remedy =
-			first.envKey === null
+			first.remedy ??
+			(first.envKey === null
 				? `move it (census id '${first.id}')`
-				: `move it, or set ${first.envKey}`;
+				: `move it, or set ${first.envKey}`);
 		throw new DedaloError('update.refused', {
 			// The FIRST offender + its env key on the wire; the full list log-only.
 			publicMessage: `Error. Runtime data lives inside the code tree: ${first.path} (${remedy}) — a code swap would carry it into the backup.`,
@@ -1498,11 +1530,14 @@ export function refuseUntrackedSecrets(codeRoot: string, targetRoot: string): vo
  * tree's OWN stamp records the root of the archive it was installed from
  * (install_stamp.ts), so an entry listed there is release-shipped and rides the
  * old tree into the backup — where retired release files belong. A tree with
- * no recorded list proves nothing and refuses as before. The secret walk below
+ * no recorded list proves nothing and refuses as before. The incoming tree's
+ * `export-ignore` roots (releaseExcludedRootEntriesOf — a checkout's agent
+ * aliases) retire the same way. The secret walk below
  * still covers retired dirs: it walks the whole live tree. */
 export function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: string): void {
 	const shipped = new Set(readdirSync(codeRoot));
 	const previouslyShipped = installedRootEntriesOf(targetRoot);
+	const repoOnly = releaseExcludedRootEntriesOf(codeRoot);
 	const unaccounted = readdirSync(targetRoot).filter(
 		(name) =>
 			!shipped.has(name) &&
@@ -1510,8 +1545,15 @@ export function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: strin
 			!IGNORED_ROOT_ENTRIES.has(name) &&
 			name !== 'node_modules',
 	);
-	const retired = unaccounted.filter((name) => previouslyShipped?.has(name) === true);
-	const unknown = unaccounted.filter((name) => previouslyShipped?.has(name) !== true);
+	// A checkout carries the export-ignored aliases as SYMLINKS; a real
+	// `.claude/` dir or a hand-written CLAUDE.md is operator content.
+	// One lstat per name: the three lists must partition `unaccounted`.
+	const repoOnlyAliases = unaccounted.filter(
+		(name) => repoOnly.has(name) && lstatSync(join(targetRoot, name)).isSymbolicLink(),
+	);
+	const rest = unaccounted.filter((name) => !repoOnlyAliases.includes(name));
+	const retired = rest.filter((name) => previouslyShipped?.has(name) === true);
+	const unknown = rest.filter((name) => previouslyShipped?.has(name) !== true);
 	if (unknown.length > 0) {
 		refuseArchive(
 			`Error. Unknown entries at the code-tree root would be moved into the backup by the swap: ${unknown.join(', ')} — move them out of the tree (or delete them) before updating.`,
@@ -1521,6 +1563,11 @@ export function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: strin
 	if (retired.length > 0) {
 		console.warn(
 			`[code update] retired root entries (shipped by the installed release, dropped by this one) move into the backup: ${retired.join(', ')}`,
+		);
+	}
+	if (repoOnlyAliases.length > 0) {
+		console.warn(
+			`[code update] checkout-only root links (export-ignored, never in a release) move into the backup: ${repoOnlyAliases.join(', ')}`,
 		);
 	}
 }

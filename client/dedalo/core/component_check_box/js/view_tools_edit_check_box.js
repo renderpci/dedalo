@@ -6,6 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {a11y} from '../../common/js/a11y.js'
 	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {strip_tags, tool_base_url, same_section_id} from '../../common/js/utils/index.js'
 	import {get_buttons} from './render_edit_component_check_box.js'
@@ -34,7 +35,7 @@
 *
 * Data flow:
 *   `self.data.datalist` — array of resolved option objects, each carrying
-*     `{value:{section_id,section_tipo}, label, section_id, tool_name, always_active}`.
+*     `{value:{section_id,section_tipo}, label, section_id, tool_name, always_active, tool_description}`.
 *   `self.data.entries`  — array of currently selected locators (relations).
 *   Changes are persisted immediately via `self.change_value` (inherited from
 *   `component_common`) after every checkbox interaction, keeping the relation store
@@ -273,6 +274,10 @@ const get_content_data = function(self) {
 *      b. A `<span>` with the stripped label text
 *   3. Optionally, a `<span class="developer_info show_on_active">` badge when
 *      `SHOW_DEBUG === true`, showing `[tool_name - section_id]`.
+*   4. When `tool_description` is non-empty: an info toggle (`.tool_info_toggle`,
+*      role=button, aria-expanded) and a folded `.tool_description` text block
+*      wrapping under the row. The toggle flips `.open` on the row and never
+*      touches the checkbox.
 *
 * A non-enumerable property `input_checkbox.datalist_value` stores the locator
 * `{section_id, section_tipo}` object directly on the DOM node so the master
@@ -299,7 +304,7 @@ const get_content_data = function(self) {
 *
 * @param {number} i - Zero-based index of this item within the datalist.
 * @param {Object} current_value - A single resolved datalist item with shape:
-*   `{value:{section_id,section_tipo}, label, section_id, tool_name, always_active}`.
+*   `{value:{section_id,section_tipo}, label, section_id, tool_name, always_active, tool_description}`.
 * @param {Object} self - Component instance. Must expose `self.data.entries`,
 *   `self.permissions`, `self.active`, `self.change_handler`, and `self.context`.
 * @returns {HTMLElement} A `<div class="content_value">` ready to append into `content_data`.
@@ -384,6 +389,38 @@ const get_input_element = (i, current_value, self) => {
 			})
 		}
 
+
+	// tool_description. Folded under the row (info toggle) so the panel stays
+	// compact. Stored as HTML (register.json dd612): rendered as plain text.
+		const description = datalist_item.tool_description
+			// paragraph/line breaks survive as newlines (CSS pre-line)
+			? strip_tags(datalist_item.tool_description.replace(/<\/p>|<br\s*\/?>/gi, '\n')).trim()
+			: ''
+		if (description.length>0) {
+			const description_id = `tool_description_${self.id}_${i}`
+			const button_info = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button info tool_info_toggle',
+				title			: get_label.information || 'Information',
+				aria			: {controls : description_id},
+				parent			: content_value
+			})
+			a11y.make_activable(button_info, {
+				expanded	: false,
+				on_activate	: (e) => {
+					e.stopPropagation()
+					const open = content_value.classList.toggle('open')
+					button_info.setAttribute('aria-expanded', String(open))
+				}
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tool_description',
+				id				: description_id,
+				inner_html		: render_value(description, 'text'),
+				parent			: content_value
+			})
+		}
 
 	// tool_icon
 		const icon_url	= tool_base_url(tool_name) + '/img/icon.svg'

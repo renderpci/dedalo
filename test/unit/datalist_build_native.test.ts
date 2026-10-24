@@ -17,7 +17,8 @@
  *  - fixed_filter narrowing: the FIRST expanded group becomes the option
  *    search's filter, and a fixed_filter that expands to NO group leaves the
  *    enumeration unnarrowed;
- *  - the dd1067 security-tools enrichment (tool_name / always_active), absent
+ *  - the dd1067 security-tools enrichment (tool_name / always_active /
+ *    tool_description), absent
  *    on every other component;
  *  - the CACHE: key `${componentTipo}_${ownerSectionTipo}_${lang}` (the owner
  *    section joined the key on 2026-08-14 — a component's target sections can
@@ -426,7 +427,7 @@ describe('getDatalist — properties.sort_by', () => {
 });
 
 describe('getDatalist — the dd1067 security-tools enrichment', () => {
-	test('the profile-tools component stamps tool_name / always_active on every option', async () => {
+	test('the profile-tools component stamps tool_name / always_active / tool_description on every option', async () => {
 		await seedOptions();
 		clearDatalistCache();
 		const list = await getDatalist(PROFILE_TOOLS_COMPONENT, properties({}), SECTION, LANG);
@@ -436,6 +437,7 @@ describe('getDatalist — the dd1067 security-tools enrichment', () => {
 			// These scratch records are not registered tools: PHP's fallback pair.
 			expect(item.tool_name).toBe('Unknown');
 			expect(item.always_active).toBe(false);
+			expect(item.tool_description).toBeNull();
 		}
 		clearDatalistCache();
 		// Same properties, ANY other component tipo: the keys must not appear.
@@ -443,6 +445,24 @@ describe('getDatalist — the dd1067 security-tools enrichment', () => {
 		for (const item of plain) {
 			expect('tool_name' in item).toBe(false);
 			expect('always_active' in item).toBe(false);
+			expect('tool_description' in item).toBe(false);
+		}
+	});
+
+	test('a registered tool carries its dd612 description in the REQUESTED lang', async () => {
+		// Expected values come from the repo-owned register.json the suite DB
+		// registered the tool from — not from the ambient DB.
+		const { getActiveToolMetaBySectionId } = await import('../../src/core/tools/registry.ts');
+		const register = (await Bun.file(
+			`${import.meta.dir}/../../tools/tool_update_cache/register.json`,
+		).json()) as { string: Record<string, { lang: string; value: string }[]> };
+		const source = register.string.dd612 ?? [];
+		for (const lang of ['lg-eng', 'lg-spa']) {
+			const expected = source.find((item) => item.lang === lang)?.value;
+			expect(expected).toBeString();
+			const metas = [...(await getActiveToolMetaBySectionId(lang)).values()];
+			const meta = metas.find((item) => item.name === 'tool_update_cache');
+			expect(meta?.description).toBe(expected as string);
 		}
 	});
 });

@@ -421,6 +421,21 @@ remote's level from its URL.
   `DB_PORT` points at a closed port so any accidental DB touch fails loudly. No
   hermetic gate starts a server: `suite_mariadb_target_native` (which drives the lane's
   own `mariadbd`) is a DB-tier gate (`NOT_HERMETIC` row + `DB_TIER_TRIPWIRES`).
+  **Parallel tripwires (2026-10-21).** The tripwires run in `bun test --parallel`
+  workers (one per core, `--isolate` implied), slowest file first from
+  `engineering/hermetic_timings.json`; the daemon packages start BEFORE typecheck, in
+  the background, verdicts at the end. Measured on a 12-core desk: 513 s serial → 124 s
+  on 8 workers; the tier ~10 min → ~2.5 min. Every gate still runs — nothing is selected.
+  Files that touch shared state run alone afterwards in `HERMETIC_SERIAL_LANE`, each with
+  its reason; every lane entry is also a `HERMETIC_TRIPWIRES` entry, and
+  `tier_execution_tripwire` proves (bun stubbed) that each entry reaches bun exactly once.
+  The tier reds when the run CHANGED the checkout (`git status` before vs after).
+  `DEDALO_HERMETIC_SERIAL=1` runs the whole list in one serial process: the nightly full
+  gate sets it, so a coupling the lane missed shows as a parallel-green push against a
+  serial-red night on the same sha. **Refresh the timings** when files are added or get
+  much slower (scheduling only — a stale entry never changes a verdict): run the list
+  once serially with `--timings=engineering/hermetic_timings.json --update-timings`
+  under hermetic.sh's env stubs, then `bunx biome format --write engineering/hermetic_timings.json` (bun writes 2-space JSON; `bun run lint` holds the repo's tabs) and commit the file.
 - **DB** (`db` job, `scripts/ci/db_tier.sh`): builds the suite database from bytes
   vendored in the repo (`scripts/test_db_setup.ts`; the `test` TLD ontology, the
   hierarchy copies; it stamps `dedalo_test_marker`), then the DB-backed tripwires

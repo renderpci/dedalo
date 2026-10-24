@@ -428,6 +428,7 @@ const TRIPWIRES = [
 	'test/unit/psql_matrix_write_obligations_tripwire.test.ts',
 	'test/unit/advisory_lock_class_tripwire.test.ts',
 	'test/unit/psql_argv_sql_tripwire.test.ts',
+	'test/unit/hermetic_parallel_safety_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

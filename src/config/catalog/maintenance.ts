@@ -4,10 +4,87 @@
  * GENERATED SCAFFOLD (probe_emit_catalog.ts). Hand-edit from here on.
  */
 
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { CatalogEntry } from '../catalog_types.ts';
-import { privateDir } from '../env.ts';
-import { legacyAwareDefaultDir } from './media.ts';
+import { privateDir, readEnv } from '../env.ts';
+import { type LegacyDirProbe, legacyAwareDefaultDir } from './media.ts';
+
+/**
+ * The file names an ontology version directory holds — what a release ships
+ * in `install/import/ontology/<major.minor>/`, what an export writes and what
+ * an ontology server serves (src/server.ts serveOntologyIoFile). ONE grammar.
+ */
+export function isOntologyIoFileName(name: string): boolean {
+	return (
+		/^[a-z_]{2,}\.copy\.gz$/.test(name) ||
+		name === 'ontology.json' ||
+		name === 'ontology_llm_map.json'
+	);
+}
+
+/** A version directory of the release (`7.0`). */
+const ONTOLOGY_VERSION_DIR = /^\d+\.\d+$/;
+
+/** macOS Finder litter: not operator data, never a reason to keep the legacy dir. */
+const PROBE_IGNORED: ReadonlySet<string> = new Set(['.DS_Store']);
+
+/**
+ * The ONTOLOGY_DATA_IO_DIR legacy probe (2026-10-21). The in-tree
+ * `install/import/ontology/` SHIPS the vendored release, so the generic probe
+ * ("holds any entry") kept every install in the code tree: an image install
+ * died EACCES on `.staging`, and every tree-swap code update was refused by
+ * the runtime-path census. Release content is not operator data, so it reads
+ * 'empty'; 'content' means something the release does not ship — a
+ * `recovery/` snapshot, a stale `.staging`, an unknown file — or an ontology
+ * server, whose exports overwrite the shipped dumps and which serves from there
+ * (a live master is never repointed on a guess).
+ */
+export function probeOntologyLegacyDir(path: string): LegacyDirProbe {
+	if (readEnv('IS_AN_ONTOLOGY_SERVER')?.trim() === 'true') return 'content';
+	if (!existsSync(path)) return 'empty';
+	try {
+		for (const entry of readdirSync(path, { withFileTypes: true })) {
+			if (PROBE_IGNORED.has(entry.name)) continue;
+			if (!entry.isDirectory() || !ONTOLOGY_VERSION_DIR.test(entry.name)) return 'content';
+			for (const file of readdirSync(join(path, entry.name), { withFileTypes: true })) {
+				if (PROBE_IGNORED.has(file.name)) continue;
+				if (!file.isFile() || !isOntologyIoFileName(file.name)) return 'content';
+			}
+		}
+		return 'empty';
+	} catch {
+		return 'unreadable';
+	}
+}
+
+/**
+ * The ONTOLOGY_DATA_IO_DIR default: `<private>/import/ontology`, unless the
+ * legacy in-tree dir holds operator content (probe above). `record` + `warn`
+ * belong to the ONE consumer call (config.ts), as for MEDIA_PATH.
+ */
+export function ontologyDataIoDefaultDir(
+	options: { record?: boolean; warn?: boolean } = {},
+): string {
+	return legacyAwareDefaultDir(
+		'ONTOLOGY_DATA_IO_DIR',
+		['install', 'import', 'ontology'],
+		['import', 'ontology'],
+		{ preferPrivateWhenExists: true, probe: probeOntologyLegacyDir, ...options },
+	);
+}
+
+/**
+ * SERVER BOOT: freeze the derived decision in ts_state.json (the sticky home).
+ * At BOOT and not at config import, because `pg_bin.ts` loads config during the
+ * installer's machine preflight — and a refused install writes NOTHING into its
+ * private dir (install_validation_upfront_tripwire). A configured key needs no
+ * record: the explicit value wins on every read.
+ */
+export function recordOntologyDataIoDefault(): void {
+	if ((readEnv('ONTOLOGY_DATA_IO_DIR') ?? '').trim() !== '') return;
+	ontologyDataIoDefaultDir({ record: true, warn: true });
+}
 
 export const MAINTENANCE_KEYS = {
 	CODE_SERVERS: {
@@ -168,24 +245,23 @@ DEDALO_ONTOLOGY_RECOVERY_PATH="/srv/dedalo_private/db/dd_ontology_recovery.sql.g
 \`\`\``,
 	},
 	ONTOLOGY_DATA_IO_DIR: {
+		// Empty = unset, as config.ts reads it: the census (runtime_paths.ts)
+		// must not resolve `ONTOLOGY_DATA_IO_DIR=` to the cwd — the code tree.
+		emptyIsUnset: true,
 		type: 'string',
 		scope: 'operator',
-		default: () =>
-			legacyAwareDefaultDir(
-				'ONTOLOGY_DATA_IO_DIR',
-				['install', 'import', 'ontology'],
-				['import', 'ontology'],
-				{
-					preferPrivateWhenExists: true,
-				},
-			),
+		default: () => ontologyDataIoDefaultDir(),
 		defaultDoc:
-			'`<private dir>/import/ontology` once that directory exists; until then the legacy `<install dir>/install/import/ontology` (which ships the vendored ontology seeds) keeps being used',
+			'`<private dir>/import/ontology`; an install whose legacy `<install dir>/install/import/ontology` holds anything that is not an ontology release file (or that is an ontology server) keeps the legacy dir until that private directory exists',
 		heading: 'Ontology input/output, export/import or download directory',
 		typeLabel: 'string',
 		doc: `This parameter defines the directory to input/output the ontology files in the server. Ontology files can be created by master ontology servers or downloaded from an external provider such as the official master Dédalo server.
 
-Unset, Dédalo prefers \`import/ontology\` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and would otherwise carry downloaded or exported ontology files away with the old code. The legacy \`install/import/ontology\` directory inside the install tree ships the vendored ontology seed files, so it keeps being used until you create the private-directory home (move any files of your own there) or set this key explicitly.
+Unset, Dédalo uses \`import/ontology\` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory: an update refuses to start while runtime data lives inside it, and an image install cannot write there at all. The \`install/import/ontology\` directory inside the code tree holds the ontology release that ships with the code; Dédalo only reads it.
+
+An install from before this default keeps using \`install/import/ontology\`, with a warning at start-up, when that directory holds anything that is not an ontology release file (a \`recovery/\` snapshot or \`.staging\` from an earlier update, any other file), or when the install is an ontology server (\`IS_AN_ONTOLOGY_SERVER\`, whose exports were written and are served there). Nothing is moved for you. Move those files to \`<private dir>/import/ontology\` (creating it ends the fallback), or set this key explicitly. An ontology server copies every \`<major.minor>/\` directory, its exports included, before creating the private directory: once it exists, the server serves from it. The decision is taken once and recorded.
+
+The check goes by file NAME: an export of your own written into \`install/import/ontology/<major.minor>/\` on an install that is not an ontology server has the name of a release file and is treated as one. Such an export is rebuilt from the database at any time, and a code update keeps it in the backup of the old code.
 
 Files are organised in version directories, \`<major.minor>/\`: one \`<tld>.copy.gz\` per ontology, \`matrix_dd.copy.gz\` for the private lists, and the \`ontology.json\` (plus \`ontology_llm_map.json\`) that describe them. The canonical production layout is:
 

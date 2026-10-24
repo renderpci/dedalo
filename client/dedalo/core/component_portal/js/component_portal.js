@@ -1389,8 +1389,16 @@ component_portal.prototype.link_records = async function(values, options={}) {
 			// exists. Check if value already exists.
 			// (!) Only the currently loaded paginated page is available for this check; the
 			// server performs the authoritative full-dataset check after the insert (level 2 below).
-				const exists = current_entries.find(item => item.section_tipo===value.section_tipo && String(item.section_id) === String(value.section_id))
-					|| accepted.find(item => item.section_tipo===value.section_tipo && String(item.section_id) === String(value.section_id))
+			// (!) tag_id is part of the identity, as in the server dedup key (relations/save.ts
+			// normalizeRelationInsert): the same record linked by two text tags (tags_reference,
+			// tags_draw) is two values. Without it the second tag was refused as 'duplicate'.
+			// Locators without tag_id (plain portals) compare undefined===undefined, as before.
+			// String() keeps the id-type coercion the loose compare had (a tag_id is a number
+			// in the client and a string once stored).
+				const same_value = (item) => item.section_tipo===value.section_tipo
+					&& String(item.section_id) === String(value.section_id)
+					&& String(item.tag_id) === String(value.tag_id)
+				const exists = current_entries.find(same_value) || accepted.find(same_value)
 				if (typeof exists!=='undefined') {
 					console.log('[link_records] Value already exists (1) !');
 					if(SHOW_DEBUG===true) {

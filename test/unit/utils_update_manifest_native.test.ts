@@ -42,6 +42,18 @@ import { getOntologyIoPath } from '../../src/core/ontology/data_io_import.ts';
 
 const HANDLER_SOURCE_PATH = join(import.meta.dir, '../../src/core/api/handlers/dd_utils_api.ts');
 
+/** A scratch ontology IO dir holding the `7.0` version dir the doors ask for —
+ * BUILT here, never borrowed from the ambient `ONTOLOGY_DATA_IO_DIR` (its default
+ * moved to `<private>/import/ontology`, which a checkout need not have). */
+function scratchOntologyIoDir(): string {
+	const dir = join(
+		process.env.TMPDIR ?? '/tmp',
+		`dedalo_ontology_io_${process.pid}_${Math.random().toString(36).slice(2)}`,
+	);
+	mkdirSync(join(dir, '7.0'), { recursive: true });
+	return dir;
+}
+
 /** Base input: an authorized ontology-door call. Each test perturbs ONE field. */
 function ontologyInput(overrides: Record<string, unknown> = {}) {
 	return {
@@ -297,18 +309,23 @@ describe('the two doors as wired (this install is neither master)', () => {
 });
 
 describe('getOntologyIoPath (the ontology door s downstream step)', () => {
+	const IO = scratchOntologyIoDir();
+	afterAll(() => {
+		rmSync(IO, { recursive: true, force: true });
+	});
+
 	test('an existing major.minor dir resolves', () => {
-		const resolved = getOntologyIoPath(config.ops.ontologyDataIoDir, [7, 0]);
+		const resolved = getOntologyIoPath(IO, [7, 0]);
 		expect(typeof resolved).toBe('string');
 		expect(String(resolved).endsWith('/7.0')).toBe(true);
 	});
 
 	test('a version with no shipped ontology files answers false', () => {
-		expect(getOntologyIoPath(config.ops.ontologyDataIoDir, [99, 9])).toBe(false);
+		expect(getOntologyIoPath(IO, [99, 9])).toBe(false);
 	});
 
 	test('a non-integer part answers false before touching the filesystem', () => {
-		expect(getOntologyIoPath(config.ops.ontologyDataIoDir, [7, Number.NaN])).toBe(false);
+		expect(getOntologyIoPath(IO, [7, Number.NaN])).toBe(false);
 	});
 });
 
@@ -394,6 +411,12 @@ describe('both doors refuse a remote peer when this master would advertise a loc
 	const ONTOLOGY_CODE = 'zzprobe';
 	const CODE_CODE = 'zzcode';
 	const REMOTE = '203.0.113.9';
+	// The ontology door serves its manifest FROM this dir: given explicitly, so the
+	// child never depends on which default the ambient checkout resolves.
+	const IO = scratchOntologyIoDir();
+	afterAll(() => {
+		rmSync(IO, { recursive: true, force: true });
+	});
 	type Door = 'get_ontology_update_info' | 'get_code_update_info';
 	const VERSION: Record<Door, string> = {
 		get_ontology_update_info: '7.0',
@@ -430,6 +453,7 @@ describe('both doors refuse a remote peer when this master would advertise a loc
 			IS_A_CODE_SERVER: 'true',
 			CODE_SERVERS: JSON.stringify([{ name: 'p', url: 'https://p.test', code: CODE_CODE }]),
 			DEDALO_HOST: host,
+			ONTOLOGY_DATA_IO_DIR: IO,
 		};
 		const run = Bun.spawnSync(['bun', '-e', script], { env, cwd: join(import.meta.dir, '../..') });
 		const out = run.stdout.toString().trim().split('\n').at(-1) ?? '';

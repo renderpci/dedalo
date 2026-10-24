@@ -487,6 +487,23 @@
 				padding: 0px;
 			}
 
+			// Panel silhouette: the rail tab at each END wears the panel's outer
+			// corner (FIELDS — or TYPE, which precedes it — on the left; PRESET on
+			// the right), so the inner seams stay square. --radius-lg is the group
+			// operator bar's (>.operator), so the panel edge and the bar inside it
+			// read as the same roundness. Desktop only: the compact tier turns these
+			// tabs into free-standing chips with their own radius.
+			@media screen and (min-width: (@width_break_point_0 + 1)) {
+				border-radius: var(--radius-lg);
+
+				>.toggle_container_selector:first-child {
+					border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+				}
+				>.toggle_container_selection_presets:last-child {
+					border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+				}
+			}
+
 			// toggle_container_selector
 			>.toggle_container_selector {
 				margin: 0px;

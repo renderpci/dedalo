@@ -1327,6 +1327,10 @@ export const config: DedaloConfig = Object.freeze({
 		pgBinPath: readEnv('DEDALO_PG_BIN_PATH'),
 		backupTimeRangeHours: Math.max(0, readNumber('DEDALO_BACKUP_TIME_RANGE')),
 		backupVerifySecondsPerGb: Math.max(1, readNumber('DEDALO_BACKUP_VERIFY_SECONDS_PER_GB')),
+		// The legacy-aware default comes from the catalog (empty = unset, its
+		// emptyIsUnset). The decision is RECORDED at server boot instead
+		// (catalog/maintenance.ts recordOntologyDataIoDefault): config is imported
+		// inside a refused install, which must write nothing.
 		ontologyDataIoDir: readString('ONTOLOGY_DATA_IO_DIR'),
 		transformDefinitionsDir: readString('DEDALO_TRANSFORM_DEFINITIONS_DIR'),
 		exportArtifactsDir: readString('DEDALO_EXPORT_ARTIFACTS_DIR'),
